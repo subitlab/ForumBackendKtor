@@ -12,33 +12,33 @@ import java.util.logging.LogRecord
 import kotlin.math.log
 
 /**
- * 使用[ForumLogger]接管springboot的logger
+ * 使用[ForumLogger]接管ktor的logger
  */
 class LogbackAppender: AppenderBase<ILoggingEvent>()
 {
     override fun append(event: ILoggingEvent) = runCatching()
     {
-        val record=LogRecord(fromInt(event.level.levelInt), event.message)
+        val record = LogRecord(fromInt(event.level.levelInt), event.message)
         record.setInstant(Instant.ofEpochMilli(event.timeStamp))
-        record.loggerName=event.loggerName
-        record.parameters=event.argumentArray
+        record.loggerName = event.loggerName
+        record.parameters = event.argumentArray
         record.setSourceClassName(event.callerData[0].className)
         record.setSourceMethodName(event.callerData[0].methodName)
         if (event.throwableProxy is ThrowableProxy)
         {
-            record.thrown=(event.throwableProxy as ThrowableProxy).throwable
+            record.thrown = (event.throwableProxy as ThrowableProxy).throwable
         }
         else if (event.throwableProxy!=null)
         {
-            val throwable=Throwable(event.throwableProxy.message)
+            val throwable = Throwable(event.throwableProxy.message)
             throwable.setStackTrace(
                 Arrays.stream(event.throwableProxy.stackTraceElementProxyArray)
                     .map { obj: StackTraceElementProxy -> obj.stackTraceElement }
                     .toArray { size: Int -> arrayOfNulls(size) })
-            record.thrown=throwable
+            record.thrown = throwable
         }
         ForumLogger.logger().log(record)
-    }.onFailure { ForumLogger.err.println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run {  }
+    }.onFailure { ForumLogger.err.println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run { }
 
     private fun fromInt(id: Int): Level
     {

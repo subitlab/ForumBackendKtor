@@ -4,28 +4,47 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import subit.ForumBackend
+import subit.database.UserFull.Companion.set
 import java.util.*
 import javax.naming.OperationNotSupportedException
 
+/**
+ * 用户数据库数据类
+ * @param id 用户ID
+ * @param username 用户名(学生ID)
+ * @param password 密码
+ * @param email 邮箱
+ * @param phone 电话
+ * @param registrationTime 注册时间
+ * @param introduction 个人简介
+ * @param read 阅读权限
+ * @param post 发帖权限
+ * @param comment 评论权限
+ * @param ask 提问权限
+ * @param file 文件权限
+ * @param delete 删除权限
+ * @param anonymous 匿名权限
+ */
 @Serializable
 data class UserFull(
     val id: Long,
     val username: String,
     val password: String,
-    val email: String,
-    val phone: String,
-    val registrationTime: Long,
-    val introduction: String,
-    val read: Permission,
-    val post: Permission,
-    val comment: Permission,
-    val ask: Permission,
-    val file: Permission,
-    val delete: Permission,
-    val anonymous: Permission,
+    val email: String = "",
+    val phone: String = "",
+    val registrationTime: Long = System.currentTimeMillis(),
+    val introduction: String = "",
+    val read: Permission = Permission.NORMAL,
+    val post: Permission = Permission.NORMAL,
+    val comment: Permission = Permission.NORMAL,
+    val ask: Permission = Permission.NORMAL,
+    val file: Permission = Permission.NORMAL,
+    val delete: Permission = Permission.NORMAL,
+    val anonymous: Permission = Permission.NORMAL,
 )
 {
     constructor(row: ResultRow): this(
@@ -45,14 +64,44 @@ data class UserFull(
         row[UserDatabase.Users.anonymous],
     )
 
+    /**
+     * 将注册时间转换为Date
+     */
     fun registrationTimeAsDate() = Date(registrationTime)
+
+    companion object
+    {
+        fun UpdateBuilder<Int>.set(user: UserFull)
+        {
+            this[UserDatabase.Users.id] = user.id
+            this[UserDatabase.Users.username] = user.username
+            this[UserDatabase.Users.password] = user.password
+            this[UserDatabase.Users.email] = user.email
+            this[UserDatabase.Users.phone] = user.phone
+            this[UserDatabase.Users.registrationTime] = user.registrationTime
+            this[UserDatabase.Users.introduction] = user.introduction
+            this[UserDatabase.Users.read] = user.read
+            this[UserDatabase.Users.post] = user.post
+            this[UserDatabase.Users.comment] = user.comment
+            this[UserDatabase.Users.ask] = user.ask
+            this[UserDatabase.Users.file] = user.file
+            this[UserDatabase.Users.delete] = user.delete
+            this[UserDatabase.Users.anonymous] = user.anonymous
+        }
+    }
 }
 
+/**
+ * 数据库交互类
+ */
 object UserDatabase
 {
+    /**
+     * 用户信息表
+     */
     object Users: Table()
     {
-        val id = long("id").autoIncrement().uniqueIndex()
+        val id = long("id").uniqueIndex()
         val username = text("name")
         val password = text("password")
         val email = text("email").default("")
@@ -73,9 +122,16 @@ object UserDatabase
         transaction(ForumBackend.database) { SchemaUtils.create(Users) }
     }
 
+    /**
+     * 执行数据库操作
+     */
     suspend inline fun <T> dbQuery(crossinline block: suspend ()->T) =
         newSuspendedTransaction(Dispatchers.IO) { return@newSuspendedTransaction block() }
 
+    /**
+     * 查找用户, null为不限制
+     * [T]必须为[UserFull], [List]<[UserFull]>或者[Array]<[UserFull]>
+     */
     suspend inline fun <reified T> finedUser(
         id: Long? = null,
         username: String? = null,
@@ -125,6 +181,19 @@ object UserDatabase
         }
     }
 
+    /**
+     * 创建用户
+     */
+    suspend fun createUser(user: UserFull) = dbQuery { Users.insert { it.set(user) } }
+
+    /**
+     * 删除用户
+     */
+    suspend fun updateUser(user: UserFull) = dbQuery { Users.update({ Users.id eq user.id }) { it.set(user) } }
+
+    /**
+     * 帮助创建And条件
+     */
     class AndHelper
     {
         companion object
@@ -142,6 +211,9 @@ object UserDatabase
     }
 }
 
+/**
+ * 权限枚举
+ */
 enum class Permission
 {
     BANNED,

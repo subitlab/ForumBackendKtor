@@ -33,7 +33,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * logger中的日期格式
      */
     val loggerDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-
     private const val LOGGER_SETTINGS_FILE = "log.yml"
 
     @Serializable
@@ -57,10 +56,11 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
             return "LoggerFilter(matchers=$matchers, whiteList=$whiteList, level=$level)"
         }
 
-        object LevelSerializer:KSerializer<Level>
+        object LevelSerializer: KSerializer<Level>
         {
             override fun deserialize(decoder: Decoder): Level = Level.parse(decoder.decodeString())
             override fun serialize(encoder: Encoder, value: Level) = encoder.encodeString(value.name)
+
             @OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
             override val descriptor: SerialDescriptor = buildSerialDescriptor("LevelSerializer", PrimitiveKind.STRING)
         }
@@ -78,7 +78,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      */
     fun addFilter(pattern: String)
     {
-        filter = LoggerFilter(filter.matchers+pattern, filter.whiteList, filter.level)
+        filter = filter.copy(matchers = filter.matchers+pattern)
     }
 
     /**
@@ -86,14 +86,23 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      */
     fun removeFilter(pattern: String)
     {
-        filter = LoggerFilter(filter.matchers.filter { it!=pattern }, filter.whiteList, filter.level)
+        filter = filter.copy(matchers = filter.matchers.filter { it!=pattern })
     }
+
     /**
      * 设置白名单模式
      */
     fun setWhiteList(whiteList: Boolean)
     {
-        filter = LoggerFilter(filter.matchers, whiteList, filter.level)
+        filter = filter.copy(whiteList = whiteList)
+    }
+
+    /**
+     * 设置日志等级
+     */
+    fun setLevel(level: Level)
+    {
+        filter = filter.copy(level = level)
     }
 
     /**
@@ -116,11 +125,12 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         {
             override fun publish(record: LogRecord?)
             {
-                val throwable = record?.thrown?:return
-                val out=ByteArrayOutputStream()
+                val throwable = record?.thrown ?: return
+                val out = ByteArrayOutputStream()
                 throwable.printStackTrace(PrintStream(out))
                 out.toString().split('\n').forEach { ForumLogger.logger().log(record.level, it) }
             }
+
             override fun flush() = Unit
             override fun close() = Unit
         })
@@ -161,7 +171,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      */
     fun <T> log(vararg args: Any?, block: ()->T): T
     {
-        runCatching {  }
+        runCatching { }
         try
         {
             val res: T = block()
@@ -236,7 +246,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         if (throwable!=null) record.level = Level.WARNING
         logger().log(record)
     }
-
 
     private class LoggerOutputStream(private val level: Level): OutputStream()
     {

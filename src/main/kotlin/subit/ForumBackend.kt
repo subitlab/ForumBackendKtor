@@ -13,11 +13,11 @@ import org.jetbrains.exposed.sql.Database
 object ForumBackend
 {
     private lateinit var application: Application
-    val environment
+    val environment // 环境
         get() = application.environment
-    val config
+    val config // application.yaml
         get() = environment.config
-    val database by lazy()
+    val database by lazy() // 数据库
     {
         Database.connect(
             user = config.property("user").getString(),
@@ -27,6 +27,9 @@ object ForumBackend
         )
     }
 
+    /**
+     * 论坛,启动!
+     */
     @JvmStatic
     fun main(args: Array<String>)
     {
@@ -34,9 +37,11 @@ object ForumBackend
         EngineMain.main(args)
     }
 
+    /**
+     * 应用程序入口
+     */
     fun Application.module()
     {
-
         application = this
         installAuthentication()
         installDeserialization()
@@ -46,6 +51,9 @@ object ForumBackend
         }
     }
 
+    /**
+     * 安装登陆验证服务
+     */
     private fun Application.installAuthentication() = install(Authentication)
     {
         jwt()
@@ -58,6 +66,9 @@ object ForumBackend
         }
     }
 
+    /**
+     * 安装反序列化/序列化服务
+     */
     private fun Application.installDeserialization() = install(ContentNegotiation)
     {
         json(Json()

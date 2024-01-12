@@ -28,7 +28,7 @@ object Logger : TreeCommand(Level, Filter)
             {
                 // 有参数就设置日志等级
                 val level=java.util.logging.Level.parse(args[0])
-                ForumLogger.logger().level=level
+                ForumLogger.filter = ForumLogger.filter.copy(level = level)
                 ForumLogger.saveConfig()
                 CommandSet.out.println("set logger level to ${level.name}")
             }
