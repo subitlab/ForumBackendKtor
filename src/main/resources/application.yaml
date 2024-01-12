@@ -9,8 +9,8 @@ jwt:
   secret: "$JWT_SECRET:SUBIT_SECRET"
 
 datasource:
-  user: root
-  password: 123456
-  url: 'jdbc:mysql://127.0.0.1:3306/forum?useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=false&amp;allowMultiQueries=true'
+  user: BdfzSubit
+  password: Bdfz20230301!@#
+  url: 'jdbc:mysql://43.138.69.230:45141/forum?useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=false&amp;allowMultiQueries=true&amp;allowPublicKeyRetrieval=true'
   driver: com.mysql.cj.jdbc.Driver
 version: 0.0.0
