@@ -1,0 +1,16 @@
+ktor:
+  deployment:
+    port: "$PORT:29719"
+  application:
+    modules:
+      - 'subit.ForumBackend.module'
+
+jwt:
+  secret: "$JWT_SECRET:SUBIT_SECRET"
+
+datasource:
+  user: root
+  password: 123456
+  url: 'jdbc:mysql://127.0.0.1:3306/forum?useUnicode=true&amp;characterEncoding=utf-8&amp;useSSL=false&amp;allowMultiQueries=true'
+  driver: com.mysql.cj.jdbc.Driver
+version: 0.0.0
