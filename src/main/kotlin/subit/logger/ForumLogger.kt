@@ -1,6 +1,8 @@
 package subit.logger
 
+import org.jline.utils.StyleResolver
 import subit.Loader
+import subit.config.ConfigLoader
 import subit.config.loggerConfig
 import subit.console.AnsiStyle.Companion.RESET
 import subit.console.Console
@@ -91,6 +93,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         ForumLogger.logger.addHandler(ToConsoleHandler)
         ForumLogger.logger.addHandler(ToFileHandler)
         Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
+        ConfigLoader.reload("logger.yml")
     }
 
     private class LoggerOutputStream(private val level: Level): OutputStream()
@@ -121,7 +124,6 @@ object ToConsoleHandler: Handler()
     override fun publish(record: LogRecord) = safe()
     {
         if (!loggerConfig.check(record)) return
-
         val messages = mutableListOf(record.message)
 
         if (record.thrown != null)
@@ -129,25 +131,37 @@ object ToConsoleHandler: Handler()
             val str = record.thrown.stackTraceToString()
             str.split("\n").forEach { messages.add(it) }
         }
-
-        if (record.sourceClassName.startsWith("org.jline"))
+        /**
+         * 当[Console.println]调用的时候, 向终端打印日志, 会调用jline库,
+         * 使得[org.jline.utils.StyleResolver]会在此时打印等级为FINEST的日志.
+         *
+         * 当该日志打印时会调用[Console.println], 再次引起日志打印, 造成无限递归.
+         * 因此在这里特别处理
+         */
+        if (record.loggerName == StyleResolver::class.java.name)
         {
-            if (record.level.intValue() < Level.INFO.intValue()) return@safe
-            val head = String.format(
-                "[%s][%s]",
-                ForumLogger.loggerDateFormat.format(record.millis),
-                record.level.name
-            )
-            messages.forEach { message -> nativeOut.println("$head $message") }
+            /**
+             * 如果等级不足INFO就不打印了
+             */
+            if (record.level.intValue() >= Level.INFO.intValue())
+            {
+                /**
+                 * 如果等级大于等于INFO, 也不能直接调用[Console.println], 所以使用[nativeOut]直接打印到终端
+                 */
+                val head = String.format(
+                    "[%s][%s]",
+                    ForumLogger.loggerDateFormat.format(record.millis),
+                    record.level.name
+                )
+                messages.forEach { message -> nativeOut.println("$head $message") }
+            }
             return
         }
-
         val level = record.level
         val ansiStyle = if (level.intValue() >= Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
         else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
         else if (level.intValue() >= Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
         else SimpleAnsiColor.GREEN.bright()
-
         val head = String.format(
             "%s[%s]%s[%s]%s",
             PURPLE.bright(),
@@ -250,7 +264,6 @@ object ToFileHandler: Handler()
     override fun publish(record: LogRecord) = safe()
     {
         if (!loggerConfig.check(record)) return
-
         val messages = mutableListOf(record.message)
 
         if (record.thrown != null)
@@ -258,9 +271,7 @@ object ToFileHandler: Handler()
             val str = record.thrown.stackTraceToString()
             str.split("\n").forEach { messages.add(it) }
         }
-
         val messagesWithOutColor = messages.map { colorMatcher.replace(it, "") }
-
         val head = String.format(
             "[%s][%s]",
             ForumLogger.loggerDateFormat.format(record.millis),

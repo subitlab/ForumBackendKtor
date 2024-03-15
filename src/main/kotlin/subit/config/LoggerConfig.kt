@@ -12,12 +12,12 @@ import java.util.regex.Pattern
 @Serializable
 data class LoggerConfig(
     @Comment("过滤器，根据whiteList决定符合哪些条件的log会被打印/过滤")
-    val matchers: List<String> = arrayListOf(),
+    val matchers: List<String>,
     @Comment("是否为白名单模式，如果为true，则只有符合matchers的log会被打印，否则只有不符合matchers的log会被打印")
-    val whiteList: Boolean = true,
+    val whiteList: Boolean,
     @Comment("日志等级 (OFF, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL)")
     @SerialName("level")
-    val levelName: String = Level.INFO.name,
+    val levelName: String,
 )
 {
     @Transient
@@ -28,4 +28,8 @@ data class LoggerConfig(
     fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
 }
 
-var loggerConfig: LoggerConfig by config("logger.yml", LoggerConfig(), { _, new -> ForumLogger.logger.setLevel(new.level) })
+var loggerConfig: LoggerConfig by config(
+    "logger.yml",
+    LoggerConfig(listOf(), true, "INFO"),
+    { _, new -> ForumLogger.logger.setLevel(new.level) }
+)
