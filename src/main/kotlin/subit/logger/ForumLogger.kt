@@ -2,7 +2,9 @@ package subit.logger
 
 import kotlinx.serialization.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import me.nullaqua.api.util.LoggerUtils
@@ -51,18 +53,15 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         fun check(record: LogRecord): Boolean = (matchers.isEmpty()||pattern.matcher(record.message).find()==whiteList)
                 &&(record.loggerName?.startsWith("org.jline")!=true||record.level.intValue()>=Level.INFO.intValue())
 
-        override fun toString(): String
-        {
-            return "LoggerFilter(matchers=$matchers, whiteList=$whiteList, level=$level)"
-        }
+        override fun toString() = "LoggerFilter(matchers=$matchers, whiteList=$whiteList, level=$level)"
 
         object LevelSerializer: KSerializer<Level>
         {
+            @OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
+            override val descriptor: SerialDescriptor = buildSerialDescriptor("LevelSerializer", PrimitiveKind.STRING)
             override fun deserialize(decoder: Decoder): Level = Level.parse(decoder.decodeString())
             override fun serialize(encoder: Encoder, value: Level) = encoder.encodeString(value.name)
 
-            @OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
-            override val descriptor: SerialDescriptor = buildSerialDescriptor("LevelSerializer", PrimitiveKind.STRING)
         }
     }
 
@@ -149,10 +148,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     /**
      * 保存配置到文件
      */
-    fun saveConfig(file: String = LOGGER_SETTINGS_FILE)
-    {
-        Loader.saveConfig(file, filter)
-    }
+    fun saveConfig(file: String = LOGGER_SETTINGS_FILE) = Loader.saveConfig(file, filter)
 
     /**
      * 用于在方法中调用，会自动记录方法名和参数,是否出错等内容
@@ -169,21 +165,8 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * @param args 函数调用的参数
      * @param block 要执行的代码块
      */
-    fun <T> log(vararg args: Any?, block: ()->T): T
-    {
-        runCatching { }
-        try
-        {
-            val res: T = block()
-            logFromMethod(null, *args)
-            return res
-        }
-        catch (e: Throwable)
-        {
-            logFromMethod(e, *args)
-            throw e
-        }
-    }
+    fun <T> log(vararg args: Any?, block: ()->T): T =
+        runCatching(block).onSuccess { logFromMethod(null, *args) }.onFailure { logFromMethod(it, *args) }.getOrThrow()
 
     /**
      * 用于在方法中调用，会记录方法名和参数,是否出错等内容
@@ -191,23 +174,14 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     private fun logFromMethod(throwable: Throwable?, vararg msg: Any?)
     {
         val callerClass = Arrays.stream(Thread.currentThread().stackTrace)
-            .filter { obj: StackTraceElement -> obj.className!=ForumLogger::class.java.name&&obj.className.startsWith("subit.forum.backend") }
-            .map { obj: StackTraceElement -> obj.className }
-            .map { className: String ->
-                try
-                {
-                    Class.forName(className)
-                }
-                catch (e: ClassNotFoundException)
-                {
-                    null
-                }
-            }
+            .filter { it.className!=ForumLogger::class.java.name&&it.className.startsWith("subit.forum.backend") }
+            .map { it.className }
+            .map { runCatching { Class.forName(it) }.getOrNull() }
             .findFirst()
             .orElse(null) ?: return
         val callerMethod = Arrays.stream(Thread.currentThread().stackTrace)
-            .filter { obj: StackTraceElement -> obj.className==callerClass.name }
-            .map { obj: StackTraceElement -> obj.methodName }
+            .filter { it.className==callerClass.name }
+            .map { it.methodName }
             .findFirst()
             .getOrNull()
         val method = if (callerMethod!=null) Arrays.stream(callerClass.declaredMethods)
@@ -302,13 +276,8 @@ object ToConsoleHandler: Handler()
         )
     }
 
-    override fun flush()
-    {
-    }
-
-    override fun close()
-    {
-    }
+    override fun flush() = Unit
+    override fun close() = Unit
 }
 
 /**
@@ -382,11 +351,7 @@ object ToFileHandler: Handler()
         if (!ForumLogger.filter.check(record)) return
         if (!logFile.exists()) new()
         val fos = FileOutputStream(logFile, true)
-        fos.write(
-            String.format(
-                "[%s][%s] %s\n", ForumLogger.loggerDateFormat.format(record.millis), record.level.name, record.message
-            ).toByteArray()
-        )
+        fos.write(String.format("[%s][%s] %s\n", ForumLogger.loggerDateFormat.format(record.millis), record.level.name, record.message).toByteArray())
         fos.close()
         ++cnt
         if ((cnt ushr 10)>0) new()

@@ -2,7 +2,6 @@ package subit
 
 import kotlinx.serialization.decodeFromString
 import net.mamoe.yamlkt.Yaml
-import net.mamoe.yamlkt.YamlMap
 import org.fusesource.jansi.AnsiConsole
 import subit.console.Console
 import subit.console.command.CommandSet
@@ -15,7 +14,7 @@ object Loader
     /**
      * 是否已经初始化
      */
-    private var initiated = false
+    private var initialized = false
 
     /**
      * 重载后需要执行的任务
@@ -29,8 +28,8 @@ object Loader
      */
     fun init()
     {
-        if (initiated) return
-        initiated = true
+        if (initialized) return
+        initialized = true
         AnsiConsole.systemInstall() // 支持终端颜色码
         CommandSet.registerAll() // 注册所有命令
         Loader() // 加载配置文件
@@ -40,11 +39,7 @@ object Loader
     /**
      * 执行加载任务
      */
-    operator fun invoke(): Loader
-    {
-        for (task in tasks) task()
-        return this
-    }
+    operator fun invoke() = this.apply { tasks.forEach { it() } }
 
     /**
      * 从配置文件中获取配置, 需要T是可序列化的.在读取失败时抛出错误

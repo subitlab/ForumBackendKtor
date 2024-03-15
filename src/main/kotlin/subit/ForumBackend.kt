@@ -6,9 +6,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
+import subit.router.router
 
 object ForumBackend
 {
@@ -20,10 +20,10 @@ object ForumBackend
     val database by lazy() // 数据库
     {
         Database.connect(
-            user = config.property("user").getString(),
-            password = config.property("password").getString(),
-            url = config.property("url").getString(),
-            driver = config.property("driver").getString()
+            user = config.property("datasource.user").getString(),
+            password = config.property("datasource.password").getString(),
+            url = config.property("datasource.url").getString(),
+            driver = config.property("datasource.driver").getString()
         )
     }
 
@@ -46,9 +46,7 @@ object ForumBackend
         installAuthentication()
         installDeserialization()
 
-        routing()
-        {
-        }
+        router()
     }
 
     /**

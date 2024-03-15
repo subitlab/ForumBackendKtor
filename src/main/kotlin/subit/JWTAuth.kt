@@ -5,13 +5,13 @@ import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
-import org.h2.engine.User
+import org.jetbrains.exposed.sql.select
 import subit.database.UserDatabase
 import subit.database.UserFull
+import subit.database.deserialize
+import subit.database.match
 import java.util.*
 
 /**
@@ -21,22 +21,21 @@ object JWTAuth
 {
     @Serializable
     data class Token(val token: String)
-    data class UserPrincipal(val info: UserFull): Principal
 
     /**
      * JWT密钥
      */
-    private val SECRET_KEY = ForumBackend.config.property("jwt.secret").getString()
+    private val SECRET_KEY: String = ForumBackend.config.property("jwt.secret").getString()
 
     /**
      * JWT算法
      */
-    private val algorithm = Algorithm.HMAC512(SECRET_KEY)
+    private val algorithm: Algorithm = Algorithm.HMAC512(SECRET_KEY)
 
     /**
      * JWT有效期
      */
-    private const val VALIDITY = 1000/*ms*/*60/*s*/*60/*m*/*24/*h*/*7/*d*/
+    private const val VALIDITY: Long = 1000L/*ms*/*60/*s*/*60/*m*/*24/*h*/*7/*d*/
 
     /**
      * 生成验证器
@@ -51,9 +50,14 @@ object JWTAuth
         .sign(algorithm)
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)
-    inline fun <reified T: Principal> PipelineContext<Unit, ApplicationCall>.getPrincipal(): T? = call.principal<T>()
-    suspend fun getLoginUser(name: String, password: String): UserPrincipal? = UserDatabase.finedUser<UserFull>(
-        username = name,
-        password = password
-    )?.let(::UserPrincipal)
+    fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserFull? = call.principal<UserFull>()
+    suspend fun getLoginUser(name: String, password: String): UserFull? = UserDatabase.query()
+    {
+        select(match("username" to name, "password" to password)).firstOrNull()?.let { deserialize<UserFull>(it) }
+    }
+
+    /**
+     * 在数据库中保存密码的加密,暂未实现,现在为不加密,明文存储
+     */
+    fun encryptPassword(password: String): String = password
 }

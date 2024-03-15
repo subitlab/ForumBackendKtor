@@ -4,7 +4,7 @@ val logback_version: String by project
 val exposed_version: String by project
 val h2_version: String by project
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "1.9.10"
     id("io.ktor.plugin") version "2.3.7"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
@@ -27,9 +27,15 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jvm") // 登陆验证
     implementation("io.ktor:ktor-server-auth-jwt-jvm") // jwt登陆验证
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
+
+    //mysql
+    implementation("mysql:mysql-connector-java:8.0.26")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version") // 数据库
+    implementation("org.jetbrains.exposed:exposed-dao:$exposed_version") // 数据库
+    implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version") // 数据库
     implementation("com.h2database:h2:$h2_version") // 数据库
+
     implementation("io.ktor:ktor-server-netty-jvm") // netty
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
     implementation("io.ktor:ktor-server-call-logging-jvm:2.3.7") // 日志
