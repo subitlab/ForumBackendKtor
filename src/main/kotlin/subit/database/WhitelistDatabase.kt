@@ -2,9 +2,10 @@ package subit.database
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-object WhitelistDatabase: DatabaseController<WhitelistDatabase.Whitelist>(Whitelist)
+object WhitelistDatabase: DataAccessObject<WhitelistDatabase.Whitelist>(Whitelist)
 {
     object Whitelist: IdTable<String>("whitelist")
     {
@@ -13,5 +14,31 @@ object WhitelistDatabase: DatabaseController<WhitelistDatabase.Whitelist>(Whitel
             get() = email
         override val primaryKey: PrimaryKey
             get() = PrimaryKey(email)
+    }
+
+    suspend fun add(email: String) = query()
+    {
+        insert {
+            it[Whitelist.email] = email
+        }
+    }
+
+    suspend fun remove(email: String) = query()
+    {
+        deleteWhere {
+            Whitelist.email eq email
+        }
+    }
+
+    suspend fun isWhitelisted(email: String): Boolean = query()
+    {
+        select {
+            Whitelist.email eq email
+        }.count() > 0
+    }
+
+    suspend fun getWhitelist(): List<String> = query()
+    {
+        selectAll().map { it[email].value }
     }
 }

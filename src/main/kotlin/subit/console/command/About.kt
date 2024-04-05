@@ -14,7 +14,7 @@ object About: Command
     override fun execute(args: List<String>): Boolean
     {
         CommandSet.out.println("SubIT Forum Backend")
-        CommandSet.out.println("Version: ${ForumBackend.config.property("version").getString()}")
+        CommandSet.out.println("Version: ${ForumBackend.version}")
         CommandSet.out.println("Author: SubIT Team")
         CommandSet.out.println("Github: https://github.com/subitlab")
         CommandSet.out.println("Website: https://subit.org.cn")

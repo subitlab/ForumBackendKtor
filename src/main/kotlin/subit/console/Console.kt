@@ -9,6 +9,7 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp
 import subit.console.command.CommandSet
 import subit.logger.ForumLogger
+import subit.utils.FileUtils
 import java.io.File
 
 /**
@@ -54,7 +55,7 @@ object Console
      * 命令历史文件
      */
     private val historyFile: File
-        get() = File("data/command_history.txt")
+        get() = File(FileUtils.dataFolder,"command_history.txt")
 
     /**
      * 在终端上打印一行, 会自动换行并下移命令提升符和已经输入的命令

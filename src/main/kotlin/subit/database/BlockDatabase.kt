@@ -4,18 +4,20 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.update
 
 /**
  * 板块数据库交互类
  */
-object BlockDatabase: DatabaseController<BlockDatabase.Blocks>(Blocks)
+object BlockDatabase: DataAccessObject<BlockDatabase.Blocks>(Blocks)
 {
-    object Blocks: IdTable<UInt>("blocks")
+    object Blocks: IdTable<Int>("blocks")
     {
         /**
          * 板块ID
          */
-        override val id: Column<EntityID<UInt>> = uinteger("id").entityId()
+        override val id: Column<EntityID<Int>> = integer("id").autoIncrement().entityId()
 
         /**
          * 板块名称
@@ -40,19 +42,47 @@ object BlockDatabase: DatabaseController<BlockDatabase.Blocks>(Blocks)
         /**
          * 发帖所需权限
          */
-        val postingPermission = enumeration<Permission>("postingPermission").default(Permission.NORMAL)
+        val postingPermission = enumeration<PermissionLevel>("postingPermission").default(PermissionLevel.NORMAL)
 
         /**
          * 评论所需权限
          */
-        val commentingPermission = enumeration<Permission>("commentingPermission").default(Permission.NORMAL)
+        val commentingPermission = enumeration<PermissionLevel>("commentingPermission").default(PermissionLevel.NORMAL)
 
         /**
          * 阅读所需权限
          */
-        val readingPermission = enumeration<Permission>("readingPermission").default(Permission.NORMAL)
-
+        val readingPermission = enumeration<PermissionLevel>("readingPermission").default(PermissionLevel.NORMAL)
         override val primaryKey: PrimaryKey
             get() = PrimaryKey(id)
+    }
+
+    suspend fun createBlock(
+        name: String,
+        description: String,
+        parent: Int?,
+        creator: Long,
+        postingPermission: PermissionLevel = PermissionLevel.NORMAL,
+        commentingPermission: PermissionLevel = PermissionLevel.NORMAL,
+        readingPermission: PermissionLevel = PermissionLevel.NORMAL
+    ) = query()
+    {
+        insert {
+            it[Blocks.name] = name
+            it[Blocks.description] = description
+            it[Blocks.parent] = parent
+            it[Blocks.creator] = creator
+            it[Blocks.postingPermission] = postingPermission
+            it[Blocks.commentingPermission] = commentingPermission
+            it[Blocks.readingPermission] = readingPermission
+        }
+    }
+
+    suspend fun setPostingPermission(block: Int, permission: PermissionLevel) = query()
+    {
+        update({ id eq block })
+        {
+            it[postingPermission] = permission
+        }
     }
 }

@@ -1,12 +1,14 @@
 package subit.database
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
-import subit.ForumBackend
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.isSuperclassOf
@@ -42,16 +44,14 @@ import kotlin.reflect.full.primaryConstructor
  * @param T 表类型
  * @property table 表
  */
-abstract class DatabaseController<T: Table>(val table: T)
+abstract class DataAccessObject<T: Table>(val table: T)
 {
-    suspend inline fun <R> query(crossinline block: suspend T.()->R) = newSuspendedTransaction(Dispatchers.IO) { block(table) }
+    suspend inline fun <R> query(crossinline block: suspend T.()->R) =
+        newSuspendedTransaction(Dispatchers.IO) { block(table) }
 
     init // 创建表
     {
-        transaction(ForumBackend.database)
-        {
-            SchemaUtils.create(table)
-        }
+        transaction(DatabaseSingleton.database) { SchemaUtils.create(table) }
     }
 }
 
@@ -73,9 +73,9 @@ inline fun <reified R: Any> Table.deserialize(resultRow: ResultRow): R
             if (this is EntityID<*>) this.value
             else this
         }
-        if (paramType.isMarkedNullable&&value==null) argsMap[param] = null // 如果参数可空且值为空则赋值为null
-        else if (value==null) continue // 如果参数不可空且值为空则跳过
-        else if (paramType.classifier!=value::class)
+        if (paramType.isMarkedNullable && value == null) argsMap[param] = null // 如果参数可空且值为空则赋值为null
+        else if (value == null) continue // 如果参数不可空且值为空则跳过
+        else if (paramType.classifier != value::class)
             throw IllegalArgumentException("Parameter ${param.name} of ${clazz.qualifiedName} is not ${value::class.qualifiedName}") // 如果参数类型不匹配则抛出错误
         else argsMap[param] = value // 否则赋值
     }
@@ -107,8 +107,8 @@ inline fun <reified R: Any, reified T: Table> T.from(obj: R): T.(UpdateBuilder<*
             val fieldName = field.name // 字段名
             val fieldValue = field.get(obj) // 字段值
             val column = (columns[fieldName] ?: continue) as Column<Any?> // 获取对应列
-            if (fieldValue==null&&column.columnType.nullable) it[column] = null // 如果字段值为空且列可空则赋值为null
-            else if (fieldValue!=null) it[column] = fieldValue // 否则赋值
+            if (fieldValue == null && column.columnType.nullable) it[column] = null // 如果字段值为空且列可空则赋值为null
+            else if (fieldValue != null) it[column] = fieldValue // 否则赋值
         }
     }
 }
@@ -121,13 +121,13 @@ inline fun <reified T: Table> T.from(map: Map<String, Any?>): T.(UpdateBuilder<*
         for ((key, value) in map)
         {
             val column = (columns[key] ?: continue) as Column<Any?> // 获取对应列
-            if (value==null&&column.columnType.nullable) it[column] = null // 如果字段值为空且列可空则赋值为null
-            else if (value!=null) it[column] = value // 否则赋值
+            if (value == null && column.columnType.nullable) it[column] = null // 如果字段值为空且列可空则赋值为null
+            else if (value != null) it[column] = value // 否则赋值
         }
     }
 }
 
-inline fun <reified T: Table, K, V> T.from(vararg pairs: Pair<K, V>) = from(mapOf(*pairs))
+inline fun <reified T: Table, V> T.from(vararg pairs: Pair<String, V>) = from(mapOf(*pairs))
 
 @Suppress("UNCHECKED_CAST")
 inline fun <reified R: Any, reified T: Table, I> T.match(obj: R): I.()->Op<Boolean>
@@ -143,8 +143,8 @@ inline fun <reified R: Any, reified T: Table, I> T.match(obj: R): I.()->Op<Boole
         val fieldName = field.name // 字段名
         val fieldValue = field.get(obj) // 字段值
         val column = (columns[fieldName] ?: continue) as Column<Any?> // 获取对应列
-        if (fieldValue==null&&column.columnType.nullable) op = op.and { column.isNull() } // 如果字段值为空且列可空则赋值为null
-        else if (fieldValue!=null) op = op.and { column.eq(fieldValue) } // 否则赋值
+        if (fieldValue == null && column.columnType.nullable) op = op.and { column.isNull() } // 如果字段值为空且列可空则赋值为null
+        else if (fieldValue != null) op = op.and { column.eq(fieldValue) } // 否则赋值
     }
     return { op }
 }
@@ -157,10 +157,61 @@ inline fun <reified T: Table, I> T.match(map: Map<String, Any?>): I.()->Op<Boole
     for ((key, value) in map)
     {
         val column = (columns[key] ?: continue) as Column<Any?> // 获取对应列
-        if (value==null&&column.columnType.nullable) op = op.and { column.isNull() } // 如果字段值为空且列可空则赋值为null
-        else if (value!=null) op = op.and { column.eq(value) } // 否则赋值
+        if (value == null && column.columnType.nullable) op = op.and { column.isNull() } // 如果字段值为空且列可空则赋值为null
+        else if (value != null) op = op.and { column.eq(value) } // 否则赋值
     }
     return { op }
 }
 
 inline fun <reified T: Table, K, V, I> T.match(vararg pairs: Pair<K, V>): I.()->Op<Boolean> = match(mapOf(*pairs))
+
+/**
+ * 数据库单例
+ */
+object DatabaseSingleton
+{
+    /**
+     * 数据库
+     */
+    lateinit var database: Database
+        private set
+
+    /**
+     * 创建Hikari数据源,即数据库连接池
+     */
+    private fun createHikariDataSource(
+        url: String,
+        driver: String,
+        user: String,
+        password: String
+    ) = HikariDataSource(HikariConfig().apply {
+        this.driverClassName = driver
+        this.jdbcUrl = url
+        this.username = user
+        this.password = password
+        this.maximumPoolSize = 3
+        this.isAutoCommit = false
+        this.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        validate()
+    })
+
+    fun initDatabase(config: ApplicationConfig)
+    {
+        database = Database.connect(
+            createHikariDataSource(
+                config.property("datasource.url").getString(),
+                config.property("datasource.driver").getString(),
+                config.property("datasource.user").getString(),
+                config.property("datasource.password").getString()
+            )
+        )
+
+        // 在此处写一下所有数据库, 这样就可以自动执行每个数据库的init, 从而初始化所有表
+        BlockDatabase
+        EmailCodeDatabase
+        PostDatabase
+        StarDatabase
+        UserDatabase
+        WhitelistDatabase
+    }
+}

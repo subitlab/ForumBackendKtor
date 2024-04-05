@@ -87,6 +87,7 @@ object CommandSet: TreeCommand()
         addCommand(Logger)
         addCommand(Shell)
         addCommand(Color)
+        addCommand(Whitelist)
     }
 
     /**

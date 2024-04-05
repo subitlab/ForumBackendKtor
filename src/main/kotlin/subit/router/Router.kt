@@ -1,5 +1,6 @@
 package subit.router
 
+import io.github.smiley4.ktorswaggerui.dsl.OpenApiResponses
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -14,7 +15,7 @@ fun Route.checkPermission(body: (UserFull)->Boolean) = intercept(ApplicationCall
 suspend inline fun Context.checkPermission(body: (UserFull)->Boolean)
 {
     val user = getLoginUser()
-    if (user==null)
+    if (user == null)
     {
         call.respond(HttpStatusCode.Unauthorized)
         finish()
@@ -26,8 +27,17 @@ suspend inline fun Context.checkPermission(body: (UserFull)->Boolean)
     }
 }
 
+@JvmName("addHttpStatusesWithBody")
+inline fun <reified T> OpenApiResponses.addHttpStatuses(vararg statuses: HttpStatusCode) =
+    if (T::class == Nothing::class) addHttpStatuses(*statuses)
+    else statuses.forEach { it to { description = it.description; body<T>() } }
+
+fun OpenApiResponses.addHttpStatuses(vararg statuses: HttpStatusCode) =
+    statuses.forEach { it to { description = it.description } }
+
 fun Application.router() = routing()
 {
+    auth()
     adminUser()
     adminPost()
 }

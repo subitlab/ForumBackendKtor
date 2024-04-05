@@ -11,6 +11,6 @@ jwt:
 datasource:
   user: 'BdfzSubit'
   password: 'Bdfz20230301!@#'
-  url: 'jdbc:mysql://43.138.69.230:45141/forum?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowMultiQueries=true&allowPublicKeyRetrieval=true'
+  url: 'jdbc:mysql://43.138.69.230:45141/forum0'
   driver: com.mysql.cj.jdbc.Driver
 version: 0.0.0

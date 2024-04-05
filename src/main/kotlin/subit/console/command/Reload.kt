@@ -1,5 +1,7 @@
 package subit.console.command
 
+import subit.Loader
+
 /**
  * Reload configs.
  */
@@ -9,7 +11,7 @@ object Reload: Command
 
     override fun execute(args: List<String>): Boolean
     {
-//        Loader()
+        Loader()
         CommandSet.out.println("Reloaded.")
         return true
     }

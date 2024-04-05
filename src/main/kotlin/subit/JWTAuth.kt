@@ -5,13 +5,11 @@ import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.config.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.sql.select
 import subit.database.UserDatabase
 import subit.database.UserFull
-import subit.database.deserialize
-import subit.database.match
 import java.util.*
 
 /**
@@ -25,36 +23,50 @@ object JWTAuth
     /**
      * JWT密钥
      */
-    private val SECRET_KEY: String = ForumBackend.config.property("jwt.secret").getString()
+    private lateinit var SECRET_KEY: String
 
     /**
      * JWT算法
      */
-    private val algorithm: Algorithm = Algorithm.HMAC512(SECRET_KEY)
+    private lateinit var algorithm: Algorithm
 
     /**
      * JWT有效期
      */
     private const val VALIDITY: Long = 1000L/*ms*/*60/*s*/*60/*m*/*24/*h*/*7/*d*/
+    fun initJwtAuth(config: ApplicationConfig)
+    {
+        // 从配置文件中读取密钥
+        val secretKey = config.property("jwt.secret").getString()
+        // 初始化JWT算法
+        algorithm = Algorithm.HMAC512(secretKey)
+    }
 
     /**
      * 生成验证器
      */
     fun makeJwtVerifier(): JWTVerifier = JWT.require(algorithm).build()
-    fun sign(name: String, password: String) = Token(makeToken(name, password))
-    private fun makeToken(name: String, password: String): String = JWT.create()
+
+    /**
+     * 生成Token
+     * @param id 用户ID
+     * @param password 用户密码(加密后)
+     */
+    fun makeTokenByEncryptPassword(id: Long, password: String): Token = JWT.create()
         .withSubject("Authentication")
-        .withClaim("name", name)
+        .withClaim("id", id)
         .withClaim("password", password)
         .withExpiresAt(getExpiration())
         .sign(algorithm)
+        .let(::Token)
+
+    fun makeToken(id: Long, password: String): Token = makeTokenByEncryptPassword(id, encryptPassword(password))
+
+    suspend fun makeToken(id: Long): Token? = UserDatabase.makeJwtToken(id)
+    suspend fun makeToken(email: String): Token? = UserDatabase.makeJwtToken(email)
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)
     fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserFull? = call.principal<UserFull>()
-    suspend fun getLoginUser(name: String, password: String): UserFull? = UserDatabase.query()
-    {
-        select(match("username" to name, "password" to password)).firstOrNull()?.let { deserialize<UserFull>(it) }
-    }
 
     /**
      * 在数据库中保存密码的加密,暂未实现,现在为不加密,明文存储

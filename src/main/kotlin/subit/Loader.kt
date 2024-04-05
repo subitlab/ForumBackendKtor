@@ -2,9 +2,8 @@ package subit
 
 import kotlinx.serialization.decodeFromString
 import net.mamoe.yamlkt.Yaml
-import org.fusesource.jansi.AnsiConsole
-import subit.console.Console
-import subit.console.command.CommandSet
+import net.mamoe.yamlkt.YamlElement
+import net.mamoe.yamlkt.YamlMap
 import subit.logger.ForumLogger
 import java.io.File
 import java.io.InputStream
@@ -12,34 +11,18 @@ import java.io.InputStream
 object Loader
 {
     /**
-     * 是否已经初始化
-     */
-    private var initialized = false
-
-    /**
      * 重载后需要执行的任务
      */
-    private val tasks: Set<()->Unit> = setOf(
-        ForumLogger::load,
-    )
-
-    /**
-     * 初始化
-     */
-    fun init()
-    {
-        if (initialized) return
-        initialized = true
-        AnsiConsole.systemInstall() // 支持终端颜色码
-        CommandSet.registerAll() // 注册所有命令
-        Loader() // 加载配置文件
-        Console.init() // 初始化终端(启动命令处理线程)
-    }
+    val reloadTasks: HashSet<()->Unit> = HashSet()
 
     /**
      * 执行加载任务
      */
-    operator fun invoke() = this.apply { tasks.forEach { it() } }
+    operator fun invoke()
+    {
+        ForumLogger.config("Loading configs...")
+        reloadTasks.forEach { it() }
+    }
 
     /**
      * 从配置文件中获取配置, 需要T是可序列化的.在读取失败时抛出错误
@@ -47,6 +30,23 @@ object Loader
      * @return 配置
      */
     inline fun <reified T> getConfig(filename: String): T = Yaml.decodeFromString(getConfigFile(filename).readText())
+
+    /**
+     * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时抛出错误
+     * @param filename 配置文件名
+     * @param path 配置路径
+     * @return 配置
+     */
+    inline fun <reified T> getConfig(filename: String, path: String): T
+    {
+        val m = Yaml.decodeYamlMapFromString(getConfigFile(filename).readText())
+        var e: YamlElement = m
+        path.split(".").forEach {
+            val map = e as? YamlMap ?: throw IllegalArgumentException("path $path not found")
+            e = map[it] ?: throw IllegalArgumentException("path $path not found")
+        }
+        return Yaml.decodeFromString(e.toString())
+    }
 
     /**
      * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时返回默认值
@@ -59,9 +59,27 @@ object Loader
     /**
      * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时返回null
      * @param filename 配置文件名
+     * @param path 配置路径
+     * @param default 默认值
      * @return 配置
      */
-    inline fun <reified T> getConfigOrNull(filename: String): T? = runCatching { getConfig<T>(filename) }.getOrNull()
+    inline fun <reified T> getConfig(filename: String, path: String, default: T): T =
+        runCatching { getConfig<T>(filename, path) }.getOrDefault(default)
+
+    /**
+     * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时返回null
+     * @param filename 配置文件名
+     * @return 配置
+     */
+    inline fun <reified T> getConfigOrNull(filename: String): T? = getConfig(filename, null)
+
+    /**
+     * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时返回null
+     * @param filename 配置文件名
+     * @param path 配置路径
+     * @return 配置
+     */
+    inline fun <reified T> getConfigOrNull(filename: String, path: String): T? = getConfig(filename, path, null)
 
     /**
      * 从配置文件中获取配置, 需要T是可序列化的,在读取失败时返回默认值,并将默认值写入配置文件

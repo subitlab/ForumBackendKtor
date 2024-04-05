@@ -14,7 +14,6 @@ import subit.console.AnsiStyle
 import subit.console.Console
 import subit.console.SimpleAnsiColor
 import java.io.*
-import java.lang.reflect.Method
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.logging.Handler
@@ -24,7 +23,6 @@ import java.util.logging.Logger
 import java.util.regex.Pattern
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.jvm.optionals.getOrNull
 
 /**
  * logger系统
@@ -36,6 +34,92 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      */
     val loggerDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     private const val LOGGER_SETTINGS_FILE = "log.yml"
+
+    /**
+     * 日志输出流
+     */
+    val out: PrintStream = PrintStream(LoggerOutputStream(Level.INFO))
+
+    /**
+     * 日志错误流
+     */
+    val err: PrintStream = PrintStream(LoggerOutputStream(Level.WARNING))
+
+    var filter = LoggerFilter()
+        set(value)
+        {
+            field = value
+            logger().level = value.level
+        }
+
+    fun addFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers+pattern) }
+    fun removeFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers.filter { it!=pattern }) }
+    fun setWhiteList(whiteList: Boolean) = run { filter = filter.copy(whiteList = whiteList) }
+    fun setLevel(level: Level) = run { filter = filter.copy(level = level) }
+
+    /**
+     * 获取过滤器
+     */
+    fun filters(): MutableList<String> = Collections.unmodifiableList(filter.matchers)
+
+    /**
+     * 初始化logger，将设置终端支持显示颜色码，捕获stdout，应在启动springboot前调用
+     */
+    init
+    {
+        System.setOut(out)
+        System.setErr(err)
+        ForumLogger.logger().setUseParentHandlers(false)
+        ForumLogger.logger().handlers.forEach { ForumLogger.logger().removeHandler(it) }
+        ForumLogger.logger().addHandler(ToConsoleHandler)
+        ForumLogger.logger().addHandler(ToFileHandler)
+        ForumLogger.logger().addHandler(object: Handler()
+        {
+            override fun publish(record: LogRecord?)
+            {
+                val throwable = record?.thrown ?: return
+                val out = ByteArrayOutputStream()
+                throwable.printStackTrace(PrintStream(out))
+                out.toString().split('\n').forEach { ForumLogger.logger().log(record.level, it) }
+            }
+
+            override fun flush() = Unit
+            override fun close() = Unit
+        })
+        loadConfig()
+        Loader.reloadTasks.add(::loadConfig)
+    }
+
+    /**
+     * 从文件中加载配置
+     */
+    fun loadConfig(file: String = LOGGER_SETTINGS_FILE)
+    {
+        filter = Loader.getConfigOrCreate(file, filter)
+        info("log filter: $filter")
+    }
+
+    /**
+     * 保存配置到文件
+     */
+    fun saveConfig(file: String = LOGGER_SETTINGS_FILE) = Loader.saveConfig(file, filter)
+
+    private class LoggerOutputStream(private val level: Level): OutputStream()
+    {
+        val arrayOutputStream = ByteArrayOutputStream()
+        override fun write(b: Int)
+        {
+            if (b=='\n'.code)
+            {
+                ForumLogger.logger().log(level, arrayOutputStream.toString())
+                arrayOutputStream.reset()
+            }
+            else
+            {
+                arrayOutputStream.write(b)
+            }
+        }
+    }
 
     @Serializable
     data class LoggerFilter(
@@ -64,189 +148,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
 
         }
     }
-
-    var filter = LoggerFilter()
-        set(value)
-        {
-            field = value
-            logger().level = value.level
-        }
-
-    /**
-     * 添加过滤器
-     */
-    fun addFilter(pattern: String)
-    {
-        filter = filter.copy(matchers = filter.matchers+pattern)
-    }
-
-    /**
-     * 移除过滤器
-     */
-    fun removeFilter(pattern: String)
-    {
-        filter = filter.copy(matchers = filter.matchers.filter { it!=pattern })
-    }
-
-    /**
-     * 设置白名单模式
-     */
-    fun setWhiteList(whiteList: Boolean)
-    {
-        filter = filter.copy(whiteList = whiteList)
-    }
-
-    /**
-     * 设置日志等级
-     */
-    fun setLevel(level: Level)
-    {
-        filter = filter.copy(level = level)
-    }
-
-    /**
-     * 获取过滤器
-     */
-    fun filters(): MutableList<String> = Collections.unmodifiableList(filter.matchers)
-
-    /**
-     * 初始化logger，将设置终端支持显示颜色码，捕获stdout，应在启动springboot前调用
-     */
-    fun load()
-    {
-        System.setOut(out)
-        System.setErr(err)
-        ForumLogger.logger().setUseParentHandlers(false)
-        ForumLogger.logger().handlers.forEach { ForumLogger.logger().removeHandler(it) }
-        ForumLogger.logger().addHandler(ToConsoleHandler)
-        ForumLogger.logger().addHandler(ToFileHandler)
-        ForumLogger.logger().addHandler(object: Handler()
-        {
-            override fun publish(record: LogRecord?)
-            {
-                val throwable = record?.thrown ?: return
-                val out = ByteArrayOutputStream()
-                throwable.printStackTrace(PrintStream(out))
-                out.toString().split('\n').forEach { ForumLogger.logger().log(record.level, it) }
-            }
-
-            override fun flush() = Unit
-            override fun close() = Unit
-        })
-        loadConfig()
-    }
-
-    /**
-     * 从文件中加载配置
-     */
-    fun loadConfig(file: String = LOGGER_SETTINGS_FILE)
-    {
-        filter = Loader.getConfigOrCreate(file, filter)
-        info("log filter: $filter")
-    }
-
-    /**
-     * 保存配置到文件
-     */
-    fun saveConfig(file: String = LOGGER_SETTINGS_FILE) = Loader.saveConfig(file, filter)
-
-    /**
-     * 用于在方法中调用，会自动记录方法名和参数,是否出错等内容
-     *
-     * # 示例:
-     *
-     * ```kotlin
-     *     fun example(a: Any?,b: Any?,c: Any?,...): Any = log(a,b,c,...)
-     *     {
-     *         // do something
-     *         return@log something
-     *     }
-     * ```
-     * @param args 函数调用的参数
-     * @param block 要执行的代码块
-     */
-    fun <T> log(vararg args: Any?, block: ()->T): T =
-        runCatching(block).onSuccess { logFromMethod(null, *args) }.onFailure { logFromMethod(it, *args) }.getOrThrow()
-
-    /**
-     * 用于在方法中调用，会记录方法名和参数,是否出错等内容
-     */
-    private fun logFromMethod(throwable: Throwable?, vararg msg: Any?)
-    {
-        val callerClass = Arrays.stream(Thread.currentThread().stackTrace)
-            .filter { it.className!=ForumLogger::class.java.name&&it.className.startsWith("subit.forum.backend") }
-            .map { it.className }
-            .map { runCatching { Class.forName(it) }.getOrNull() }
-            .findFirst()
-            .orElse(null) ?: return
-        val callerMethod = Arrays.stream(Thread.currentThread().stackTrace)
-            .filter { it.className==callerClass.name }
-            .map { it.methodName }
-            .findFirst()
-            .getOrNull()
-        val method = if (callerMethod!=null) Arrays.stream(callerClass.declaredMethods)
-            .filter { method: Method -> method.name==callerMethod&&method.parameterCount==msg.size }
-            .findFirst()
-            .getOrNull()
-        else null
-        val sb: StringBuilder = StringBuilder()
-        sb.append(callerClass.name.split('.').last())
-        sb.append("#")
-        sb.append(callerMethod)
-        sb.append("(")
-        if (method!=null)
-        {
-            for (i in 0 until method.parameterCount)
-            {
-                sb.append(method.parameters[i].name.split('.').last())
-                sb.append(":")
-                sb.append(msg[i])
-                if (i!=method.parameterCount-1) sb.append(", ")
-            }
-        }
-        else
-        {
-            for (i in msg.indices)
-            {
-                sb.append(msg[i])
-                if (i!=msg.size-1) sb.append(", ")
-            }
-        }
-        sb.append(")")
-        val record = LogRecord(Level.FINE, sb.toString())
-        record.setSourceClassName(callerClass.name)
-        record.setSourceMethodName(callerMethod)
-        record.thrown = throwable
-        if (throwable!=null) record.level = Level.WARNING
-        logger().log(record)
-    }
-
-    private class LoggerOutputStream(private val level: Level): OutputStream()
-    {
-        val arrayOutputStream = ByteArrayOutputStream()
-        override fun write(b: Int)
-        {
-            if (b=='\n'.code)
-            {
-                ForumLogger.logger().log(level, arrayOutputStream.toString())
-                arrayOutputStream.reset()
-            }
-            else
-            {
-                arrayOutputStream.write(b)
-            }
-        }
-    }
-
-    /**
-     * 日志输出流
-     */
-    val out: PrintStream = PrintStream(LoggerOutputStream(Level.INFO))
-
-    /**
-     * 日志错误流
-     */
-    val err: PrintStream = PrintStream(LoggerOutputStream(Level.SEVERE))
 }
 
 /**
@@ -357,11 +258,7 @@ object ToFileHandler: Handler()
         if ((cnt ushr 10)>0) new()
     }
 
-    override fun flush()
-    {
-    }
+    override fun flush() = Unit
 
-    override fun close()
-    {
-    }
+    override fun close() = Unit
 }

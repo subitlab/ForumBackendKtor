@@ -3,6 +3,8 @@ val kotlin_version: String by project
 val logback_version: String by project
 val exposed_version: String by project
 val h2_version: String by project
+val hikaricp_version: String by project
+
 plugins {
     kotlin("jvm") version "1.9.10"
     id("io.ktor.plugin") version "2.3.7"
@@ -20,6 +22,7 @@ application {
 
 repositories {
     mavenCentral()
+    maven(url = "https://jitpack.io")
 }
 
 dependencies {
@@ -27,14 +30,20 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jvm") // 登陆验证
     implementation("io.ktor:ktor-server-auth-jwt-jvm") // jwt登陆验证
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
+    implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
+
+    implementation("io.github.smiley4:ktor-swagger-ui:2.8.0") // 创建api页面
+
+    implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
 
     //mysql
-    implementation("mysql:mysql-connector-java:8.0.26")
+    implementation("mysql:mysql-connector-java:8.0.33")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version") // 数据库
     implementation("com.h2database:h2:$h2_version") // 数据库
+    implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池
 
     implementation("io.ktor:ktor-server-netty-jvm") // netty
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
@@ -56,4 +65,5 @@ dependencies {
     testImplementation("io.ktor:ktor-client-content-negotiation")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.7")
 }

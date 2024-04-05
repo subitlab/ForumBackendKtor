@@ -7,13 +7,16 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.update
 
 @Serializable
 data class PostFull(
-    val id: ULong,
+    val id: Long,
     val title: String,
     val content: String,
-    val author: ULong,
+    val author: Long,
+    val anonymous: Boolean,
     val create: String,
     val lastModified: String,
     val view: UInt,
@@ -27,14 +30,14 @@ data class PostFull(
 /**
  * 帖子数据库交互类
  */
-object PostDatabase: DatabaseController<PostDatabase.Posts>(Posts)
+object PostDatabase: DataAccessObject<PostDatabase.Posts>(Posts)
 {
-    object Posts: IdTable<ULong>("posts")
+    object Posts: IdTable<Long>("posts")
     {
         /**
          * 帖子ID
          */
-        override val id: Column<EntityID<ULong>> = ulong("id").entityId()
+        override val id: Column<EntityID<Long>> = long("id").autoIncrement().entityId()
 
         /**
          * 帖子标题
@@ -50,6 +53,11 @@ object PostDatabase: DatabaseController<PostDatabase.Posts>(Posts)
          * 帖子作者
          */
         val author = reference("author", UserDatabase.Users).index()
+
+        /**
+         * 此贴作者匿名
+         */
+        val anonymous = bool("anonymous").default(false)
 
         /**
          * 帖子创建时间
@@ -90,8 +98,7 @@ object PostDatabase: DatabaseController<PostDatabase.Posts>(Posts)
          * 帖子当前状态
          */
         val state = enumeration("state", PostState::class).default(PostState.PENDING)
-        override val primaryKey: PrimaryKey
-            get() = PrimaryKey(id)
+        override val primaryKey = PrimaryKey(id)
     }
 
     /**
@@ -118,5 +125,15 @@ object PostDatabase: DatabaseController<PostDatabase.Posts>(Posts)
          * 被删除
          */
         DELETED;
+    }
+
+    suspend fun setPostState(pid: Long, state: PostState) = query()
+    {
+        update({ Posts.id eq pid }) { it[Posts.state] = state }
+    }
+
+    suspend fun getPostFull(pid: Long): PostFull? = query()
+    {
+        select() { Posts.id eq pid }.firstOrNull()?.let { deserialize<PostFull>(it) }
     }
 }
