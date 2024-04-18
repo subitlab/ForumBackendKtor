@@ -1,9 +1,9 @@
 package subit.utils
 
-import io.ktor.http.*
+import java.util.*
 import java.util.regex.Pattern
 
-private val emailPattern = Pattern.compile(".+@(i\\.)?pkuschool\\.edu\\.cn")
+var emailPattern = Pattern.compile(".+@(i\\.)?pkuschool\\.edu\\.cn")
 
 /**
  * 检查邮箱格式是否正确
@@ -27,10 +27,12 @@ fun checkUsername(username: String): Boolean =
     username.length in 2..20 &&
     username.all { it in '\u4e00'..'\u9fa5' || it.isLetterOrDigit() || it in "_-." }
 
-fun checkUserInfo(username: String, password: String, email: String): HttpStatusCode
+fun checkUserInfo(username: String, password: String, email: String): HttpStatus
 {
     if (!checkEmail(email)) return HttpStatus.EmailFormatError
     if (!checkPassword(password)) return HttpStatus.PasswordFormatError
     if (!checkUsername(username)) return HttpStatus.UsernameFormatError
-    return HttpStatusCode.OK
+    return HttpStatus.OK
 }
+
+fun String?.toUUIDOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()

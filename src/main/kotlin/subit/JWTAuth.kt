@@ -8,8 +8,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
+import subit.dataClasses.UserFull
+import subit.dataClasses.UserId
 import subit.database.UserDatabase
-import subit.database.UserFull
 import java.util.*
 
 /**
@@ -37,9 +38,9 @@ object JWTAuth
     fun initJwtAuth(config: ApplicationConfig)
     {
         // 从配置文件中读取密钥
-        val secretKey = config.property("jwt.secret").getString()
+        SECRET_KEY = config.property("jwt.secret").getString()
         // 初始化JWT算法
-        algorithm = Algorithm.HMAC512(secretKey)
+        algorithm = Algorithm.HMAC512(SECRET_KEY)
     }
 
     /**
@@ -52,7 +53,7 @@ object JWTAuth
      * @param id 用户ID
      * @param password 用户密码(加密后)
      */
-    fun makeTokenByEncryptPassword(id: Long, password: String): Token = JWT.create()
+    fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id)
         .withClaim("password", password)
@@ -60,9 +61,9 @@ object JWTAuth
         .sign(algorithm)
         .let(::Token)
 
-    fun makeToken(id: Long, password: String): Token = makeTokenByEncryptPassword(id, encryptPassword(password))
+    fun makeToken(id: UserId, password: String): Token = makeTokenByEncryptPassword(id, encryptPassword(password))
 
-    suspend fun makeToken(id: Long): Token? = UserDatabase.makeJwtToken(id)
+    suspend fun makeToken(id: UserId): Token? = UserDatabase.makeJwtToken(id)
     suspend fun makeToken(email: String): Token? = UserDatabase.makeJwtToken(email)
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)

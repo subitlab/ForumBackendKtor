@@ -7,7 +7,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import me.nullaqua.api.util.LoggerUtils
 import net.mamoe.yamlkt.Comment
 import subit.Loader
 import subit.console.AnsiStyle
@@ -43,17 +42,16 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     /**
      * 日志错误流
      */
-    val err: PrintStream = PrintStream(LoggerOutputStream(Level.WARNING))
-
+    val err: PrintStream = PrintStream(LoggerOutputStream(Level.SEVERE))
     var filter = LoggerFilter()
         set(value)
         {
             field = value
-            logger().level = value.level
+            logger.level = value.level
         }
 
     fun addFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers+pattern) }
-    fun removeFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers.filter { it!=pattern }) }
+    fun removeFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers.filter { it != pattern }) }
     fun setWhiteList(whiteList: Boolean) = run { filter = filter.copy(whiteList = whiteList) }
     fun setLevel(level: Level) = run { filter = filter.copy(level = level) }
 
@@ -69,18 +67,18 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     {
         System.setOut(out)
         System.setErr(err)
-        ForumLogger.logger().setUseParentHandlers(false)
-        ForumLogger.logger().handlers.forEach { ForumLogger.logger().removeHandler(it) }
-        ForumLogger.logger().addHandler(ToConsoleHandler)
-        ForumLogger.logger().addHandler(ToFileHandler)
-        ForumLogger.logger().addHandler(object: Handler()
+        ForumLogger.logger.setUseParentHandlers(false)
+        ForumLogger.logger.handlers.forEach { ForumLogger.logger.removeHandler(it) }
+        ForumLogger.logger.addHandler(ToConsoleHandler)
+        ForumLogger.logger.addHandler(ToFileHandler)
+        ForumLogger.logger.addHandler(object: Handler()
         {
             override fun publish(record: LogRecord?)
             {
                 val throwable = record?.thrown ?: return
                 val out = ByteArrayOutputStream()
                 throwable.printStackTrace(PrintStream(out))
-                out.toString().split('\n').forEach { ForumLogger.logger().log(record.level, it) }
+                out.toString().split('\n').forEach { ForumLogger.logger.log(record.level, it) }
             }
 
             override fun flush() = Unit
@@ -88,6 +86,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         })
         loadConfig()
         Loader.reloadTasks.add(::loadConfig)
+        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
     }
 
     /**
@@ -103,15 +102,14 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * 保存配置到文件
      */
     fun saveConfig(file: String = LOGGER_SETTINGS_FILE) = Loader.saveConfig(file, filter)
-
     private class LoggerOutputStream(private val level: Level): OutputStream()
     {
         val arrayOutputStream = ByteArrayOutputStream()
         override fun write(b: Int)
         {
-            if (b=='\n'.code)
+            if (b == '\n'.code)
             {
-                ForumLogger.logger().log(level, arrayOutputStream.toString())
+                ForumLogger.logger.log(level, arrayOutputStream.toString())
                 arrayOutputStream.reset()
             }
             else
@@ -134,8 +132,8 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         val pattern: Pattern = Pattern.compile(matchers.joinToString("|") { "($it)" })
     )
     {
-        fun check(record: LogRecord): Boolean = (matchers.isEmpty()||pattern.matcher(record.message).find()==whiteList)
-                &&(record.loggerName?.startsWith("org.jline")!=true||record.level.intValue()>=Level.INFO.intValue())
+        fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
+                                                && (record.loggerName?.startsWith("org.jline") != true || record.level.intValue() >= Level.INFO.intValue())
 
         override fun toString() = "LoggerFilter(matchers=$matchers, whiteList=$whiteList, level=$level)"
 
@@ -145,7 +143,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
             override val descriptor: SerialDescriptor = buildSerialDescriptor("LevelSerializer", PrimitiveKind.STRING)
             override fun deserialize(decoder: Decoder): Level = Level.parse(decoder.decodeString())
             override fun serialize(encoder: Encoder, value: Level) = encoder.encodeString(value.name)
-
         }
     }
 }
@@ -159,9 +156,9 @@ object ToConsoleHandler: Handler()
     {
         if (!ForumLogger.filter.check(record)) return
         val level = record.level
-        val ansiStyle = if (level.intValue()>=Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
-        else if (level.intValue()>=Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
-        else if (level.intValue()>=Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
+        val ansiStyle = if (level.intValue() >= Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
+        else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
+        else if (level.intValue() >= Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
         else SimpleAnsiColor.GREEN.bright() // if level.name.length<5 then add space
 
         Console.println(
@@ -241,7 +238,7 @@ object ToFileHandler: Handler()
         zipOut.putNextEntry(zipEntry)
         val bytes = ByteArray(1024)
         var length: Int
-        while (fis.read(bytes).also { length = it }>=0) zipOut.write(bytes, 0, length)
+        while (fis.read(bytes).also { length = it } >= 0) zipOut.write(bytes, 0, length)
         zipOut.close()
         fis.close()
         fos.close()
@@ -255,10 +252,9 @@ object ToFileHandler: Handler()
         fos.write(String.format("[%s][%s] %s\n", ForumLogger.loggerDateFormat.format(record.millis), record.level.name, record.message).toByteArray())
         fos.close()
         ++cnt
-        if ((cnt ushr 10)>0) new()
+        if ((cnt ushr 10) > 0) new()
     }
 
     override fun flush() = Unit
-
     override fun close() = Unit
 }

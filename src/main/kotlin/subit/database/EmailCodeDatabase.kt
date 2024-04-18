@@ -5,12 +5,14 @@ import net.mamoe.yamlkt.Comment
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.javatime.timestamp
 import subit.Loader
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup
-import java.time.LocalDateTime
+import subit.utils.emailPattern
+import java.time.Instant
 import java.util.*
+import java.util.regex.Pattern
 import javax.mail.Address
 import javax.mail.Message
 import javax.mail.Session
@@ -25,7 +27,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
     {
         val email = varchar("email", 100).index()
         val code = varchar("code", 10)
-        val time = datetime("time").index()
+        val time = timestamp("time").index()
         val usage = enumeration("usage", EmailCodeUsage::class)
     }
 
@@ -50,6 +52,8 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
         val codeValidTime: Long = 600,
         @Comment("验证邮件标题")
         val verifyEmailTitle: String = "论坛验证码",
+        @Comment("用户邮箱格式要求(正则表达式)")
+        val emailFormat: String = ".*@.*\\..*",
     )
     {
         companion object
@@ -76,9 +80,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
             )
             {
                 ForumLogger.config("Clearing expired email codes")
-                runCatching { clearExpiredEmailCode() }.onFailure {
-                    ForumLogger.severe("Failed to clear expired email codes", it)
-                }
+                ForumLogger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
             }
         )
         config = Loader.getConfigOrCreate("email.yml", EmailConfig.example)
@@ -88,8 +90,10 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
     private fun reloadConfig()
     {
         config = Loader.getConfigOrCreate("email.yml", EmailConfig.example)
+        emailPattern = Pattern.compile(config.emailFormat)
         ForumLogger.config("Email config reloaded")
     }
+
     suspend fun sendEmailCode(email: String, usage: EmailCodeUsage): Unit = query()
     {
         val code = (1..6).map { ('0'..'9').random() }.joinToString("")
@@ -100,7 +104,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
             it[EmailCodes.email] = email
             it[EmailCodes.code] = code
             it[EmailCodes.usage] = usage
-            it[time] = LocalDateTime.now().plusSeconds(config.codeValidTime)
+            it[time] = Instant.now().plusSeconds(config.codeValidTime)
         }
     }
 
@@ -151,11 +155,11 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
             }
         }
 
-        result != null && result >= LocalDateTime.now()
+        result != null && result >= Instant.now()
     }
 
-    suspend fun clearExpiredEmailCode(): Unit = query()
+    private suspend fun clearExpiredEmailCode(): Unit = query()
     {
-        EmailCodes.deleteWhere { time lessEq LocalDateTime.now() }
+        EmailCodes.deleteWhere { time lessEq Instant.now() }
     }
 }

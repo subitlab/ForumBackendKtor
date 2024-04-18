@@ -4,12 +4,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.StackTraceElementProxy
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.AppenderBase
-import subit.console.Console
 import java.time.Instant
 import java.util.*
 import java.util.logging.Level
 import java.util.logging.LogRecord
-import kotlin.math.log
 
 /**
  * 使用[ForumLogger]接管ktor的logger
@@ -37,7 +35,7 @@ class LogbackAppender: AppenderBase<ILoggingEvent>()
                     .toArray { size: Int -> arrayOfNulls(size) })
             record.thrown = throwable
         }
-        ForumLogger.logger().log(record)
+        ForumLogger.logger.log(record)
     }.onFailure { ForumLogger.err.println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run { }
 
     private fun fromInt(id: Int): Level

@@ -31,7 +31,7 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt-jvm") // jwt登陆验证
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
     implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
-
+    implementation("io.ktor:ktor-server-swagger")
     implementation("io.github.smiley4:ktor-swagger-ui:2.8.0") // 创建api页面
 
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
@@ -53,7 +53,6 @@ dependencies {
     implementation("net.mamoe.yamlkt:yamlkt:0.13.0") // yaml for kotlin on read/write file
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
 
-    implementation("me.nullaqua:BluestarAPI-kotlin:4.0.0-pre7") // BluestarAPI
     implementation("org.fusesource.jansi:jansi:2.4.1") // 终端颜色码
     implementation("org.jline:jline-terminal-jansi:3.24.1") // 终端打印、命令等
     implementation("org.jline:jline-reader:3.24.1") // 终端打印、命令等

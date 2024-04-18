@@ -11,6 +11,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.fusesource.jansi.AnsiConsole
 import subit.console.Console
@@ -66,11 +67,31 @@ object ForumBackend
             verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
             validate() // 设置验证函数
             {
+                ForumLogger.config("用户token: id=${it.payload.getClaim("id").asInt()}, password=${it.payload.getClaim("password").asString()}")
                 val (b, user) = UserDatabase.checkUserLoginByEncryptedPassword(
-                    it.payload.getClaim("id").asLong(),
+                    it.payload.getClaim("id").asInt(),
                     it.payload.getClaim("password").asString()
                 ) ?: return@validate null
                 if (b) user
+                else null
+            }
+        }
+
+        @Serializable
+        data class ApiDocsUser(val name: String = "username", val password: String = "password")
+        var apiDocsUser: ApiDocsUser = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
+        Loader.reloadTasks.add {
+            apiDocsUser = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
+            ForumLogger.config("重新加载auth-api-docs配置: $apiDocsUser")
+        }
+
+        basic("auth-api-docs")
+        {
+            realm = "Access to the Swagger UI"
+            validate()
+            {
+                if (it.name == apiDocsUser.name && it.password == apiDocsUser.password)
+                    UserIdPrincipal(it.name)
                 else null
             }
         }
@@ -83,6 +104,8 @@ object ForumBackend
     {
         json(Json()
         {
+            // 设置默认值也序列化, 否则不默认值不会被序列化
+            encodeDefaults = true
             prettyPrint = true
             isLenient = true
             ignoreUnknownKeys = true
@@ -108,6 +131,7 @@ object ForumBackend
         {
             swaggerUrl = "api-docs"
             forwardRoot = true
+            authentication = "auth-api-docs"
         }
         info()
         {

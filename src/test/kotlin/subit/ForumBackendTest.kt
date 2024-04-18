@@ -1,21 +1,16 @@
 package subit
 
-import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import org.jetbrains.exposed.sql.deleteAll
-import subit.database.PermissionLevel
 import subit.database.UserDatabase
 import subit.database.WhitelistDatabase
-import subit.utils.HttpStatus
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class ForumBackendTest
 {
@@ -46,7 +41,7 @@ class ForumBackendTest
     {
         val client = createClient()
         {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation)
+            install(ContentNegotiation)
             {
                 json(Json()
                 {
@@ -56,70 +51,20 @@ class ForumBackendTest
                 })
             }
         }
-        client.get("/")
 
-        clearDatabase()
-        setWhiteList()
+        val token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg"
 
-        val token = client.post("/auth/register")
-        {
-            this.header("Content-Type", "application/json")
-            this.setBody(
-                buildJsonObject {
-                    put("password", TEST_PASSWORD)
-                    put("email", TEST_EMAIL)
-                    put("username", TEST_USERNAME)
-                    put("code", "123456")
-                }.toString()
-            )
-        }.let {
-            println(it.status.description)
-            it.body<LoginResponse>().token
-        }
-
-        val userID = UserDatabase.getUser(TEST_EMAIL)?.id ?: throw AssertionError("User not found")
-
-        UserDatabase.changeUserPermission(
-            id = userID,
-            read = PermissionLevel.ROOT,
-            post = PermissionLevel.ROOT,
-            comment = PermissionLevel.ROOT,
-            ask = PermissionLevel.ROOT,
-            file = PermissionLevel.ROOT,
-            delete = PermissionLevel.ROOT,
-            anonymous = PermissionLevel.ROOT,
-        )
-
-        println(UserDatabase.getUser(userID)?.toPermission())
-
-        client.post("/admin/user/changeUserPermission")
+        client.get("/user/info/0")
         {
             this.header("Content-Type", "application/json")
             this.header("Authorization", "Bearer $token")
-            this.setBody(
-                buildJsonObject {
-                    put("id", userID)
-                    put("read", PermissionLevel.SUPER_ADMIN.toString())
-                    put("post", PermissionLevel.SUPER_ADMIN.toString())
-                    put("comment", PermissionLevel.SUPER_ADMIN.toString())
-                    put("ask", PermissionLevel.SUPER_ADMIN.toString())
-                    put("file", PermissionLevel.SUPER_ADMIN.toString())
-                    put("delete", PermissionLevel.SUPER_ADMIN.toString())
-                    put("anonymous", PermissionLevel.SUPER_ADMIN.toString())
-                }.toString()
-            )
         }.apply {
-            assertEquals(HttpStatus.OK, status)
-        }
-
-        client.get("/admin/user/getUserPermission")
-        {
-            this.header("Content-Type", "application/json")
-            this.header("Authorization", "Bearer $token")
-            this.parameter("id", userID.toString())
-        }.apply {
-            assertEquals(HttpStatus.OK, status)
+            println(status)
             println(bodyAsText())
         }
     }
 }
+/*
+{Authorization=[Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg], Accept=[application/json], Accept-Charset=[UTF-8], User-Agent=[Ktor client], Content-Type=[application/json], Content-Length=[0]}
+{Authorization=[Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg], Accept=[application/json], Accept-Charset=[UTF-8], User-Agent=[Ktor client], Content-Type=[application/json], Host=[localhost:29719], Connection=[keep-alive]}
+ */

@@ -1,13 +1,16 @@
 package subit.router
 
-import io.github.smiley4.ktorswaggerui.dsl.OpenApiResponses
+import io.github.smiley4.ktorswaggerui.dsl.OpenApiRequest
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
 import subit.JWTAuth.getLoginUser
-import subit.database.UserFull
+import subit.dataClasses.UserFull
+import subit.database.ProhibitDatabase
+import subit.utils.HttpStatus
 
 typealias Context = PipelineContext<*, ApplicationCall>
 
@@ -27,17 +30,37 @@ suspend inline fun Context.checkPermission(body: (UserFull)->Boolean)
     }
 }
 
-@JvmName("addHttpStatusesWithBody")
-inline fun <reified T> OpenApiResponses.addHttpStatuses(vararg statuses: HttpStatusCode) =
-    if (T::class == Nothing::class) addHttpStatuses(*statuses)
-    else statuses.forEach { it to { description = it.description; body<T>() } }
-
-fun OpenApiResponses.addHttpStatuses(vararg statuses: HttpStatusCode) =
-    statuses.forEach { it to { description = it.description } }
+/**
+ * 辅助方法, 标记此接口需要验证token(需要登陆)
+ * @param required 是否必须登陆
+ */
+fun OpenApiRequest.authenticated(required: Boolean) = headerParameter<String>("Authorization")
+{
+    this.description = "Bearer token"
+    this.required = required
+}
 
 fun Application.router() = routing()
 {
-    auth()
-    adminUser()
-    adminPost()
+    authenticate(optional = true)
+    {
+        intercept(ApplicationCallPipeline.Call)
+        {
+            getLoginUser()?.id?.apply {
+                ProhibitDatabase.checkProhibit(this).apply {
+                    call.respond(HttpStatus.Forbidden)
+                    finish()
+                }
+            }
+        }
+
+        admin()
+        auth()
+        // todo block()
+        files()
+        // todo files()
+        // todo notice()
+        posts()
+        user()
+    }
 }

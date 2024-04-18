@@ -4,16 +4,15 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.statements.UpdateBuilder
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.encoding.Decoder
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
-import kotlin.reflect.full.isSuperclassOf
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.primaryConstructor
+import java.time.Instant
 
 /**
  * 数据库控制类,提供了一些便捷的方法
@@ -55,6 +54,7 @@ abstract class DataAccessObject<T: Table>(val table: T)
     }
 }
 
+/*
 inline fun <reified R: Any> Table.deserialize(resultRow: ResultRow): R
 {
     val clazz: KClass<R> = R::class // 获取类
@@ -164,6 +164,15 @@ inline fun <reified T: Table, I> T.match(map: Map<String, Any?>): I.()->Op<Boole
 }
 
 inline fun <reified T: Table, K, V, I> T.match(vararg pairs: Pair<K, V>): I.()->Op<Boolean> = match(mapOf(*pairs))
+*/
+
+object InstantSerializer: KSerializer<Instant>
+{
+    override val descriptor = String.serializer().descriptor
+    override fun deserialize(decoder: Decoder): Instant = Instant.ofEpochMilli(decoder.decodeLong())
+    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Instant) =
+        encoder.encodeLong(value.toEpochMilli())
+}
 
 /**
  * 数据库单例

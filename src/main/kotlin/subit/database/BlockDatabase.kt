@@ -2,69 +2,49 @@ package subit.database
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.*
+import subit.dataClasses.*
 
 /**
  * 板块数据库交互类
  */
 object BlockDatabase: DataAccessObject<BlockDatabase.Blocks>(Blocks)
 {
-    object Blocks: IdTable<Int>("blocks")
+    object Blocks: IdTable<BlockId>("blocks")
     {
-        /**
-         * 板块ID
-         */
-        override val id: Column<EntityID<Int>> = integer("id").autoIncrement().entityId()
-
-        /**
-         * 板块名称
-         */
+        override val id: Column<EntityID<BlockId>> = blockId("id").autoIncrement().entityId()
         val name = varchar("name", 100).index()
-
-        /**
-         * 板块描述
-         */
         val description = text("description")
-
-        /**
-         * 板块父板块
-         */
         val parent = reference("parent", Blocks, ReferenceOption.CASCADE, ReferenceOption.CASCADE).nullable().default(null).index()
-
-        /**
-         * 板块创建者
-         */
         val creator = reference("creator", UserDatabase.Users).index()
-
-        /**
-         * 发帖所需权限
-         */
-        val postingPermission = enumeration<PermissionLevel>("postingPermission").default(PermissionLevel.NORMAL)
-
-        /**
-         * 评论所需权限
-         */
-        val commentingPermission = enumeration<PermissionLevel>("commentingPermission").default(PermissionLevel.NORMAL)
-
-        /**
-         * 阅读所需权限
-         */
-        val readingPermission = enumeration<PermissionLevel>("readingPermission").default(PermissionLevel.NORMAL)
-        override val primaryKey: PrimaryKey
-            get() = PrimaryKey(id)
+        val posting = enumeration<PermissionLevel>("posting").default(PermissionLevel.NORMAL)
+        val commenting = enumeration<PermissionLevel>("commenting").default(PermissionLevel.NORMAL)
+        val reading = enumeration<PermissionLevel>("reading").default(PermissionLevel.NORMAL)
+        val anonymous = enumeration<PermissionLevel>("anonymous").default(PermissionLevel.NORMAL)
+        override val primaryKey: PrimaryKey = PrimaryKey(id)
     }
+
+    private fun deserializeBlock(row: ResultRow): BlockFull = BlockFull(
+        id = row[Blocks.id].value,
+        name = row[Blocks.name],
+        description = row[Blocks.description],
+        parent = row[Blocks.parent]?.value,
+        creator = row[Blocks.creator].value,
+        posting = row[Blocks.posting],
+        commenting = row[Blocks.commenting],
+        reading = row[Blocks.reading],
+        anonymous = row[Blocks.anonymous]
+    )
 
     suspend fun createBlock(
         name: String,
         description: String,
-        parent: Int?,
-        creator: Long,
+        parent: BlockId?,
+        creator: UserId,
         postingPermission: PermissionLevel = PermissionLevel.NORMAL,
         commentingPermission: PermissionLevel = PermissionLevel.NORMAL,
-        readingPermission: PermissionLevel = PermissionLevel.NORMAL
+        readingPermission: PermissionLevel = PermissionLevel.NORMAL,
+        anonymousPermission: PermissionLevel = PermissionLevel.NORMAL
     ) = query()
     {
         insert {
@@ -72,17 +52,32 @@ object BlockDatabase: DataAccessObject<BlockDatabase.Blocks>(Blocks)
             it[Blocks.description] = description
             it[Blocks.parent] = parent
             it[Blocks.creator] = creator
-            it[Blocks.postingPermission] = postingPermission
-            it[Blocks.commentingPermission] = commentingPermission
-            it[Blocks.readingPermission] = readingPermission
+            it[Blocks.posting] = postingPermission
+            it[Blocks.commenting] = commentingPermission
+            it[Blocks.reading] = readingPermission
+            it[Blocks.anonymous] = anonymousPermission
         }
     }
 
-    suspend fun setPostingPermission(block: Int, permission: PermissionLevel) = query()
+    suspend fun setPermission(
+        block: BlockId,
+        posting: PermissionLevel?,
+        commenting: PermissionLevel?,
+        reading: PermissionLevel?,
+        anonymous: PermissionLevel?
+    ) = query()
     {
-        update({ id eq block })
+        update({ Blocks.id eq block })
         {
-            it[postingPermission] = permission
+            if (posting != null) it[Blocks.posting] = posting
+            if (commenting != null) it[Blocks.commenting] = commenting
+            if (reading != null) it[Blocks.reading] = reading
+            if (anonymous != null) it[Blocks.anonymous] = anonymous
         }
+    }
+
+    suspend fun getBlock(block: BlockId): BlockFull = query()
+    {
+        select { Blocks.id eq block }.first().let(::deserializeBlock)
     }
 }

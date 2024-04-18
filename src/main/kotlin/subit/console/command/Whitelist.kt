@@ -9,12 +9,12 @@ import subit.database.WhitelistDatabase
 object Whitelist: TreeCommand(Add, Remove, Get)
 {
     override val description: String
-        get() = "白名单管理"
+        get() = "Whitelist manage."
 
     object Add: Command
     {
         override val description: String
-            get() = "添加白名单"
+            get() = "Add an email to whitelist."
         override val args: String
             get() = "<email>"
 
@@ -32,7 +32,7 @@ object Whitelist: TreeCommand(Add, Remove, Get)
     object Remove: Command
     {
         override val description: String
-            get() = "移除白名单"
+            get() = "Remove an email from whitelist."
         override val args: String
             get() = "<email>"
 

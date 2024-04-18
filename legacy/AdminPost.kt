@@ -1,31 +1,20 @@
 package subit.router
 
-import io.github.smiley4.ktorswaggerui.dsl.get
-import io.github.smiley4.ktorswaggerui.dsl.post
-import io.github.smiley4.ktorswaggerui.dsl.route
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
-import subit.database.BlockDatabase
-import subit.database.PermissionLevel
-import subit.database.PostDatabase
-import subit.database.PostFull
-import subit.utils.HttpStatus
-
-fun Route.adminPost() = authenticate()
+/*
+fun Route.adminPost()
 {
     route("/admin/post",{
         tags = listOf("帖子管理")
         description = "帖子管理接口"
+        request {
+            authenticated(true)
+        }
         response {
             addHttpStatuses(HttpStatus.Unauthorized, HttpStatus.Forbidden)
         }
     })
     {
-        checkPermission { it.post>=PermissionLevel.ADMIN }
+        checkPermission { it.permissions.post>=PermissionLevel.ADMIN }
         post("/processPost",{
             description = "审核帖子, 需要管理员权限"
             request {
@@ -39,7 +28,7 @@ fun Route.adminPost() = authenticate()
         get("/getPostNeedProcess",{
             description = "获取需要审核的帖子, 需要管理员权限"
             request {
-                pathParameter<Long>("pid") { description = "帖子ID" }
+                queryParameter<Long>("pid") { description = "帖子ID" }
             }
             response {
                 addHttpStatuses<PostFull>(HttpStatus.OK)
@@ -58,7 +47,6 @@ fun Route.adminPost() = authenticate()
         }) { limitBlock() }
     }
 }
-
 @Serializable
 data class ProcessPost(val pid: Long, val allow: Boolean)
 private suspend fun Context.processPost()
@@ -68,6 +56,7 @@ private suspend fun Context.processPost()
         process.pid,
         if (process.allow) PostDatabase.PostState.NORMAL else PostDatabase.PostState.HIDDEN
     )
+    AdminOperationDatabase.addOperation(getLoginUser()!!.id,process)
     call.respond(HttpStatus.OK)
 }
 
@@ -84,5 +73,8 @@ private suspend fun Context.limitBlock()
 {
     val data = call.receive<LimitBlock>()
     BlockDatabase.setPostingPermission(data.bid, data.permission)
+    AdminOperationDatabase.addOperation(getLoginUser()!!.id,data)
     call.respond(HttpStatus.OK)
 }
+
+ */

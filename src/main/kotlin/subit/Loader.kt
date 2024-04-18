@@ -116,5 +116,9 @@ object Loader
      * @param path 资源路径
      * @return 资源文件输入流
      */
-    fun getResources(path: String): InputStream? = javaClass.classLoader.getResource(path)?.openStream()
+    fun getResource(path: String): InputStream?
+    {
+        if (path.startsWith("/")) return Loader::class.java.getResource(path)?.openStream()
+        return Loader::class.java.getResource("/$path")?.openStream()
+    }
 }

@@ -9,13 +9,11 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth
 import subit.JWTAuth.getLoginUser
+import subit.dataClasses.UserId
 import subit.database.EmailCodeDatabase
 import subit.database.UserDatabase
 import subit.database.WhitelistDatabase
-import subit.utils.HttpStatus
-import subit.utils.checkEmail
-import subit.utils.checkPassword
-import subit.utils.checkUserInfo
+import subit.utils.*
 
 fun Route.auth()
 {
@@ -29,8 +27,8 @@ fun Route.auth()
                 body<RegisterInfo> { description = "注册信息" }
             }
             this.response {
-                addHttpStatuses<JWTAuth.Token>(HttpStatus.OK)
-                addHttpStatuses(
+                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses(
                     HttpStatus.WrongEmailCode,
                     HttpStatus.EmailExist,
                     HttpStatus.EmailFormatError,
@@ -47,8 +45,8 @@ fun Route.auth()
                 body<LoginInfo> { description = "登陆信息" }
             }
             this.response {
-                addHttpStatuses<JWTAuth.Token>(HttpStatus.OK)
-                addHttpStatuses(
+                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses(
                     HttpStatus.PasswordError,
                     HttpStatus.AccountNotExist,
                 )
@@ -61,8 +59,8 @@ fun Route.auth()
                 body<LoginByCodeInfo> { description = "登陆信息" }
             }
             this.response {
-                addHttpStatuses<JWTAuth.Token>(HttpStatus.OK)
-                addHttpStatuses(
+                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses(
                     HttpStatus.AccountNotExist,
                     HttpStatus.WrongEmailCode,
                 )
@@ -75,8 +73,8 @@ fun Route.auth()
                 body<ResetPasswordInfo> { description = "重置密码信息" }
             }
             this.response {
-                addHttpStatuses(HttpStatus.OK)
-                addHttpStatuses(
+                statuses(HttpStatus.OK)
+                statuses(
                     HttpStatus.WrongEmailCode,
                     HttpStatus.AccountNotExist,
                 )
@@ -89,8 +87,8 @@ fun Route.auth()
                 body<EmailInfo> { description = "邮箱信息" }
             }
             this.response {
-                addHttpStatuses(HttpStatus.OK)
-                addHttpStatuses(
+                statuses(HttpStatus.OK)
+                statuses(
                     HttpStatus.EmailFormatError,
                 )
             }
@@ -99,11 +97,12 @@ fun Route.auth()
         post("/changePassword",{
             description = "修改密码"
             request {
+                authenticated(true)
                 body<ChangePasswordInfo> { description = "修改密码信息" }
             }
             this.response {
-                addHttpStatuses<JWTAuth.Token>(HttpStatus.OK)
-                addHttpStatuses(
+                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses(
                     HttpStatus.Unauthorized,
                     HttpStatus.PasswordError,
                     HttpStatus.PasswordFormatError,
@@ -114,7 +113,7 @@ fun Route.auth()
 }
 
 @Serializable
-data class RegisterInfo(val username: String, val password: String, val email: String, val code: String)
+private data class RegisterInfo(val username: String, val password: String, val email: String, val code: String)
 private suspend fun Context.register()
 {
     val registerInfo: RegisterInfo = call.receive()
@@ -142,7 +141,7 @@ private suspend fun Context.register()
 }
 
 @Serializable
-data class LoginInfo(val email: String? = null, val id: Long? = null, val password: String)
+private data class LoginInfo(val email: String? = null, val id: UserId? = null, val password: String)
 private suspend fun Context.login()
 {
     val loginInfo = call.receive<LoginInfo>()
@@ -157,7 +156,7 @@ private suspend fun Context.login()
 }
 
 @Serializable
-data class LoginByCodeInfo(val email: String? = null, val id: Long? = null, val code: String)
+private data class LoginByCodeInfo(val email: String? = null, val id: UserId? = null, val code: String)
 private suspend fun Context.loginByCode()
 {
     val loginInfo = call.receive<LoginByCodeInfo>()
@@ -177,7 +176,7 @@ private suspend fun Context.loginByCode()
 }
 
 @Serializable
-data class ResetPasswordInfo(val email: String, val code: String, val password: String)
+private data class ResetPasswordInfo(val email: String, val code: String, val password: String)
 private suspend fun Context.resetPassword()
 {
     // 接收重置密码的信息
@@ -197,7 +196,7 @@ private suspend fun Context.resetPassword()
 }
 
 @Serializable
-data class ChangePasswordInfo(val oldPassword: String, val newPassword: String)
+private data class ChangePasswordInfo(val oldPassword: String, val newPassword: String)
 private suspend fun Context.changePassword()
 {
     val (oldPassword, newPassword) = call.receive<ChangePasswordInfo>()
@@ -211,7 +210,7 @@ private suspend fun Context.changePassword()
 }
 
 @Serializable
-data class EmailInfo(val email: String, val usage: EmailCodeDatabase.EmailCodeUsage)
+private data class EmailInfo(val email: String, val usage: EmailCodeDatabase.EmailCodeUsage)
 private suspend fun Context.sendEmailCode()
 {
     val emailInfo = call.receive<EmailInfo>()
