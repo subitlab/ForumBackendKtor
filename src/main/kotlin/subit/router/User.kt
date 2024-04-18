@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.user
 
 import io.github.smiley4.ktorswaggerui.dsl.delete
 import io.github.smiley4.ktorswaggerui.dsl.get
@@ -19,6 +20,7 @@ import subit.database.PostDatabase
 import subit.database.StarDatabase
 import subit.database.UserDatabase
 import subit.logger.ForumLogger
+import subit.router.*
 import subit.utils.AvatarUtils
 import subit.utils.HttpStatus
 import subit.utils.statuses

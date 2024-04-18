@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.report
 
 // TODO 举报一个帖子
 // TODO 举报一个评论

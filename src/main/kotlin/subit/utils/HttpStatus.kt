@@ -10,6 +10,7 @@ import subit.utils.Error.Companion.toError
 /**
  * 定义了一些出现的自定义的HTTP状态码, 更多HTTP状态码请参考[io.ktor.http.HttpStatusCode]
  */
+@Suppress("unused")
 data class HttpStatus(val code: HttpStatusCode, val message: String)
 {
     companion object
@@ -60,25 +61,25 @@ data class Error(val message: String)
 }
 suspend inline fun ApplicationCall.respond(status: HttpStatus) = this.respond(status.code, status.toError())
 suspend inline fun <reified T: Any> ApplicationCall.respond(status: HttpStatus,t: T) = this.respond(status.code, t)
-fun OpenApiResponses.statuses(vararg statuses: HttpStatus)
+fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "错误信息")
 {
     statuses.forEach {
         it.code to {
             description = it.message
             body<Error> {
-                description = "错误信息"
+                description = bodyDescription
                 example("固定值", it.toError())
             }
         }
     }
 }
 @JvmName("statusesWithBody")
-inline fun <reified T> OpenApiResponses.statuses(vararg statuses: HttpStatus)
+inline fun <reified T> OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "返回体")
 {
     statuses.forEach {
         it.code to {
             description = it.message
-            body<T> { description = "返回体" }
+            body<T> { description = bodyDescription }
         }
     }
 }

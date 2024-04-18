@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.auth
 
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
@@ -13,6 +14,8 @@ import subit.dataClasses.UserId
 import subit.database.EmailCodeDatabase
 import subit.database.UserDatabase
 import subit.database.WhitelistDatabase
+import subit.router.Context
+import subit.router.authenticated
 import subit.utils.*
 
 fun Route.auth()

@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.posts
 
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.server.application.*
@@ -15,6 +16,7 @@ import subit.database.PermissionDatabase.canPost
 import subit.database.PermissionDatabase.canRead
 import subit.database.PostDatabase
 import subit.database.StarDatabase
+import subit.router.Context
 import subit.utils.HttpStatus
 import subit.utils.statuses
 
@@ -104,7 +106,7 @@ private suspend fun Context.getPost()
 }
 
 @Serializable
-private data class EditPost(val title: String, val content: String, )
+private data class EditPost(val title: String, val content: String)
 private suspend fun Context.editPost()
 {
     val post = call.receive<EditPost>()
@@ -155,7 +157,7 @@ private suspend fun Context.likePost()
 }
 
 @Serializable
-private data class NewPost(val title: String, val content: String, val anonymous: Boolean, val block: Int, )
+private data class NewPost(val title: String, val content: String, val anonymous: Boolean, val block: Int)
 private suspend fun Context.newPost()
 {
     val post = call.receive<PostInfo>()

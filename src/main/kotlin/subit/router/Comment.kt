@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.comment
 
 // TODO 对一个帖子进行评论
 // TODO 对一个评论进行评论

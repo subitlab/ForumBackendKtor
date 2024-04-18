@@ -213,6 +213,12 @@ object FileUtils
     {
         File(rawFolder, "${user}.${id}.file").delete()
     }
+
+    fun changeInfo(id: UUID, info: FileInfo)
+    {
+        val indexFile = File(indexFolder, "${id}.index")
+        indexFile.writeText(fileInfoSerializer.encodeToString(FileInfo.serializer(), info))
+    }
 }
 
 /**

@@ -10,6 +10,11 @@ import io.ktor.util.pipeline.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.UserFull
 import subit.database.ProhibitDatabase
+import subit.router.admin.admin
+import subit.router.auth.auth
+import subit.router.files.files
+import subit.router.posts.posts
+import subit.router.user.user
 import subit.utils.HttpStatus
 
 typealias Context = PipelineContext<*, ApplicationCall>

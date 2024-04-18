@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.block
 
 // TODO 创建板块
 // TODO 修改板块信息

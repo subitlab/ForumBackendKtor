@@ -1,4 +1,5 @@
-package subit.router
+@file:Suppress("PackageDirectoryMismatch")
+package subit.router.admin
 
 import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
@@ -16,6 +17,9 @@ import subit.dataClasses.UserId
 import subit.database.AdminOperationDatabase
 import subit.database.ProhibitDatabase
 import subit.database.UserDatabase
+import subit.router.Context
+import subit.router.authenticated
+import subit.router.checkPermission
 import subit.utils.HttpStatus
 import subit.utils.checkUserInfo
 import subit.utils.respond
@@ -70,7 +74,7 @@ fun Route.admin()
         post("changePermission", {
             description = "修改用户权限, 需要当前用户的权限大于ADMIN且大于对方的权限"
             request {
-                body<UserId> { description = "用户id" }
+                body<ChangePermission> { description = "修改信息" }
             }
             response {
                 statuses(HttpStatus.OK)
