@@ -64,7 +64,3 @@ class ForumBackendTest
         }
     }
 }
-/*
-{Authorization=[Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg], Accept=[application/json], Accept-Charset=[UTF-8], User-Agent=[Ktor client], Content-Type=[application/json], Content-Length=[0]}
-{Authorization=[Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg], Accept=[application/json], Accept-Charset=[UTF-8], User-Agent=[Ktor client], Content-Type=[application/json], Host=[localhost:29719], Connection=[keep-alive]}
- */
