@@ -28,7 +28,7 @@ data class PostInfo(
     val lastModified: Long,
     val view: Long,
     val block: Int,
-    val state: PostState,
+    val state: State,
 )
 {
     suspend fun toPostFull(): PostFull
@@ -50,7 +50,7 @@ data class PostFull(
     val lastModified: Long,
     val view: Long,
     val block: Int,
-    val state: PostState,
+    val state: State,
     val like: Long,
     val dislike: Long,
     val star: Long,
@@ -59,7 +59,7 @@ data class PostFull(
 /**
  * 帖子当前状态,
  */
-enum class PostState
+enum class State
 {
     /**
      * 正常

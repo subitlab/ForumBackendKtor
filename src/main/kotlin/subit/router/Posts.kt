@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.posts
 
 import io.github.smiley4.ktorswaggerui.dsl.*
@@ -10,25 +11,25 @@ import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.database.LikesDatabase
-import subit.database.PermissionDatabase.canAnonymous
-import subit.database.PermissionDatabase.canDelete
-import subit.database.PermissionDatabase.canPost
-import subit.database.PermissionDatabase.canRead
 import subit.database.PostDatabase
 import subit.database.StarDatabase
+import subit.database.checkPermission
 import subit.router.Context
+import subit.router.authenticated
+import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.statuses
 
 fun Route.posts()
 {
     route("post", {
-        listOf("帖子")
+        tags = listOf("帖子")
     }) {
         get("/{id}", {
-            description = "获取帖子信息, "
+            description = "获取帖子信息"
             request {
-                pathParameter<Long>("id") { required=true;description = "要获取的帖子的id, 若是匿名帖则author始终是null" }
+                authenticated(false)
+                pathParameter<Long>("id") { required = true; description = "要获取的帖子的id, 若是匿名帖则author始终是null" }
             }
             response {
                 statuses<PostFull>(HttpStatus.OK)
@@ -39,7 +40,8 @@ fun Route.posts()
         delete("/{id}", {
             description = "删除帖子"
             request {
-                pathParameter<Long>("id") { required=true;description = "要删除的帖子的id" }
+                authenticated(true)
+                pathParameter<Long>("id") { required = true; description = "要删除的帖子的id" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -50,7 +52,8 @@ fun Route.posts()
         put("/{id}", {
             description = "编辑帖子"
             request {
-                body<EditPost> { required=true;description = "编辑帖子, 成功返回帖子ID" }
+                authenticated(true)
+                body<EditPost> { required = true; description = "编辑帖子, 成功返回帖子ID" }
             }
             response {
                 statuses<Long>(HttpStatus.OK)
@@ -61,8 +64,9 @@ fun Route.posts()
         post("/{id}/like", {
             description = "点赞/点踩/取消点赞/收藏/取消收藏 帖子"
             request {
-                pathParameter<Long>("id") { required=true;description = "帖子的id" }
-                body<LikePost> { required=true;description = "点赞/点踩/取消点赞/收藏/取消收藏" }
+                authenticated(true)
+                pathParameter<Long>("id") { required = true; description = "帖子的id" }
+                body<LikePost> { required = true; description = "点赞/点踩/取消点赞/收藏/取消收藏" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -73,7 +77,8 @@ fun Route.posts()
         post("/new", {
             description = "新建帖子"
             request {
-                body<NewPost> { required=true;description = "发帖, 成功返回帖子ID" }
+                authenticated(true)
+                body<NewPost> { required = true; description = "发帖, 成功返回帖子ID" }
             }
             response {
                 statuses<Long>(HttpStatus.OK)
@@ -84,12 +89,24 @@ fun Route.posts()
         post("/list", {
             description = "获取帖子列表"
             request {
-                queryParameter<Int>("block") { required=false;description = "板块ID" }
-                queryParameter<Int>("user") { required=false;description = "作者ID" }
-                queryParameter<Long>("begin") { required=true;description = "起始位置" }
-                queryParameter<Int>("count") { required=true;description = "获取数量" }
+                authenticated(false)
+                queryParameter<Int>("block") { required = false; description = "板块ID" }
+                queryParameter<Int>("user") { required = false; description = "作者ID" }
+                paged()
             }
         }) { getPosts() }
+
+        get("/search", {
+            description = "搜索帖子"
+            request {
+                authenticated(false)
+                queryParameter<String>("key") { required = true; description = "关键字" }
+                paged()
+            }
+            response {
+                statuses<Slice<PostId>>(HttpStatus.OK)
+            }
+        }) { searchPost() }
     }
 }
 
@@ -98,7 +115,7 @@ private suspend fun Context.getPost()
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val postInfo = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
-    if (!loginUser.canRead(postInfo)) return call.respond(HttpStatus.NotFound) // 检查用户权限
+    checkPermission { checkCanRead(postInfo) }
     val postFull = postInfo.toPostFull()
     if (!postFull.anonymous) call.respond(postFull) // 若不是匿名帖则直接返回
     else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(postFull.copy(author = 0))
@@ -107,6 +124,7 @@ private suspend fun Context.getPost()
 
 @Serializable
 private data class EditPost(val title: String, val content: String)
+
 private suspend fun Context.editPost()
 {
     val post = call.receive<EditPost>()
@@ -122,13 +140,12 @@ private suspend fun Context.deletePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val post = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
-    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    if (loginUser.canDelete(post)) PostDatabase.setPostState(id, PostState.DELETED).also { call.respond(HttpStatus.OK) }
-    else call.respond(HttpStatus.Forbidden)
+    checkPermission { checkCanDelete(post) }
+    PostDatabase.setPostState(id, State.DELETED).also { call.respond(HttpStatus.OK) }
 }
 
 @Serializable
- private enum class LikeType
+private enum class LikeType
 {
     LIKE,
     DISLIKE,
@@ -136,15 +153,17 @@ private suspend fun Context.deletePost()
     STAR,
     UNSTAR
 }
+
 @Serializable
 private data class LikePost(val type: LikeType)
+
 private suspend fun Context.likePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val post = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
     val type = call.receive<LikePost>().type
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    if (!loginUser.canRead(post)) return call.respond(HttpStatus.NotFound) // 检查用户权限
+    checkPermission { checkCanRead(post) }
     when (type)
     {
         LikeType.LIKE    -> LikesDatabase.like(loginUser.id, id, true)
@@ -158,12 +177,13 @@ private suspend fun Context.likePost()
 
 @Serializable
 private data class NewPost(val title: String, val content: String, val anonymous: Boolean, val block: Int)
+
 private suspend fun Context.newPost()
 {
     val post = call.receive<PostInfo>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    if (!loginUser.canPost(post.block)) return call.respond(HttpStatus.Forbidden)
-    if (!loginUser.canAnonymous(post.block)) return call.respond(HttpStatus.Forbidden)
+    checkPermission { checkCanPost(post.block) }
+    if (post.anonymous) checkPermission { checkCanAnonymous(post.block) }
     val id = PostDatabase.createPost(
         title = post.title,
         content = post.content,
@@ -182,5 +202,14 @@ private suspend fun Context.getPosts()
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val posts = PostDatabase.getPosts(loginUser, block, author, begin, count)
+    call.respond(posts)
+}
+
+private suspend fun Context.searchPost()
+{
+    val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val posts = PostDatabase.searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
     call.respond(posts)
 }

@@ -67,7 +67,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
         }
     }
 
-    var config: EmailConfig
+    var config: EmailConfig = EmailConfig.example
         private set
 
     init
@@ -83,7 +83,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
                 ForumLogger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
             }
         )
-        config = Loader.getConfigOrCreate("email.yml", EmailConfig.example)
+        reloadConfig()
         Loader.reloadTasks.add(::reloadConfig)
     }
 
@@ -91,7 +91,7 @@ object EmailCodeDatabase: DataAccessObject<EmailCodeDatabase.EmailCodes>(EmailCo
     {
         config = Loader.getConfigOrCreate("email.yml", EmailConfig.example)
         emailPattern = Pattern.compile(config.emailFormat)
-        ForumLogger.config("Email config reloaded")
+        ForumLogger.config("Email config reloaded successfully: $config")
     }
 
     suspend fun sendEmailCode(email: String, usage: EmailCodeUsage): Unit = query()

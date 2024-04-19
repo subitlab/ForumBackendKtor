@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.user
 
 import io.github.smiley4.ktorswaggerui.dsl.delete
@@ -15,12 +16,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.AdminOperationDatabase
-import subit.database.PostDatabase
-import subit.database.StarDatabase
-import subit.database.UserDatabase
+import subit.database.*
 import subit.logger.ForumLogger
-import subit.router.*
+import subit.router.Context
+import subit.router.authenticated
+import subit.router.paged
 import subit.utils.AvatarUtils
 import subit.utils.HttpStatus
 import subit.utils.statuses
@@ -41,7 +41,7 @@ fun Route.user()
                 """.trimIndent()
             request {
                 authenticated(false)
-                pathParameter<Long>("id") { description = "用户ID" }
+                pathParameter<Long>("id") { required = true; description = "用户ID" }
             }
             response {
                 "200: 获取完整用户信息成功" to {
@@ -62,11 +62,12 @@ fun Route.user()
                 authenticated(true)
                 pathParameter<Long>("id")
                 {
+                    required = true
                     description = """
                         要修改的用户ID, 0为当前登陆用户
                     """.trimIndent()
                 }
-                body<ChangeIntroduction> { description = "个人简介" }
+                body<ChangeIntroduction> { required = true; description = "个人简介" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -80,12 +81,14 @@ fun Route.user()
                 authenticated(true)
                 pathParameter<Long>("id")
                 {
+                    required = true
                     description = """
                         要修改的用户ID, 0为当前登陆用户
                     """.trimIndent()
                 }
                 body()
                 {
+                    required = true
                     mediaType(ContentType.Image.Any)
                     description = "头像图片, 要求是正方形的"
                 }
@@ -108,6 +111,7 @@ fun Route.user()
                 authenticated(false)
                 pathParameter<Long>("id")
                 {
+                    required = true
                     description = """
                         要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆
                     """.trimIndent()
@@ -132,6 +136,7 @@ fun Route.user()
                 authenticated(true)
                 pathParameter<Long>("id")
                 {
+                    required = true
                     description = """
                         要删除的用户ID, 0为当前登陆用户
                     """.trimIndent()
@@ -153,13 +158,13 @@ fun Route.user()
                 authenticated(false)
                 pathParameter<Long>("id")
                 {
+                    required = true
                     description = """
                         要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆。
                         若目标用户
                     """.trimIndent()
                 }
-                queryParameter<Long>("begin") { description = "起始位置(篇)" }
-                queryParameter<Int>("limit") { description = "总共获取多少篇" }
+                paged()
             }
             response {
                 statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized)
@@ -171,17 +176,28 @@ fun Route.user()
             description = "切换是否公开收藏"
             request {
                 authenticated(true)
-                body<SwitchStars> { description = "是否公开收藏" }
+                body<SwitchStars> { required = true; description = "是否公开收藏" }
             }
             response {
                 statuses(HttpStatus.OK)
                 statuses(HttpStatus.Unauthorized)
             }
         }) { switchStars() }
+
+        get("/search", {
+            description = "搜索用户 会返回所有用户名包含key的用户"
+            request {
+                queryParameter<String>("key") { required = true;description = "关键字" }
+                paged()
+            }
+            response {
+                statuses<Slice<UserId>>(HttpStatus.OK)
+            }
+        }) { searchUser() }
     }
 }
 
-suspend fun Context.getUserInfo()
+private suspend fun Context.getUserInfo()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
@@ -203,7 +219,8 @@ suspend fun Context.getUserInfo()
 
 @Serializable
 private data class ChangeIntroduction(val introduction: String)
-suspend fun Context.changeIntroduction()
+
+private suspend fun Context.changeIntroduction()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -215,7 +232,7 @@ suspend fun Context.changeIntroduction()
     }
     else
     {
-        checkPermission { it.permission >= PermissionLevel.ADMIN }
+        checkPermission { checkHasGlobalAdmin() }
         if (UserDatabase.changeIntroduction(id, changeIntroduction.introduction))
         {
             AdminOperationDatabase.addOperation(loginUser.id, changeIntroduction)
@@ -226,7 +243,7 @@ suspend fun Context.changeIntroduction()
     }
 }
 
-suspend fun Context.changeAvatar()
+private suspend fun Context.changeAvatar()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -247,13 +264,13 @@ suspend fun Context.changeAvatar()
     }
     else
     {
-        checkPermission { it.permission >= PermissionLevel.ADMIN }
+        checkPermission { checkHasGlobalAdmin() }
         val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
         AvatarUtils.setAvatar(user.id, image)
     }
 }
 
-suspend fun Context.deleteAvatar()
+private suspend fun Context.deleteAvatar()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -264,14 +281,14 @@ suspend fun Context.deleteAvatar()
     }
     else
     {
-        checkPermission { it.permission >= PermissionLevel.ADMIN }
+        checkPermission { checkHasGlobalAdmin() }
         val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
         AvatarUtils.setDefaultAvatar(user.id)
         call.respond(HttpStatus.OK)
     }
 }
 
-suspend fun Context.getAvatar()
+private suspend fun Context.getAvatar()
 {
     val id = (call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)).let {
         if (it == 0) getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
@@ -286,11 +303,11 @@ suspend fun Context.getAvatar()
     }
 }
 
-suspend fun Context.getStars()
+private suspend fun Context.getStars()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.request.queryParameters["limit"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.request.queryParameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser()
     // 若查询自己的收藏
     if (id == 0)
@@ -310,10 +327,19 @@ suspend fun Context.getStars()
 
 @Serializable
 private data class SwitchStars(val showStars: Boolean)
-suspend fun Context.switchStars()
+
+private suspend fun Context.switchStars()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val switchStars = call.receive<SwitchStars>()
     UserDatabase.changeShowStars(loginUser.id, switchStars.showStars)
     call.respond(HttpStatus.OK)
+}
+
+private suspend fun Context.searchUser()
+{
+    val username = call.request.queryParameters["key"] ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.request.queryParameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    call.respond(UserDatabase.searchUser(username, begin, count).map(UserFull::id))
 }

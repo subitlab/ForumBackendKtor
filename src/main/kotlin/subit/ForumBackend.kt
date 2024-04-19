@@ -79,10 +79,12 @@ object ForumBackend
 
         @Serializable
         data class ApiDocsUser(val name: String = "username", val password: String = "password")
-        var apiDocsUser: ApiDocsUser = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
+        fun reloadApiDocsUser() = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
+        var apiDocsUser: ApiDocsUser = reloadApiDocsUser()
+
         Loader.reloadTasks.add {
-            apiDocsUser = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
-            ForumLogger.config("重新加载auth-api-docs配置: $apiDocsUser")
+            apiDocsUser = reloadApiDocsUser()
+            ForumLogger.config("Reload auth-api-docs configs: $apiDocsUser")
         }
 
         basic("auth-api-docs")

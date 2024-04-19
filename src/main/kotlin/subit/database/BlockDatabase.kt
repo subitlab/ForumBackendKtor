@@ -4,6 +4,8 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import subit.dataClasses.*
+import subit.dataClasses.Slice
+import subit.dataClasses.Slice.Companion.asSlice
 
 /**
  * 板块数据库交互类
@@ -17,6 +19,7 @@ object BlockDatabase: DataAccessObject<BlockDatabase.Blocks>(Blocks)
         val description = text("description")
         val parent = reference("parent", Blocks, ReferenceOption.CASCADE, ReferenceOption.CASCADE).nullable().default(null).index()
         val creator = reference("creator", UserDatabase.Users).index()
+        val state = enumeration<State>("state").default(State.NORMAL)
         val posting = enumeration<PermissionLevel>("posting").default(PermissionLevel.NORMAL)
         val commenting = enumeration<PermissionLevel>("commenting").default(PermissionLevel.NORMAL)
         val reading = enumeration<PermissionLevel>("reading").default(PermissionLevel.NORMAL)
@@ -76,8 +79,35 @@ object BlockDatabase: DataAccessObject<BlockDatabase.Blocks>(Blocks)
         }
     }
 
-    suspend fun getBlock(block: BlockId): BlockFull = query()
+    suspend fun getBlock(block: BlockId): BlockFull? = query()
     {
-        select { Blocks.id eq block }.first().let(::deserializeBlock)
+        select { Blocks.id eq block }.firstOrNull()?.let(::deserializeBlock)
+    }
+
+    suspend fun setState(block: BlockId, state: State) = query()
+    {
+        update({ Blocks.id eq block })
+        {
+            it[Blocks.state] = state
+        }
+    }
+
+    suspend fun getChildren(parent: BlockId): List<BlockFull> = query()
+    {
+        select { Blocks.parent eq parent }.map(::deserializeBlock)
+    }
+
+    suspend fun searchBlock(user: UserId?, key: String, begin: Long, count: Int): Slice<BlockFull> = query()
+    {
+        val r = Blocks.selectBatched()
+        {
+            (Blocks.name like "%$key%") or (Blocks.description like "%$key%")
+        }.flattenAsIterable().asSlice(begin, count)
+        {
+            val block = it[Blocks.id].value
+            val permission = user?.let { PermissionDatabase.getPermission(user, block) } ?: PermissionLevel.NORMAL
+            permission >= it[Blocks.reading]
+        }
+        return@query r.map(::deserializeBlock)
     }
 }

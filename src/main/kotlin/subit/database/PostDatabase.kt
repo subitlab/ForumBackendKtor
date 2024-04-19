@@ -8,7 +8,6 @@ import org.jetbrains.exposed.sql.javatime.timestamp
 import subit.dataClasses.*
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
-import subit.database.PermissionDatabase.canRead
 
 /**
  * 帖子数据库交互类
@@ -26,7 +25,7 @@ object PostDatabase: DataAccessObject<PostDatabase.Posts>(Posts)
         val create = timestamp("create").defaultExpression(CurrentTimestamp()).index()
         val lastModified = timestamp("last_modified").defaultExpression(CurrentTimestamp()).index()
         val view = long("view").default(0L)
-        val state = enumeration("state", PostState::class).default(PostState.NORMAL)
+        val state = enumeration("state", State::class).default(State.NORMAL)
         override val primaryKey = PrimaryKey(id)
     }
 
@@ -70,7 +69,7 @@ object PostDatabase: DataAccessObject<PostDatabase.Posts>(Posts)
         }
     }
 
-    suspend fun setPostState(pid: PostId, state: PostState) = query()
+    suspend fun setPostState(pid: PostId, state: State) = query()
     {
         update({ Posts.id eq pid }) { it[Posts.state] = state }
     }
@@ -91,17 +90,29 @@ object PostDatabase: DataAccessObject<PostDatabase.Posts>(Posts)
         limit: Int = Int.MAX_VALUE,
     ): Slice<PostInfo> = query()
     {
-        if (block != null && !loginUser.canRead(block)) return@query Slice.empty()
-        selectBatched()
+        if (block != null)
+        {
+            val blockFull = BlockDatabase.getBlock(block) ?: return@query Slice.empty()
+            val permission = loginUser?.let { PermissionDatabase.getPermission(it.id, blockFull.id) }
+                             ?: PermissionLevel.NORMAL
+            if (permission < blockFull.reading) return@query Slice.empty()
+        }
+        val r = selectBatched() // 注意使用selectBatched以避免一次性查询所有帖子引起内存溢出
         {
             var op: Op<Boolean> = Op.TRUE
             if (block != null) op = op and (Posts.block eq block) // block不为空则匹配block
             if (author != null) op = op and (Posts.author eq author) // author不为空则匹配author
             if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) // 若用户不是管理员
-                op = op and (Posts.state eq PostState.NORMAL)
+                op = op and (Posts.state eq State.NORMAL)
             op
-        }.flattenAsIterable().asSlice(begin, limit) {
-            loginUser.canRead(it[Posts.block].value) // 过滤掉用户无权查看的帖子
+        }.flattenAsIterable()
+
+        return@query if (block != null) r.asSlice(begin, limit).map(::deserializePost) //block不空则已经检查过权限
+        else r.asSlice(begin, limit) { // 如果block是null说明上面未提前检查权限, 则针对每一帖子检查
+            val blockFull = BlockDatabase.getBlock(it[Posts.block].value) ?: return@asSlice false
+            val permission = loginUser?.let { PermissionDatabase.getPermission(it.id, blockFull.id) }
+                             ?: PermissionLevel.NORMAL
+            permission >= blockFull.reading
         }.map(::deserializePost)
     }
 
@@ -111,5 +122,16 @@ object PostDatabase: DataAccessObject<PostDatabase.Posts>(Posts)
             if (it != null) select { Posts.id eq it }.firstOrNull()
             else null
         }.map { it?.let(::deserializePost) }
+    }
+
+    suspend fun searchPosts(user: UserId?, key: String, begin: Long, count: Int): Slice<PostInfo> = query()
+    {
+        Posts.select { (Posts.title like "%$key%") or (Posts.content like "%$key%") }
+            .asSlice(begin, count) {
+                val blockFull = BlockDatabase.getBlock(it[Posts.block].value) ?: return@asSlice false
+                val permission = user?.let { PermissionDatabase.getPermission(user, blockFull.id) }
+                                 ?: PermissionLevel.NORMAL
+                permission >= blockFull.reading
+            }.map(::deserializePost)
     }
 }

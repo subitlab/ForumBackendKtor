@@ -36,7 +36,7 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         // 邮箱验证码错误 401
         val WrongEmailCode = HttpStatus(HttpStatusCode.Unauthorized, "邮箱验证码错误")
         // 未找到 404
-        val NotFound = HttpStatus(HttpStatusCode.NotFound, "未找到")
+        val NotFound = HttpStatus(HttpStatusCode.NotFound, "目标不存在或已失效")
         // 操作成功 200
         val OK = HttpStatus(HttpStatusCode.OK, "操作成功")
         // 不合法的请求 400

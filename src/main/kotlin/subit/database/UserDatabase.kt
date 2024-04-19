@@ -7,6 +7,8 @@ import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
 import subit.JWTAuth
 import subit.dataClasses.PermissionLevel
+import subit.dataClasses.Slice
+import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
 
@@ -166,5 +168,10 @@ object UserDatabase: DataAccessObject<UserDatabase.Users>(Users)
     suspend fun changeFilePermission(id: UserId, permission: PermissionLevel): Boolean = query()
     {
         update({ Users.id eq id }) { it[Users.filePermission] = permission } > 0
+    }
+
+    suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull> = query()
+    {
+        Users.select { Users.username like "%$username%" }.asSlice(begin, count).map(::deserialize)
     }
 }

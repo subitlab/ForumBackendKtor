@@ -21,7 +21,9 @@ object Loader
     operator fun invoke()
     {
         ForumLogger.config("Loading configs...")
-        reloadTasks.forEach { it() }
+        reloadTasks.forEach {
+            ForumLogger.severe("在重载配置文件时出现错误, 无法执行重载: $it", it)
+        }
     }
 
     /**

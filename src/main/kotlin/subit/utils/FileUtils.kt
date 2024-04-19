@@ -50,7 +50,7 @@ object FileUtils
     }
 
     val dataFolder = File("data")
-    private var config = Loader.getConfigOrCreate<Config>("files.yml", Config.DEFAULT)
+    private var config = Config.DEFAULT
     private val fileFolder = File(dataFolder, "files")
     private val indexFolder = File(fileFolder, "index")
     private val rawFolder = File(fileFolder, "raw")
@@ -61,6 +61,7 @@ object FileUtils
         fileFolder.mkdirs()
         indexFolder.mkdirs()
         rawFolder.mkdirs()
+        reloadConfig()
         Loader.reloadTasks.add(::reloadConfig)
     }
 

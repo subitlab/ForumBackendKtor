@@ -95,7 +95,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     fun loadConfig(file: String = LOGGER_SETTINGS_FILE)
     {
         filter = Loader.getConfigOrCreate(file, filter)
-        info("log filter: $filter")
+        config("Reload logger filter: $filter")
     }
 
     /**

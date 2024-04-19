@@ -21,6 +21,7 @@ import subit.dataClasses.toUserIdOrNull
 import subit.database.AdminOperationDatabase
 import subit.database.UserDatabase
 import subit.router.Context
+import subit.router.authenticated
 import subit.utils.*
 import subit.utils.FileUtils.canDelete
 import subit.utils.FileUtils.canGet
@@ -31,14 +32,15 @@ import java.io.InputStream
 fun Route.files()
 {
     route("files", {
-        listOf("文件")
+        tags = listOf("文件")
     })
     {
-        get("/{id}", {
+        get("/{id}/{type}", {
             description = "获取文件, 若是管理员可以获取任意文件, 否则只能获取自己上传的文件. 注意若文件过期则只能获取info"
             request {
-                pathParameter<String>("id") { description = "文件ID" }
-                queryParameter<GetFileType>("type") { description = "获取类型, 可以获取文件信息或文件的数据" }
+                authenticated(false)
+                pathParameter<String>("id") { required = true; description = "文件ID" }
+                pathParameter<GetFileType>("type") { required = true; description = "获取类型, 可以获取文件信息或文件的数据" }
             }
             response {
                 "200: 获取文件信息" to {
@@ -56,7 +58,8 @@ fun Route.files()
         delete("/{id}", {
             description = "删除文件, 除管理员外只能删除自己上传的文件"
             request {
-                pathParameter<String>("id") { description = "文件ID" }
+                authenticated(true)
+                pathParameter<String>("id") { required = true; description = "文件ID" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -68,7 +71,9 @@ fun Route.files()
         post("/new", {
             description = "上传文件"
             request {
+                authenticated(true)
                 body {
+                    required = true
                     description = "第一部分是文件信息, 第二部分是文件数据"
                     mediaType(ContentType.MultiPart.FormData)
                 }
@@ -82,9 +87,10 @@ fun Route.files()
         get("/list/{id}", {
             description = "获取用户上传的文件的列表, 若不是管理员只能获取目标用户公开的文件"
             request {
-                pathParameter<UserId>("id") { description = "用户ID, 为0表示当前登陆的用户" }
-                queryParameter<Long>("begin") { description = "起始位置" }
-                queryParameter<Int>("count") { description = "获取数量" }
+                authenticated(false)
+                pathParameter<UserId>("id") { required = true; description = "用户ID, 为0表示当前登陆的用户" }
+                queryParameter<Long>("begin") { required = true; description = "起始位置" }
+                queryParameter<Int>("count") { required = true; description = "获取数量" }
             }
             response {
                 statuses<Files>(HttpStatus.OK)
@@ -94,7 +100,8 @@ fun Route.files()
         post("changePublic", {
             description = "修改文件的公开状态, 只能修改自己上传的文件"
             request {
-                body<ChangePublic> { description = "文件信息" }
+                authenticated(true)
+                body<ChangePublic> { required = true; description = "文件信息" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -106,7 +113,8 @@ fun Route.files()
         post("changePermission", {
             description = "修改其他用户的文件权限"
             request {
-                body<ChangePermission> { description = "文件信息" }
+                authenticated(true)
+                body<ChangePermission> { required = true; description = "文件信息" }
             }
             response {
                 statuses(HttpStatus.OK)

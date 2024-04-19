@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.admin
 
 import io.github.smiley4.ktorswaggerui.dsl.get
@@ -17,9 +18,10 @@ import subit.dataClasses.UserId
 import subit.database.AdminOperationDatabase
 import subit.database.ProhibitDatabase
 import subit.database.UserDatabase
+import subit.database.checkPermission
 import subit.router.Context
 import subit.router.authenticated
-import subit.router.checkPermission
+import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.checkUserInfo
 import subit.utils.respond
@@ -27,9 +29,8 @@ import subit.utils.statuses
 
 fun Route.admin()
 {
-    route("/admin/", {
+    route("/admin", {
         tags = listOf("用户管理")
-        description = "用户管理接口"
         request {
             authenticated(true)
         }
@@ -38,10 +39,10 @@ fun Route.admin()
         }
     })
     {
-        post("createUser", {
+        post("/createUser", {
             description = "创建用户, 需要超级管理员权限, 使用此接口创建用户无需邮箱验证码, 但需要邮箱为学校邮箱"
             request {
-                body<CreateUser> { description = "新用户信息" }
+                body<CreateUser> { required = true; description = "新用户信息" }
             }
             response {
                 statuses(
@@ -54,27 +55,30 @@ fun Route.admin()
             }
         }) { createUser() }
 
-        post("prohibitUser", {
+        post("/prohibitUser", {
             description = "封禁用户, 需要当前用户的权限大于ADMIN且大于对方的权限"
             request {
-                body<ProhibitUser> { description = "封禁信息, 其中time是封禁结束的时间戳" }
+                body<ProhibitUser> { required = true; description = "封禁信息, 其中time是封禁结束的时间戳" }
             }
             response {
                 statuses(HttpStatus.OK)
             }
         }) { prohibitUser() }
 
-        get("prohibitList", {
+        get("/prohibitList", {
             description = "获取禁言列表, 需要当前用户的user权限大于ADMIN"
+            request {
+                paged()
+            }
             response {
                 statuses<Slice<Prohibit>>(HttpStatus.OK)
             }
         }) { prohibitList() }
 
-        post("changePermission", {
+        post("/changePermission", {
             description = "修改用户权限, 需要当前用户的权限大于ADMIN且大于对方的权限"
             request {
-                body<ChangePermission> { description = "修改信息" }
+                body<ChangePermission> { required = true; description = "修改信息" }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -85,9 +89,10 @@ fun Route.admin()
 
 @Serializable
 private data class CreateUser(val username: String, val password: String, val email: String)
+
 private suspend fun Context.createUser()
 {
-    checkPermission { it.permission >= PermissionLevel.ADMIN }
+    checkPermission { hasGlobalAdmin() }
     val createUser = call.receive<CreateUser>()
     checkUserInfo(createUser.username, createUser.password, createUser.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
@@ -108,6 +113,7 @@ private suspend fun Context.createUser()
 
 @Serializable
 private data class ProhibitUser(val id: UserId, val prohibit: Boolean, val time: Long, val reason: String)
+
 private suspend fun Context.prohibitUser()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -130,14 +136,15 @@ private suspend fun Context.prohibitUser()
 
 private suspend fun Context.prohibitList()
 {
-    checkPermission { it.permission >= PermissionLevel.ADMIN }
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: 0
-    val count = call.parameters["count"]?.toIntOrNull() ?: 10
+    checkPermission { hasGlobalAdmin() }
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     call.respond(ProhibitDatabase.getProhibitList(begin, count))
 }
 
 @Serializable
 private data class ChangePermission(val id: UserId, val permission: PermissionLevel)
+
 private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)

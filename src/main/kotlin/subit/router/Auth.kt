@@ -27,7 +27,7 @@ fun Route.auth()
         post("/register", {
             description = "注册, 若成功返回token"
             request {
-                body<RegisterInfo> { description = "注册信息" }
+                body<RegisterInfo> { required = true; description = "注册信息" }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)
@@ -45,7 +45,7 @@ fun Route.auth()
         post("/login", {
             description = "登陆, 若成功返回token"
             request {
-                body<LoginInfo> { description = "登陆信息" }
+                body<LoginInfo> { required = true; description = "登陆信息" }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)
@@ -59,7 +59,7 @@ fun Route.auth()
         post("/loginByCode",{
             description = "通过邮箱验证码登陆, 若成功返回token"
             request {
-                body<LoginByCodeInfo> { description = "登陆信息" }
+                body<LoginByCodeInfo> { required = true; description = "登陆信息" }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)
@@ -71,9 +71,9 @@ fun Route.auth()
         }) { loginByCode() }
 
         post("/resetPassword",{
-            description = "重置密码"
+            description = "重置密码(忘记密码)"
             request {
-                body<ResetPasswordInfo> { description = "重置密码信息" }
+                body<ResetPasswordInfo> { required = true; description = "重置密码信息" }
             }
             this.response {
                 statuses(HttpStatus.OK)
@@ -87,7 +87,7 @@ fun Route.auth()
         post("/sendEmailCode",{
             description = "发送邮箱验证码"
             request {
-                body<EmailInfo> { description = "邮箱信息" }
+                body<EmailInfo> { required = true; description = "邮箱信息" }
             }
             this.response {
                 statuses(HttpStatus.OK)
@@ -101,7 +101,7 @@ fun Route.auth()
             description = "修改密码"
             request {
                 authenticated(true)
-                body<ChangePasswordInfo> { description = "修改密码信息" }
+                body<ChangePasswordInfo> { required = true; description = "修改密码信息" }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)
