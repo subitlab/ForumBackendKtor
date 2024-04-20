@@ -20,6 +20,7 @@ import subit.database.DatabaseSingleton.initDatabase
 import subit.database.UserDatabase
 import subit.logger.ForumLogger
 import subit.router.router
+import subit.utils.FileUtils
 import subit.utils.HttpStatus
 
 object ForumBackend
@@ -36,6 +37,7 @@ object ForumBackend
         AnsiConsole.systemInstall() // 支持终端颜色码
         CommandSet.registerAll() // 注册所有命令
         Console.init() // 初始化终端(启动命令处理线程)
+        FileUtils.init() // 初始化文件系统
         EngineMain.main(args) // 启动ktor
     }
 
@@ -46,7 +48,8 @@ object ForumBackend
     fun Application.module()
     {
         version = environment.config.property("version").getString()
-        initDatabase(environment.config)
+        val databaseLazyInit = environment.config.propertyOrNull("datasource.lazyInit")?.getString().toBoolean()
+        initDatabase(environment.config, databaseLazyInit)
 
         installAuthentication()
         installDeserialization()
@@ -79,7 +82,7 @@ object ForumBackend
 
         @Serializable
         data class ApiDocsUser(val name: String = "username", val password: String = "password")
-        fun reloadApiDocsUser() = Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser())
+        val reloadApiDocsUser:()->ApiDocsUser = { Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser()) }
         var apiDocsUser: ApiDocsUser = reloadApiDocsUser()
 
         Loader.reloadTasks.add {

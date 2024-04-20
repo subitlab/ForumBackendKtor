@@ -1,12 +1,12 @@
 package subit.database
 
-import subit.dataClasses.PrivateChat
-import subit.dataClasses.UserId
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
+import subit.dataClasses.PrivateChat
+import subit.dataClasses.UserId
 
 object PrivateChatDatabase: DataAccessObject<PrivateChatDatabase.PrivateChats>(PrivateChats)
 {
@@ -15,7 +15,7 @@ object PrivateChatDatabase: DataAccessObject<PrivateChatDatabase.PrivateChats>(P
         val from = reference("from", UserDatabase.Users).index()
         val to = reference("to", UserDatabase.Users).index()
         val time = timestamp("time").index().defaultExpression(CurrentTimestamp())
-        val content = text("content").index()
+        val content = text("content")
     }
 
     private fun deserialize(row: ResultRow) = PrivateChat(

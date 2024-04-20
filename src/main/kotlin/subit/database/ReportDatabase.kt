@@ -16,6 +16,7 @@ object ReportDatabase: DataAccessObject<ReportDatabase.Reports>(Reports)
         val objectId = long("object_id").index()
         val reason = text("reason")
         val handledBy = reference("handled_by", UserDatabase.Users).nullable().index()
+        override val primaryKey: PrimaryKey = PrimaryKey(id)
     }
 
     private fun deserialize(row: ResultRow) = Report(

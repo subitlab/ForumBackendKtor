@@ -55,7 +55,7 @@ object FileUtils
     private val indexFolder = File(fileFolder, "index")
     private val rawFolder = File(fileFolder, "raw")
 
-    init
+    fun init()
     {
         dataFolder.mkdirs()
         fileFolder.mkdirs()

@@ -10,6 +10,7 @@ import org.jline.utils.InfoCmp
 import subit.console.command.CommandSet
 import subit.logger.ForumLogger
 import subit.utils.FileUtils
+import subit.utils.ForumThreadGroup
 import java.io.File
 
 /**
@@ -72,7 +73,7 @@ object Console
      */
     fun init()
     {
-        Thread {
+        ForumThreadGroup.newThread("CommandThread") {
             var line: String? = null
             while (true) try
             {
@@ -101,5 +102,6 @@ object Console
                 line = null
             }
         }.start()
+        ForumLogger.config("Console is initialized")
     }
 }

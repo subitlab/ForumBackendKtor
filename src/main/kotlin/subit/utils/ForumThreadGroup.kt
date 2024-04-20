@@ -11,8 +11,8 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup")
         e.printStackTrace(ForumLogger.err)
     }
 
-    fun newThread(name: String, block: suspend ()->Unit) = Thread(this, { runBlocking { block() } }, name)
-    fun newThread(block: suspend ()->Unit) = Thread(this) { runBlocking { block() } }
+    fun newThread(name: String, block: ()->Unit) = Thread(this, block, name)
+    fun newThread(block: ()->Unit) = Thread(this, block)
 
     /**
      * 任务
@@ -50,7 +50,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup")
             var times = task.times
             while (true)
             {
-                task.block()
+                runBlocking { task.block () }
                 times?.let { times-- }
                 if (times == 0u) break
                 runCatching { Thread.sleep(task.interval) }.onFailure()

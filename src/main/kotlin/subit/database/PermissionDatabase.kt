@@ -22,7 +22,7 @@ object PermissionDatabase: DataAccessObject<PermissionDatabase.Permissions>(Perm
 {
     object Permissions: IdTable<ULong>("permissions")
     {
-        override val id: Column<EntityID<ULong>> = blockUserId("id").uniqueIndex().entityId()
+        override val id: Column<EntityID<ULong>> = blockUserId("id").entityId()
         val permission: Column<PermissionLevel> = enumeration("permission", PermissionLevel::class).default(PermissionLevel.NORMAL)
         override val primaryKey: PrimaryKey = PrimaryKey(id)
     }

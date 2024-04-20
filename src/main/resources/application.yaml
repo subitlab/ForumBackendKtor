@@ -13,4 +13,5 @@ datasource:
   password: 'Bdfz20230301!@#'
   url: 'jdbc:mysql://43.138.69.230:45141/forum0'
   driver: com.mysql.cj.jdbc.Driver
+  lazyInit: "$LAZY_INIT:true"
 version: 0.0.0

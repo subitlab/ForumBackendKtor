@@ -12,6 +12,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import subit.logger.ForumLogger
 import java.time.Instant
 
 /**
@@ -25,7 +26,7 @@ abstract class DataAccessObject<T: Table>(val table: T)
 
     init // 创建表
     {
-        transaction(DatabaseSingleton.database) { SchemaUtils.create(table) }
+        transaction(DatabaseSingleton.database) { SchemaUtils.createMissingTablesAndColumns(table) }
     }
 }
 
@@ -45,8 +46,17 @@ object DatabaseSingleton
     /**
      * 数据库
      */
-    lateinit var database: Database
-        private set
+    val database: Database by lazy {
+        Database.connect(
+            createHikariDataSource(
+                config.property("datasource.url").getString(),
+                config.property("datasource.driver").getString(),
+                config.property("datasource.user").getString(),
+                config.property("datasource.password").getString()
+            )
+        )
+    }
+    private lateinit var config: ApplicationConfig
 
     /**
      * 创建Hikari数据源,即数据库连接池
@@ -64,26 +74,37 @@ object DatabaseSingleton
         this.maximumPoolSize = 3
         this.isAutoCommit = false
         this.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        this.poolName = "subit"
         validate()
     })
 
-    fun initDatabase(config: ApplicationConfig)
+    /**
+     * 初始化数据库
+     * @param config 配置
+     * @param lazyInit 是否使用懒惰初始化, 数据库首次连接可能消耗大量时间, 采用懒惰初始化可以减少启动时间,
+     * 但会导致部分配置文件不会在启动时自动生成且生成数据库结构时可能会出现延迟
+     */
+    fun initDatabase(config: ApplicationConfig, lazyInit: Boolean = true)
     {
-        database = Database.connect(
-            createHikariDataSource(
-                config.property("datasource.url").getString(),
-                config.property("datasource.driver").getString(),
-                config.property("datasource.user").getString(),
-                config.property("datasource.password").getString()
-            )
-        )
+        ForumLogger.config("Init database. LazyInit: $lazyInit")
+        this.config = config
+        if (!lazyInit) activate()
+    }
 
-        // 在此处写一下所有数据库, 这样就可以自动执行每个数据库的init, 从而初始化所有表
-        BlockDatabase
-        EmailCodeDatabase
-        PostDatabase
-        StarDatabase
-        UserDatabase
-        WhitelistDatabase
+    private fun activate()
+    {
+        AdminOperationDatabase.table
+        BlockDatabase.table
+        CommentDatabase.table
+        EmailCodeDatabase.table
+        LikesDatabase.table
+        PermissionDatabase.table
+        PostDatabase.table
+        PrivateChatDatabase.table
+        ProhibitDatabase.table
+        ReportDatabase.table
+        StarDatabase.table
+        UserDatabase.table
+        WhitelistDatabase.table
     }
 }
