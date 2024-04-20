@@ -16,7 +16,7 @@ class LogbackAppender: AppenderBase<ILoggingEvent>()
 {
     override fun append(event: ILoggingEvent) = runCatching()
     {
-        val record = LogRecord(fromInt(event.level.levelInt), event.message)
+        val record = LogRecord(fromInt(event.level.levelInt), event.formattedMessage)
         record.setInstant(Instant.ofEpochMilli(event.timeStamp))
         record.loggerName = event.loggerName
         record.parameters = event.argumentArray
