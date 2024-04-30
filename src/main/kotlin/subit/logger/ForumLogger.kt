@@ -107,13 +107,15 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         {
             if (b == '\n'.code)
             {
-                ForumLogger.logger.log(level, arrayOutputStream.toString())
-                arrayOutputStream.reset()
+                val str: String
+                synchronized(arrayOutputStream)
+                {
+                    str = arrayOutputStream.toString()
+                    arrayOutputStream.reset()
+                }
+                ForumLogger.logger.log(level, str)
             }
-            else
-            {
-                arrayOutputStream.write(b)
-            }
+            else synchronized(arrayOutputStream) { arrayOutputStream.write(b) }
         }
     }
 }
