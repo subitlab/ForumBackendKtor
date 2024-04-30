@@ -20,6 +20,7 @@ import subit.database.*
 import subit.logger.ForumLogger
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.router.paged
 import subit.utils.AvatarUtils
 import subit.utils.HttpStatus
@@ -199,6 +200,7 @@ fun Route.user()
 
 private suspend fun Context.getUserInfo()
 {
+
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
     ForumLogger.config("user=${loginUser?.id} get user info id=$id")
@@ -209,7 +211,7 @@ private suspend fun Context.getUserInfo()
     }
     else
     {
-        val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
+        val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         if (loginUser != null && loginUser.permission >= PermissionLevel.ADMIN)
             call.respond(user)
         else
@@ -227,15 +229,15 @@ private suspend fun Context.changeIntroduction()
     val changeIntroduction = call.receive<ChangeIntroduction>()
     if (id == 0)
     {
-        UserDatabase.changeIntroduction(loginUser.id, changeIntroduction.introduction)
+        get<Users>().changeIntroduction(loginUser.id, changeIntroduction.introduction)
         call.respond(HttpStatus.OK)
     }
     else
     {
         checkPermission { checkHasGlobalAdmin() }
-        if (UserDatabase.changeIntroduction(id, changeIntroduction.introduction))
+        if (get<Users>().changeIntroduction(id, changeIntroduction.introduction))
         {
-            AdminOperationDatabase.addOperation(loginUser.id, changeIntroduction)
+            get<Operations>().addOperation(loginUser.id, changeIntroduction)
             call.respond(HttpStatus.OK)
         }
         else
@@ -265,7 +267,7 @@ private suspend fun Context.changeAvatar()
     else
     {
         checkPermission { checkHasGlobalAdmin() }
-        val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
+        val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         AvatarUtils.setAvatar(user.id, image)
     }
 }
@@ -282,7 +284,7 @@ private suspend fun Context.deleteAvatar()
     else
     {
         checkPermission { checkHasGlobalAdmin() }
-        val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
+        val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         AvatarUtils.setDefaultAvatar(user.id)
         call.respond(HttpStatus.OK)
     }
@@ -313,16 +315,16 @@ private suspend fun Context.getStars()
     if (id == 0)
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
-        val stars = StarDatabase.getStars(user = loginUser.id, begin = begin, limit = count).map { it.post }
-        return call.respond(PostDatabase.getPosts(stars))
+        val stars = get<Stars>().getStars(user = loginUser.id, begin = begin, limit = count).map { it.post }
+        return call.respond(get<Posts>().getPosts(stars))
     }
     // 查询其他用户的收藏
-    val user = UserDatabase.getUser(id) ?: return call.respond(HttpStatus.NotFound)
+    val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
     // 若对方不展示收藏, 而当前用户未登录或不是管理员, 返回Forbidden
     if (!user.showStars && (loginUser == null || loginUser.permission < PermissionLevel.ADMIN))
         return call.respond(HttpStatus.Forbidden)
-    val stars = StarDatabase.getStars(user = user.id, begin = begin, limit = count).map { it.post }
-    call.respond(PostDatabase.getPosts(stars))
+    val stars = get<Stars>().getStars(user = user.id, begin = begin, limit = count).map { it.post }
+    call.respond(get<Posts>().getPosts(stars))
 }
 
 @Serializable
@@ -330,9 +332,10 @@ private data class SwitchStars(val showStars: Boolean)
 
 private suspend fun Context.switchStars()
 {
+    application
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val switchStars = call.receive<SwitchStars>()
-    UserDatabase.changeShowStars(loginUser.id, switchStars.showStars)
+    get<Users>().changeShowStars(loginUser.id, switchStars.showStars)
     call.respond(HttpStatus.OK)
 }
 
@@ -341,5 +344,5 @@ private suspend fun Context.searchUser()
     val username = call.request.queryParameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.request.queryParameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    call.respond(UserDatabase.searchUser(username, begin, count).map(UserFull::id))
+    call.respond(get<Users>().searchUser(username, begin, count).map(UserFull::id))
 }

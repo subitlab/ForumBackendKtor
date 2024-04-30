@@ -1,8 +1,10 @@
 package subit.dataClasses
 
 import kotlinx.serialization.Serializable
-import subit.database.LikesDatabase
-import subit.database.StarDatabase
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import subit.database.Likes
+import subit.database.Stars
 
 /**
  * 帖子信息
@@ -31,10 +33,16 @@ data class PostInfo(
     val state: State,
 )
 {
+    companion object: KoinComponent
+    {
+        private val likes: Likes by inject()
+        private val stars: Stars by inject()
+    }
+
     suspend fun toPostFull(): PostFull
     {
-        val (like,dislike) = LikesDatabase.getLikes(id)
-        val star = StarDatabase.getStarsCount(id)
+        val (like,dislike) = likes.getLikes(id)
+        val star = stars.getStarsCount(id)
         return PostFull(id,title,content,author,anonymous,create,lastModified,view,block,state,like,dislike,star)
     }
 }

@@ -10,12 +10,13 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.LikesDatabase
-import subit.database.PostDatabase
-import subit.database.StarDatabase
+import subit.database.Likes
+import subit.database.Posts
+import subit.database.Stars
 import subit.database.checkPermission
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.statuses
@@ -29,7 +30,9 @@ fun Route.posts()
             description = "获取帖子信息"
             request {
                 authenticated(false)
-                pathParameter<Long>("id") { required = true; description = "要获取的帖子的id, 若是匿名帖则author始终是null" }
+                pathParameter<Long>("id") {
+                    required = true; description = "要获取的帖子的id, 若是匿名帖则author始终是null"
+                }
             }
             response {
                 statuses<PostFull>(HttpStatus.OK)
@@ -81,20 +84,47 @@ fun Route.posts()
                 body<NewPost> { required = true; description = "发帖, 成功返回帖子ID" }
             }
             response {
-                statuses<Long>(HttpStatus.OK)
+                statuses<PostInfo>(HttpStatus.OK)
                 statuses(HttpStatus.BadRequest)
             }
         }) { newPost() }
 
-        post("/list", {
-            description = "获取帖子列表"
+        get("/list/user/{user}", {
+            description = "获取用户发送的帖子列表"
             request {
                 authenticated(false)
-                queryParameter<Int>("block") { required = false; description = "板块ID" }
-                queryParameter<Int>("user") { required = false; description = "作者ID" }
+                pathParameter<UserId>("user") { required = true; description = "作者ID" }
                 paged()
             }
-        }) { getPosts() }
+            response {
+                statuses<Slice<PostInfo>>(HttpStatus.OK)
+            }
+        }) { getUserPosts() }
+
+        get("/list/block/{block}", {
+            description = "获取板块帖子列表"
+            request {
+                authenticated(false)
+                pathParameter<BlockId>("block") { required = true; description = "板块ID" }
+                queryParameter<Posts.PostListSort>("sort") { required = true; description = "排序方式" }
+                paged()
+            }
+            response {
+                statuses<Slice<PostInfo>>(HttpStatus.OK)
+            }
+        }) { getBlockPosts() }
+
+        get("/top/{block}", {
+            description = "获取板块置顶帖子列表"
+            request {
+                authenticated(false)
+                pathParameter<BlockId>("block") { required = true; description = "板块ID" }
+                paged()
+            }
+            response {
+                statuses<Slice<PostInfo>>(HttpStatus.OK)
+            }
+        }) { getBlockTopPosts() }
 
         get("/search", {
             description = "搜索帖子"
@@ -113,7 +143,7 @@ fun Route.posts()
 private suspend fun Context.getPost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val postInfo = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
+    val postInfo = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
     checkPermission { checkCanRead(postInfo) }
     val postFull = postInfo.toPostFull()
@@ -130,18 +160,18 @@ private suspend fun Context.editPost()
     val post = call.receive<EditPost>()
     val pid = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val postInfo = PostDatabase.getPost(pid) ?: return call.respond(HttpStatus.NotFound)
+    val postInfo = get<Posts>().getPost(pid) ?: return call.respond(HttpStatus.NotFound)
     if (postInfo.author != loginUser.id) return call.respond(HttpStatus.Forbidden)
-    PostDatabase.editPost(pid, post.title, post.content)
+    get<Posts>().editPost(pid, post.title, post.content)
     call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.deletePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val post = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
+    val post = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
     checkPermission { checkCanDelete(post) }
-    PostDatabase.setPostState(id, State.DELETED).also { call.respond(HttpStatus.OK) }
+    get<Posts>().setPostState(id, State.DELETED).also { call.respond(HttpStatus.OK) }
 }
 
 @Serializable
@@ -160,48 +190,77 @@ private data class LikePost(val type: LikeType)
 private suspend fun Context.likePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val post = PostDatabase.getPost(id) ?: return call.respond(HttpStatus.NotFound)
+    val post = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
     val type = call.receive<LikePost>().type
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanRead(post) }
     when (type)
     {
-        LikeType.LIKE    -> LikesDatabase.like(loginUser.id, id, true)
-        LikeType.DISLIKE -> LikesDatabase.like(loginUser.id, id, false)
-        LikeType.UNLIKE  -> LikesDatabase.unlike(loginUser.id, id)
-        LikeType.STAR    -> StarDatabase.addStar(loginUser.id, id)
-        LikeType.UNSTAR  -> StarDatabase.removeStar(loginUser.id, id)
+        LikeType.LIKE -> get<Likes>().like(loginUser.id, id, true)
+        LikeType.DISLIKE -> get<Likes>().like(loginUser.id, id, false)
+        LikeType.UNLIKE -> get<Likes>().unlike(loginUser.id, id)
+        LikeType.STAR -> get<Stars>().addStar(loginUser.id, id)
+        LikeType.UNSTAR -> get<Stars>().removeStar(loginUser.id, id)
     }
     call.respond(HttpStatus.OK)
 }
 
 @Serializable
-private data class NewPost(val title: String, val content: String, val anonymous: Boolean, val block: Int)
+private data class NewPost(
+    val title: String,
+    val content: String,
+    val anonymous: Boolean,
+    val block: Int,
+    val top: Boolean
+)
 
 private suspend fun Context.newPost()
 {
-    val post = call.receive<PostInfo>()
+    val post = call.receive<NewPost>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanPost(post.block) }
     if (post.anonymous) checkPermission { checkCanAnonymous(post.block) }
-    val id = PostDatabase.createPost(
+    if (post.top) checkPermission { checkHasAdminIn(post.block) }
+    val id = get<Posts>().createPost(
         title = post.title,
         content = post.content,
         author = loginUser.id,
         anonymous = post.anonymous,
-        block = post.block
+        block = post.block,
+        top = post.top
     )
-    call.respond(id)
+    get<Posts>().getPost(id)?.let { call.respond(it) } ?: call.respond(HttpStatus.InternalServerError)
 }
 
-private suspend fun Context.getPosts()
+private suspend fun Context.getUserPosts()
 {
     val loginUser = getLoginUser()
-    val block = call.parameters["block"]?.toIntOrNull()
-    val author = call.parameters["user"]?.toUserIdOrNull()
+    val author = call.parameters["user"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val posts = PostDatabase.getPosts(loginUser, block, author, begin, count)
+    val posts = get<Posts>().getUserPosts(loginUser, author, begin, count)
+    call.respond(posts)
+}
+
+private suspend fun Context.getBlockPosts()
+{
+    val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val type =
+        call.parameters["sort"]?.let { Posts.PostListSort.valueOf(it) } ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    checkPermission { checkCanRead(block) }
+    val posts = get<Posts>().getBlockPosts(block, type, begin, count)
+    call.respond(posts)
+}
+
+private suspend fun Context.getBlockTopPosts()
+{
+    val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    checkPermission { checkCanRead(block) }
+    val posts = get<Posts>().getBlockTopPosts(block, begin, count)
     call.respond(posts)
 }
 
@@ -210,6 +269,6 @@ private suspend fun Context.searchPost()
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val posts = PostDatabase.searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
+    val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
     call.respond(posts)
 }

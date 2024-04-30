@@ -1,0 +1,11 @@
+database:
+  impl: sql
+  sql:
+    user: 'YourSqlUser'
+    password: 'YourSqlPassword'
+    url: 'jdbc:mysql://YourSqlHost:YourSqlPort/YourDatabaseName'
+    driver: 'com.mysql.cj.jdbc.Driver'
+    lazyInit: true
+
+#jwt:
+#  secret: "SUBIT_SECRET" # Your can set your own secret key here, or a random one will be used

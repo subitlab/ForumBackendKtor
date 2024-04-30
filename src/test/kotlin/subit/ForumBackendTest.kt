@@ -7,9 +7,6 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.deleteAll
-import subit.database.UserDatabase
-import subit.database.WhitelistDatabase
 import kotlin.test.Test
 
 class ForumBackendTest
@@ -26,13 +23,10 @@ class ForumBackendTest
 
     private suspend fun clearDatabase()
     {
-        WhitelistDatabase.query { deleteAll() }
-        UserDatabase.query { deleteAll() }
     }
 
     private suspend fun setWhiteList()
     {
-        WhitelistDatabase.add(TEST_EMAIL)
     }
 
     @Test

@@ -1,6 +1,7 @@
 package subit.console.command
 
 import org.jline.reader.Candidate
+import subit.config.loggerConfig
 import subit.logger.ForumLogger
 
 /**
@@ -28,8 +29,7 @@ object Logger : TreeCommand(Level, Filter)
             {
                 // 有参数就设置日志等级
                 val level=java.util.logging.Level.parse(args[0])
-                ForumLogger.filter = ForumLogger.filter.copy(level = level)
-                ForumLogger.saveConfig()
+                ForumLogger.setLevel(level)
                 CommandSet.out.println("set logger level to ${level.name}")
             }
             catch (e: IllegalArgumentException) // 输入的日志等级不合法
@@ -72,7 +72,6 @@ object Logger : TreeCommand(Level, Filter)
                     return true
                 }
                 ForumLogger.addFilter(args[0])
-                ForumLogger.saveConfig()
                 CommandSet.out.println("Added filter: ${args[0]}")
                 return true
             }
@@ -95,7 +94,6 @@ object Logger : TreeCommand(Level, Filter)
                     return true
                 }
                 ForumLogger.removeFilter(args[0])
-                ForumLogger.saveConfig()
                 CommandSet.out.println("Removed filter: ${args[0]}")
                 return true
             }
@@ -141,7 +139,7 @@ object Logger : TreeCommand(Level, Filter)
             {
                 if (args.isEmpty())
                 {
-                    CommandSet.out.println("filter mode: ${if (ForumLogger.filter.whiteList) "whitelist" else "blacklist"}")
+                    CommandSet.out.println("filter mode: ${if (loggerConfig.whiteList) "whitelist" else "blacklist"}")
                 }
                 else
                 {
@@ -163,7 +161,6 @@ object Logger : TreeCommand(Level, Filter)
                             return true
                         }
                     }
-                    ForumLogger.saveConfig()
                 }
                 return true
             }

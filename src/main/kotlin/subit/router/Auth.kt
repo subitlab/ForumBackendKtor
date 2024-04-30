@@ -11,11 +11,13 @@ import kotlinx.serialization.Serializable
 import subit.JWTAuth
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.UserId
-import subit.database.EmailCodeDatabase
-import subit.database.UserDatabase
-import subit.database.WhitelistDatabase
+import subit.database.EmailCodes
+import subit.database.Users
+import subit.database.Whitelists
+import subit.database.sendEmailCode
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.utils.*
 
 fun Route.auth()
@@ -124,16 +126,16 @@ private suspend fun Context.register()
     checkUserInfo(registerInfo.username, registerInfo.password, registerInfo.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
     }
-    if (!WhitelistDatabase.isWhitelisted(registerInfo.email)) return call.respond(HttpStatus.NotInWhitelist)
+    if (!get<Whitelists>().isWhitelisted(registerInfo.email)) return call.respond(HttpStatus.NotInWhitelist)
     // 验证邮箱验证码
-    if (!EmailCodeDatabase.verifyEmailCode(
+    if (!get<EmailCodes>().verifyEmailCode(
             registerInfo.email,
             registerInfo.code,
-            EmailCodeDatabase.EmailCodeUsage.REGISTER
+            EmailCodes.EmailCodeUsage.REGISTER
         )
     ) return call.respond(HttpStatus.WrongEmailCode)
     // 创建用户
-    UserDatabase.createUser(
+    get<Users>().createUser(
         username = registerInfo.username,
         password = registerInfo.password,
         email = registerInfo.email,
@@ -147,11 +149,12 @@ private suspend fun Context.register()
 private data class LoginInfo(val email: String? = null, val id: UserId? = null, val password: String)
 private suspend fun Context.login()
 {
+    val users = get<Users>()
     val loginInfo = call.receive<LoginInfo>()
     val user = if (loginInfo.id != null)
-        UserDatabase.checkUserLogin(loginInfo.id, loginInfo.password)
+        users.checkUserLogin(loginInfo.id, loginInfo.password)
     else if (loginInfo.email != null)
-        UserDatabase.checkUserLogin(loginInfo.email, loginInfo.password)
+        users.checkUserLogin(loginInfo.email, loginInfo.password)
     else return call.respond(HttpStatus.BadRequest)
     if (user == null) return call.respond(HttpStatus.NotFound)
     if (!user.first) return call.respond(HttpStatus.PasswordError)
@@ -166,13 +169,13 @@ private suspend fun Context.loginByCode()
     val email =
         loginInfo.email ?: // 若email不为空，直接使用email
         loginInfo.id?.let {
-            UserDatabase.getUser(it)?.email // email为空，尝试从id获取email
-                ?: return call.respond(HttpStatus.AccountNotExist)
+            get<Users>().getUser(it)?.email // email为空，尝试从id获取email
+            ?: return call.respond(HttpStatus.AccountNotExist)
         } // 若id不存在，返回登陆失败
         ?: return call.respond(HttpStatus.BadRequest) // id和email都为空，返回错误的请求
-    if (!EmailCodeDatabase.verifyEmailCode(email, loginInfo.code, EmailCodeDatabase.EmailCodeUsage.LOGIN))
+    if (!get<EmailCodes>().verifyEmailCode(email, loginInfo.code, EmailCodes.EmailCodeUsage.LOGIN))
         return call.respond(HttpStatus.WrongEmailCode)
-    JWTAuth.makeToken(email).apply {
+    get<Users>().makeJwtToken(email).apply {
         if (this != null) call.respond(this)
         else call.respond(HttpStatus.AccountNotExist)
     }
@@ -185,14 +188,14 @@ private suspend fun Context.resetPassword()
     // 接收重置密码的信息
     val resetPasswordInfo = call.receive<ResetPasswordInfo>()
     // 验证邮箱验证码
-    if (!EmailCodeDatabase.verifyEmailCode(
+    if (!get<EmailCodes>().verifyEmailCode(
             resetPasswordInfo.email,
             resetPasswordInfo.code,
-            EmailCodeDatabase.EmailCodeUsage.RESET_PASSWORD
+            EmailCodes.EmailCodeUsage.RESET_PASSWORD
         )
     ) return call.respond(HttpStatus.WrongEmailCode)
     // 重置密码
-    if (UserDatabase.setPassword(resetPasswordInfo.email, resetPasswordInfo.password))
+    if (get<Users>().setPassword(resetPasswordInfo.email, resetPasswordInfo.password))
         call.respond(HttpStatus.OK)
     else
         call.respond(HttpStatus.AccountNotExist)
@@ -202,22 +205,24 @@ private suspend fun Context.resetPassword()
 private data class ChangePasswordInfo(val oldPassword: String, val newPassword: String)
 private suspend fun Context.changePassword()
 {
+    val users = get<Users>()
+
     val (oldPassword, newPassword) = call.receive<ChangePasswordInfo>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    UserDatabase.checkUserLogin(user.id, oldPassword).apply {
+    users.checkUserLogin(user.id, oldPassword).apply {
         if (this == null) return call.respond(HttpStatus.PasswordError)
     }
     if (!checkPassword(newPassword)) return call.respond(HttpStatus.PasswordFormatError)
-    UserDatabase.setPassword(user.email, newPassword)
+    users.setPassword(user.email, newPassword)
     return call.respond(JWTAuth.makeToken(user.id, newPassword))
 }
 
 @Serializable
-private data class EmailInfo(val email: String, val usage: EmailCodeDatabase.EmailCodeUsage)
+private data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeUsage)
 private suspend fun Context.sendEmailCode()
 {
     val emailInfo = call.receive<EmailInfo>()
     if (!checkEmail(emailInfo.email)) return call.respond(HttpStatus.EmailFormatError)
-    EmailCodeDatabase.sendEmailCode(emailInfo.email, emailInfo.usage)
+    get<EmailCodes>().sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)
 }

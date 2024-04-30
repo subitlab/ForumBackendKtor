@@ -1,10 +1,35 @@
 package subit.utils
 
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.response.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.koin.core.component.KoinComponent
+import subit.console.AnsiStyle
+import subit.console.SimpleAnsiColor
 import subit.logger.ForumLogger
+import kotlin.system.exitProcess
 
-object ForumThreadGroup: ThreadGroup("ForumThreadGroup")
+object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
 {
+    fun shutdown(code: Int, cause: String = "unknown"): Nothing
+    {
+        val application = getKoin().get<Application>()
+        application.shutdown(code, cause)
+    }
+    fun Application.shutdown(code: Int, cause: String = "unknown"): Nothing
+    {
+        ForumLogger.warning("${SimpleAnsiColor.PURPLE}Server is shutting down: ${SimpleAnsiColor.CYAN}$cause${AnsiStyle.RESET}")
+        val environment = this.environment
+        environment.monitor.raise(ApplicationStopPreparing, environment)
+        if (environment is ApplicationEngineEnvironment) environment.stop()
+        else this@shutdown.dispose()
+        exitProcess(code)
+    }
+
     override fun uncaughtException(t: Thread, e: Throwable)
     {
         ForumLogger.err.println("Thread ${t.name} threw an uncaught exception: ${e.message}")
@@ -35,7 +60,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup")
         override fun hashCode(): Int = name.hashCode()
     }
 
-    val tasks = mutableMapOf<Task,Thread>()
+    val tasks = mutableMapOf<Task, Thread>()
 
     /**
      * 启动一个任务
@@ -50,7 +75,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup")
             var times = task.times
             while (true)
             {
-                runBlocking { task.block () }
+                runBlocking { task.block() }
                 times?.let { times-- }
                 if (times == 0u) break
                 runCatching { Thread.sleep(task.interval) }.onFailure()

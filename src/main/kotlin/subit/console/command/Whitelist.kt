@@ -2,12 +2,15 @@ package subit.console.command
 
 import kotlinx.coroutines.runBlocking
 import org.jline.reader.Candidate
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import subit.console.AnsiStyle
 import subit.console.SimpleAnsiColor
-import subit.database.WhitelistDatabase
+import subit.database.Whitelists
 
-object Whitelist: TreeCommand(Add, Remove, Get)
+object Whitelist: TreeCommand(Add, Remove, Get), KoinComponent
 {
+    private val whitelists: Whitelists by inject()
     override val description: String
         get() = "Whitelist manage."
 
@@ -22,7 +25,7 @@ object Whitelist: TreeCommand(Add, Remove, Get)
         {
             if (args.size != 1) return false
             runBlocking {
-                WhitelistDatabase.add(args[0])
+                whitelists.add(args[0])
             }
             CommandSet.out.println("添加成功")
             return true
@@ -40,7 +43,7 @@ object Whitelist: TreeCommand(Add, Remove, Get)
         {
             if (args.size != 1) return false
             runBlocking {
-                WhitelistDatabase.remove(args[0])
+                whitelists.remove(args[0])
             }
             CommandSet.out.println("移除成功")
             return true
@@ -49,7 +52,7 @@ object Whitelist: TreeCommand(Add, Remove, Get)
         {
             if (args.size == 1)
             {
-                return runBlocking { WhitelistDatabase.getWhitelist() }.map { Candidate(it) }
+                return runBlocking { whitelists.getWhitelist() }.map { Candidate(it) }
             }
             return emptyList()
         }
@@ -65,7 +68,7 @@ object Whitelist: TreeCommand(Add, Remove, Get)
         override fun execute(args: List<String>): Boolean
         {
             runBlocking {
-                WhitelistDatabase.getWhitelist().apply {
+                whitelists.getWhitelist().apply {
                     if (isEmpty()) CommandSet.out.println("白名单为空")
                     else
                     {

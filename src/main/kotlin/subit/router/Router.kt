@@ -6,19 +6,30 @@ import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
+import org.koin.core.parameter.ParametersDefinition
+import org.koin.core.qualifier.Qualifier
+import org.koin.ktor.ext.get
+import org.koin.ktor.ext.inject
 import subit.JWTAuth.getLoginUser
-import subit.database.ProhibitDatabase
+import subit.database.Prohibits
 import subit.router.admin.admin
 import subit.router.auth.auth
 import subit.router.block.block
 import subit.router.comment.comment
 import subit.router.files.files
+import subit.router.home.home
 import subit.router.posts.posts
+import subit.router.privateChat.privateChat
 import subit.router.report.report
 import subit.router.user.user
 import subit.utils.HttpStatus
 
 typealias Context = PipelineContext<*, ApplicationCall>
+
+inline fun <reified T : Any> Context.get(
+    qualifier: Qualifier? = null,
+    noinline parameters: ParametersDefinition? = null
+) = application.get<T>(qualifier, parameters)
 
 /**
  * 辅助方法, 标记此接口需要验证token(需要登陆)
@@ -47,15 +58,26 @@ fun OpenApiRequest.paged()
     }
 }
 
+fun ApplicationCall.getPage(): Pair<Long, Int>
+{
+    val begin = request.queryParameters["begin"]?.toLongOrNull() ?: 0
+    val count = request.queryParameters["count"]?.toIntOrNull() ?: 10
+    return begin to count
+}
+
 fun Application.router() = routing()
 {
     authenticate(optional = true)
     {
+
+        val prohibits: Prohibits by inject()
+
         intercept(ApplicationCallPipeline.Call)
         {
             getLoginUser()?.id?.apply {
-                ProhibitDatabase.checkProhibit(this).apply {
-                    call.respond(HttpStatus.Forbidden)
+                if (prohibits.isProhibited(this))
+                {
+                    call.respond(HttpStatus.Prohibit)
                     finish()
                 }
             }
@@ -66,9 +88,10 @@ fun Application.router() = routing()
         block()
         comment()
         files()
-        // todo home() // 热门帖子推荐
+        home()
         // todo notice()
         posts()
+        privateChat()
         report()
         user()
     }

@@ -11,11 +11,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.CommentDatabase
-import subit.database.PostDatabase
+import subit.database.Comments
+import subit.database.Posts
 import subit.database.checkPermission
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
@@ -111,12 +112,12 @@ private suspend fun Context.commentPost()
 {
     val postId = call.parameters["postId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val content = call.receive<CommentContent>().content
-    PostDatabase.getPost(postId)?.let { postInfo ->
+    get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanComment(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
-    CommentDatabase.createComment(post = postId, parent = null, author = loginUser.id, content = content)
+    get<Comments>().createComment(post = postId, parent = null, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
 }
 
@@ -124,53 +125,53 @@ private suspend fun Context.commentComment()
 {
     val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val content = call.receive<CommentContent>().content
-    CommentDatabase.getComment(commentId)?.let { comment ->
-        PostDatabase.getPost(comment.post)?.let { postInfo ->
+    get<Comments>().getComment(commentId)?.let { comment ->
+        get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanComment(postInfo) }
         }
     } ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
-    CommentDatabase.createComment(post = null, parent = commentId, author = loginUser.id, content = content)
+    get<Comments>().createComment(post = null, parent = commentId, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.deleteComment()
 {
     val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    CommentDatabase.getComment(commentId)?.let { comment ->
-        PostDatabase.getPost(comment.post)?.let { postInfo ->
+    get<Comments>().getComment(commentId)?.let { comment ->
+        get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanDelete(postInfo) }
         }
     } ?: return call.respond(HttpStatus.NotFound)
-    CommentDatabase.setCommentState(commentId, State.DELETED)
+    get<Comments>().setCommentState(commentId, State.DELETED)
 }
 
 private suspend fun Context.getPostComments()
 {
     val postId = call.parameters["postId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    PostDatabase.getPost(postId)?.let { postInfo ->
+    get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanRead(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
-    CommentDatabase.getComments(post = postId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Comments>().getComments(post = postId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.getCommentComments()
 {
     val commentId = call.parameters["commentId"]?.toCommentIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    CommentDatabase.getComment(commentId)?.let { comment ->
-        PostDatabase.getPost(comment.post)?.let { postInfo ->
+    get<Comments>().getComment(commentId)?.let { comment ->
+        get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanRead(postInfo) }
         }
     } ?: return call.respond(HttpStatus.NotFound)
-    CommentDatabase.getComments(parent = commentId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Comments>().getComments(parent = commentId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.getComment()
 {
     val commentId = call.parameters["commentId"]?.toCommentIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val comment = CommentDatabase.getComment(commentId) ?: return call.respond(HttpStatus.NotFound)
-    PostDatabase.getPost(comment.post)?.let { postInfo ->
+    val comment = get<Comments>().getComment(commentId) ?: return call.respond(HttpStatus.NotFound)
+    get<Posts>().getPost(comment.post)?.let { postInfo ->
         checkPermission { checkCanRead(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
     if (comment.state != State.NORMAL) checkPermission { checkHasGlobalAdmin() }

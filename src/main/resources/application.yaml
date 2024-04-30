@@ -3,15 +3,6 @@ ktor:
     port: "$PORT:29719"
   application:
     modules:
-      - 'subit.ForumBackend.module'
-
-jwt:
-  secret: "$JWT_SECRET:SUBIT_SECRET"
-
-datasource:
-  user: 'BdfzSubit'
-  password: 'Bdfz20230301!@#'
-  url: 'jdbc:mysql://43.138.69.230:45141/forum0'
-  driver: com.mysql.cj.jdbc.Driver
-  lazyInit: "$LAZY_INIT:true"
+      - subit.ForumBackendKt.init
+    id: "SubitForumBackend"
 version: 0.0.0

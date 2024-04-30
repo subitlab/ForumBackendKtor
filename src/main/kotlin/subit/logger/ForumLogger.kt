@@ -1,17 +1,12 @@
 package subit.logger
 
-import kotlinx.serialization.*
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.buildSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import net.mamoe.yamlkt.Comment
+import org.fusesource.jansi.AnsiConsole
 import subit.Loader
+import subit.config.loggerConfig
 import subit.console.AnsiStyle
 import subit.console.Console
 import subit.console.SimpleAnsiColor
+import subit.logger.ForumLogger.safe
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -19,7 +14,6 @@ import java.util.logging.Handler
 import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.util.logging.Logger
-import java.util.regex.Pattern
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -32,7 +26,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * logger中的日期格式
      */
     val loggerDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    private const val LOGGER_SETTINGS_FILE = "log.yml"
 
     /**
      * 日志输出流
@@ -43,22 +36,42 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * 日志错误流
      */
     val err: PrintStream = PrintStream(LoggerOutputStream(Level.SEVERE))
-    var filter = LoggerFilter()
-        set(value)
-        {
-            field = value
-            logger.level = value.level
-        }
+    fun addFilter(pattern: String)
+    {
+        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers+pattern)
+    }
 
-    fun addFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers+pattern) }
-    fun removeFilter(pattern: String) = run { filter = filter.copy(matchers = filter.matchers.filter { it != pattern }) }
-    fun setWhiteList(whiteList: Boolean) = run { filter = filter.copy(whiteList = whiteList) }
-    fun setLevel(level: Level) = run { filter = filter.copy(level = level) }
+    fun removeFilter(pattern: String)
+    {
+        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers.filter { it != pattern })
+    }
 
+    fun setWhiteList(whiteList: Boolean)
+    {
+        loggerConfig = loggerConfig.copy(whiteList = whiteList)
+    }
+
+    fun setLevel(level: Level)
+    {
+        loggerConfig = loggerConfig.copy(level = level)
+    }
     /**
      * 获取过滤器
      */
-    fun filters(): MutableList<String> = Collections.unmodifiableList(filter.matchers)
+    fun filters(): MutableList<String> = Collections.unmodifiableList(loggerConfig.matchers)
+
+    /**
+     * 若由于终端相关组件错误导致的异常, 异常可能最终被捕获并打印在终端上, 可能导致再次抛出错误, 最终引起[StackOverflowError].
+     * 未避免此类问题, 在涉及需要打印内容的地方, 应使用此方法.
+     * 此当[block]出现错误时, 将绕过终端相关组件, 直接打印在标准输出流上. 以避免[StackOverflowError]的发生.
+     */
+    internal inline fun safe(block: () -> Unit)
+    {
+        runCatching(block).onFailure()
+        {
+            it.printStackTrace(AnsiConsole.sysErr())
+        }
+    }
 
     /**
      * 初始化logger，将设置终端支持显示颜色码，捕获stdout，应在启动springboot前调用
@@ -73,7 +86,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         ForumLogger.logger.addHandler(ToFileHandler)
         ForumLogger.logger.addHandler(object: Handler()
         {
-            override fun publish(record: LogRecord?)
+            override fun publish(record: LogRecord?): Unit = safe()
             {
                 val throwable = record?.thrown ?: return
                 val out = ByteArrayOutputStream()
@@ -84,28 +97,13 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
             override fun flush() = Unit
             override fun close() = Unit
         })
-        loadConfig()
-        Loader.reloadTasks.add(::loadConfig)
         Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
     }
 
-    /**
-     * 从文件中加载配置
-     */
-    fun loadConfig(file: String = LOGGER_SETTINGS_FILE)
-    {
-        filter = Loader.getConfigOrCreate(file, filter)
-        config("Reload logger filter: $filter")
-    }
-
-    /**
-     * 保存配置到文件
-     */
-    fun saveConfig(file: String = LOGGER_SETTINGS_FILE) = Loader.saveConfig(file, filter)
     private class LoggerOutputStream(private val level: Level): OutputStream()
     {
         val arrayOutputStream = ByteArrayOutputStream()
-        override fun write(b: Int)
+        override fun write(b: Int) = safe()
         {
             if (b == '\n'.code)
             {
@@ -118,33 +116,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
             }
         }
     }
-
-    @Serializable
-    data class LoggerFilter(
-        @Comment("过滤器，根据whiteList决定符合哪些条件的log会被打印/过滤")
-        val matchers: List<String> = arrayListOf(),
-        @Comment("是否为白名单模式，如果为true，则只有符合matchers的log会被打印，否则只有不符合matchers的log会被打印")
-        val whiteList: Boolean = true,
-        @Comment("日志等级 (OFF, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL)")
-        @Serializable(with = LevelSerializer::class)
-        val level: Level = Level.INFO,
-        @Transient
-        val pattern: Pattern = Pattern.compile(matchers.joinToString("|") { "($it)" })
-    )
-    {
-        fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
-                                                && (record.loggerName?.startsWith("org.jline") != true || record.level.intValue() >= Level.INFO.intValue())
-
-        override fun toString() = "LoggerFilter(matchers=$matchers, whiteList=$whiteList, level=$level)"
-
-        object LevelSerializer: KSerializer<Level>
-        {
-            @OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
-            override val descriptor: SerialDescriptor = buildSerialDescriptor("LevelSerializer", PrimitiveKind.STRING)
-            override fun deserialize(decoder: Decoder): Level = Level.parse(decoder.decodeString())
-            override fun serialize(encoder: Encoder, value: Level) = encoder.encodeString(value.name)
-        }
-    }
 }
 
 /**
@@ -152,9 +123,20 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
  */
 object ToConsoleHandler: Handler()
 {
-    override fun publish(record: LogRecord)
+    override fun publish(record: LogRecord) = safe()
     {
-        if (!ForumLogger.filter.check(record)) return
+        if (record.sourceClassName.startsWith("org.jline"))
+        {
+            String.format(
+                "[%s][%s] %s",
+                ForumLogger.loggerDateFormat.format(record.millis),
+                record.level.name,
+                record.message
+            ).let { AnsiConsole.sysOut().println(it) }
+            return
+        }
+
+        if (!loggerConfig.check(record)) return
         val level = record.level
         val ansiStyle = if (level.intValue() >= Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
         else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
@@ -244,12 +226,23 @@ object ToFileHandler: Handler()
         fos.close()
     }
 
-    override fun publish(record: LogRecord)
+    override fun publish(record: LogRecord) = safe()
     {
-        if (!ForumLogger.filter.check(record)) return
+        if (record.sourceClassName.startsWith("org.jline")) return
+
+        if (!loggerConfig.check(record)) return
         if (!logFile.exists()) new()
+        // 去除颜色码
+        val message = record.message.replace(Regex("\u001B\\[[;\\d]*m"), "")
         val fos = FileOutputStream(logFile, true)
-        fos.write(String.format("[%s][%s] %s\n", ForumLogger.loggerDateFormat.format(record.millis), record.level.name, record.message).toByteArray())
+        fos.write(
+            String.format(
+                "[%s][%s] %s\n",
+                ForumLogger.loggerDateFormat.format(record.millis),
+                record.level.name,
+                message
+            ).toByteArray()
+        )
         fos.close()
         ++cnt
         if ((cnt ushr 10) > 0) new()

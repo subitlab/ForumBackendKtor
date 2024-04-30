@@ -8,15 +8,19 @@ import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
+import org.koin.core.component.KoinComponent
+import subit.console.SimpleAnsiColor
+import subit.console.SimpleAnsiColor.Companion.CYAN
+import subit.console.SimpleAnsiColor.Companion.RED
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
-import subit.database.UserDatabase
+import subit.logger.ForumLogger
 import java.util.*
 
 /**
  * JWT验证
  */
-object JWTAuth
+object JWTAuth: KoinComponent
 {
     @Serializable
     data class Token(val token: String)
@@ -35,10 +39,19 @@ object JWTAuth
      * JWT有效期
      */
     private const val VALIDITY: Long = 1000L/*ms*/*60/*s*/*60/*m*/*24/*h*/*7/*d*/
-    fun initJwtAuth(config: ApplicationConfig)
+    fun Application.initJwtAuth()
     {
         // 从配置文件中读取密钥
-        SECRET_KEY = config.property("jwt.secret").getString()
+        val key = environment.config.propertyOrNull("jwt.secret")?.getString()
+        if (key == null)
+        {
+            ForumLogger.info("${CYAN}jwt.secret${RED} not found in config file, use random secret key")
+            SECRET_KEY = UUID.randomUUID().toString()
+        }
+        else
+        {
+            SECRET_KEY = key
+        }
         // 初始化JWT算法
         algorithm = Algorithm.HMAC512(SECRET_KEY)
     }
@@ -62,9 +75,6 @@ object JWTAuth
         .let(::Token)
 
     fun makeToken(id: UserId, password: String): Token = makeTokenByEncryptPassword(id, encryptPassword(password))
-
-    suspend fun makeToken(id: UserId): Token? = UserDatabase.makeJwtToken(id)
-    suspend fun makeToken(email: String): Token? = UserDatabase.makeJwtToken(email)
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)
     fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserFull? = call.principal<UserFull>()

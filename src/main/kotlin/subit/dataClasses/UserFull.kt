@@ -28,6 +28,7 @@ data class UserFull(
 {
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime, introduction, showStars)
 }
+fun UserFull?.hasGlobalAdmin() = this != null && (this.permission >= PermissionLevel.ADMIN)
 
 /**
  * 用户基本信息, 即一般人能看到的信息

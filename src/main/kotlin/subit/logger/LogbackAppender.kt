@@ -4,6 +4,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.StackTraceElementProxy
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.AppenderBase
+import org.fusesource.jansi.AnsiConsole
 import java.time.Instant
 import java.util.*
 import java.util.logging.Level
@@ -36,7 +37,7 @@ class LogbackAppender: AppenderBase<ILoggingEvent>()
             record.thrown = throwable
         }
         ForumLogger.logger.log(record)
-    }.onFailure { ForumLogger.err.println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run { }
+    }.onFailure { AnsiConsole.sysOut().println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run { }
 
     private fun fromInt(id: Int): Level
     {

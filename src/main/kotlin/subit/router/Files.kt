@@ -18,10 +18,12 @@ import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserId
 import subit.dataClasses.toUserIdOrNull
-import subit.database.AdminOperationDatabase
-import subit.database.UserDatabase
+import subit.database.Operations
+import subit.database.Users
+import subit.database.addOperation
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.utils.*
 import subit.utils.FileUtils.canDelete
 import subit.utils.FileUtils.canGet
@@ -210,7 +212,7 @@ private suspend fun Context.getFileList()
         return call.respond(Files(info, files.asIterable().asSlice(begin, count)))
     }
     val file = id.getUserFiles().filter { user.canGet(it.second) }.map { it.first.toString() }
-    val info = UserDatabase.getUser(id)?.getSpaceInfo() ?: return call.respond(HttpStatus.NotFound)
+    val info = get<Users>().getUser(id)?.getSpaceInfo() ?: return call.respond(HttpStatus.NotFound)
     call.respond(Files(info, file.asIterable().asSlice(begin, count)))
 }
 
@@ -237,10 +239,10 @@ private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val changePermission = call.receive<ChangePermission>()
-    val user = UserDatabase.getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
+    val user = get<Users>().getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)
-    UserDatabase.changePermission(changePermission.id, changePermission.permission)
-    AdminOperationDatabase.addOperation(loginUser.id, changePermission)
+    get<Users>().changePermission(changePermission.id, changePermission.permission)
+    get<Operations>().addOperation(loginUser.id, changePermission)
     call.respond(HttpStatus.OK)
 }

@@ -11,10 +11,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.ReportDatabase
+import subit.database.Reports
 import subit.database.checkPermission
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.statuses
@@ -43,7 +44,9 @@ fun Route.report()
         get("/list", {
             description = "获取举报列表"
             request {
-                queryParameter<String>("filter") { required = true; description = "all表示全部, true是已受理, false未受理" }
+                queryParameter<String>("filter") {
+                    required = true; description = "all表示全部, true是已受理, false未受理"
+                }
                 paged()
             }
             response {
@@ -85,7 +88,7 @@ private suspend fun Context.reportPost()
                ?: return call.respond(HttpStatus.BadRequest)
     val content = call.receive<ReportContent>().content
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    ReportDatabase.addReport(type, id, loginUser.id, content)
+    get<Reports>().addReport(type, id, loginUser.id, content)
 }
 
 private suspend fun Context.getReports()
@@ -100,14 +103,14 @@ private suspend fun Context.getReports()
         "all"   -> null
         else    -> return call.respond(HttpStatus.BadRequest)
     }
-    call.respond(ReportDatabase.getReports(begin, count, handled).map(Report::id))
+    call.respond(get<Reports>().getReports(begin, count, handled).map(Report::id))
 }
 
 private suspend fun Context.getReport()
 {
     checkPermission { checkHasGlobalAdmin() }
     val id = call.parameters["id"]?.toReportId() ?: return call.respond(HttpStatus.BadRequest)
-    val report = ReportDatabase.getReport(id) ?: return call.respond(HttpStatus.NotFound)
+    val report = get<Reports>().getReport(id) ?: return call.respond(HttpStatus.NotFound)
     call.respond(report)
 }
 
@@ -116,6 +119,6 @@ private suspend fun Context.handleReport()
     checkPermission { checkHasGlobalAdmin() }
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val id = call.parameters["id"]?.toReportId() ?: return call.respond(HttpStatus.BadRequest)
-    ReportDatabase.handleReport(id, loginUser.id)
+    get<Reports>().handleReport(id, loginUser.id)
     call.respond(HttpStatus.OK)
 }

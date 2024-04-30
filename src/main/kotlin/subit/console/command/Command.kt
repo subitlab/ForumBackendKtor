@@ -1,14 +1,15 @@
 package subit.console.command
 
-import org.jline.reader.Candidate
-import org.jline.reader.Completer
-import org.jline.reader.LineReader
-import org.jline.reader.ParsedLine
+import io.ktor.server.application.*
+import org.jline.reader.*
+import org.jline.reader.impl.DefaultParser
 import subit.console.AnsiStyle
 import subit.console.AnsiStyle.Companion.ansi
 import subit.console.Console
 import subit.console.SimpleAnsiColor
 import subit.logger.ForumLogger
+import subit.utils.ForumThreadGroup
+import subit.utils.ForumThreadGroup.shutdown
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
@@ -72,22 +73,84 @@ interface Command
 /**
  * Command set.
  */
-object CommandSet: TreeCommand()
+object CommandSet: TreeCommand(
+    Reload,
+    Stop,
+    Help,
+    About,
+    Clear,
+    Logger,
+    Shell,
+    Color,
+    Whitelist
+)
 {
     /**
-     * Register all commands.
+     * 上一次命令是否成功
      */
-    fun registerAll()
+    private var success = true
+
+    /**
+     * 命令提示符, 上一次成功为青色, 失败为红色
+     */
+    private val prompt: String
+        get() = "${if (success) SimpleAnsiColor.CYAN.bright() else SimpleAnsiColor.RED.bright()}FORUM > ${AnsiStyle.RESET}"
+
+    fun Application.startCommandThread()
     {
-        addCommand(Reload)
-        addCommand(Stop)
-        addCommand(Help)
-        addCommand(About)
-        addCommand(Clear)
-        addCommand(Logger)
-        addCommand(Shell)
-        addCommand(Color)
-        addCommand(Whitelist)
+        ForumThreadGroup.newThread("CommandThread")
+        {
+            var line: String? = null
+            while (true) try
+            {
+                line = Console.lineReader.readLine(prompt)
+                val words = DefaultParser().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
+                if (words.isEmpty()||(words.size==1&&words.first().isEmpty())) continue
+                val command = CommandSet.getCommand(words[0])
+                if (command==null||command.log) ForumLogger.info("Console is used command: $line")
+                success = false
+                if (command==null)
+                {
+                    CommandSet.err.println("Unknown command: ${words[0]}, use \"help\" to get help")
+                }
+                else if (!command.execute(words.subList(1, words.size)))
+                {
+                    CommandSet.err.println("Command is illegal, use \"help ${words[0]}\" to get help")
+                }
+                else success = true
+            }
+            catch (e: UserInterruptException)
+            {
+                ForumLogger.warning("Console is interrupted")
+                return@newThread
+            }
+            catch (e: EndOfFileException)
+            {
+                ForumLogger.warning("Console is closed")
+                shutdown(0)
+            }
+            catch (e: Exception)
+            {
+                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+            }
+            catch (e: Error)
+            {
+                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+            }
+            catch (e: RuntimeException)
+            {
+                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+            }
+            catch (e: Throwable)
+            {
+                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+            }
+            finally
+            {
+                line = null
+            }
+        }.start()
+        ForumLogger.config("Console is initialized")
     }
 
     /**
@@ -97,26 +160,22 @@ object CommandSet: TreeCommand()
     {
         override fun complete(reader: LineReader, line: ParsedLine, candidates: MutableList<Candidate>?)
         {
-            try
+            ForumLogger.severe("An error occurred while tab completing")
             {
                 candidates?.addAll(CommandSet.tabComplete(line.words().subList(0, line.wordIndex()+1)))
-            }
-            catch (e: Throwable)
-            {
-                ForumLogger.severe("An error occurred while tab completing", e)
             }
         }
     }
 
     /**
-     * 命令输出流,格式是[COMMAND][INFO/Error]message
+     * 命令输出流,格式是[COMMAND][INFO/ERROR]message
      */
-    private class CommandOutputStream(private val style: AnsiStyle, private val level:String): OutputStream()
+    private class CommandOutputStream(private val style: AnsiStyle, private val level: String): OutputStream()
     {
         val arrayOutputStream = ByteArrayOutputStream()
         override fun write(b: Int)
         {
-            if (b=='\n'.code)
+            if (b == '\n'.code)
             {
                 Console.println("${SimpleAnsiColor.PURPLE.bright()}[COMMAND]$style$level${AnsiStyle.RESET} $arrayOutputStream")
                 arrayOutputStream.reset()
@@ -131,10 +190,10 @@ object CommandSet: TreeCommand()
     /**
      * Command output stream.
      */
-    val out: PrintStream = PrintStream(CommandOutputStream(SimpleAnsiColor.BLUE.bright().ansi(),"[INFO]"))
+    val out: PrintStream = PrintStream(CommandOutputStream(SimpleAnsiColor.BLUE.bright().ansi(), "[INFO]"))
 
     /**
      * Command error stream.
      */
-    val err: PrintStream = PrintStream(CommandOutputStream(SimpleAnsiColor.RED.bright().ansi(),"[ERROR]"))
+    val err: PrintStream = PrintStream(CommandOutputStream(SimpleAnsiColor.RED.bright().ansi(), "[ERROR]"))
 }

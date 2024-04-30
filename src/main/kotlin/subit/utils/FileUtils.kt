@@ -4,12 +4,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import net.mamoe.yamlkt.Comment
-import subit.Loader
+import subit.config.filesConfig
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
-import subit.logger.ForumLogger
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileInputStream
@@ -32,25 +30,7 @@ import javax.imageio.ImageIO
  */
 object FileUtils
 {
-    @Serializable
-    data class Config(
-        @Comment("用户上传文件最大大小")
-        val userMaxFileSize: Long,
-        @Comment("管理员上传文件最大大小")
-        val adminMaxFileSize: Long,
-    )
-    {
-        companion object
-        {
-            val DEFAULT = Config(
-                1L shl 30,
-                Long.MAX_VALUE
-            )
-        }
-    }
-
     val dataFolder = File("data")
-    private var config = Config.DEFAULT
     private val fileFolder = File(dataFolder, "files")
     private val indexFolder = File(fileFolder, "index")
     private val rawFolder = File(fileFolder, "raw")
@@ -61,14 +41,7 @@ object FileUtils
         fileFolder.mkdirs()
         indexFolder.mkdirs()
         rawFolder.mkdirs()
-        reloadConfig()
-        Loader.reloadTasks.add(::reloadConfig)
-    }
 
-    private fun reloadConfig()
-    {
-        config = Loader.getConfigOrCreate("files.yml", Config.DEFAULT)
-        ForumLogger.config("Reloaded file config")
     }
 
     val fileInfoSerializer = Json()
@@ -191,8 +164,8 @@ object FileUtils
     suspend fun UserFull.getSpaceInfo(): SpaceInfo = withContext(Dispatchers.IO)
     {
         val userFolder = File(rawFolder, this@getSpaceInfo.id.toString(16))
-        val max = if (this@getSpaceInfo.filePermission >= PermissionLevel.ADMIN) config.adminMaxFileSize
-        else config.userMaxFileSize
+        val max = if (this@getSpaceInfo.filePermission >= PermissionLevel.ADMIN) filesConfig.adminMaxFileSize
+        else filesConfig.userMaxFileSize
         val (used, count) = userFolder.walk().filter { it.isFile }.fold(0L to 0)
         { (size, count), file ->
             size + file.length() to count + 1

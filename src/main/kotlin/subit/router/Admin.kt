@@ -15,12 +15,10 @@ import subit.dataClasses.PermissionLevel
 import subit.dataClasses.Prohibit
 import subit.dataClasses.Slice
 import subit.dataClasses.UserId
-import subit.database.AdminOperationDatabase
-import subit.database.ProhibitDatabase
-import subit.database.UserDatabase
-import subit.database.checkPermission
+import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.checkUserInfo
@@ -92,12 +90,15 @@ private data class CreateUser(val username: String, val password: String, val em
 
 private suspend fun Context.createUser()
 {
+    val users = get<Users>()
+    val operations = get<Operations>()
+
     checkPermission { hasGlobalAdmin() }
     val createUser = call.receive<CreateUser>()
     checkUserInfo(createUser.username, createUser.password, createUser.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
     }
-    UserDatabase.createUser(
+    users.createUser(
         username = createUser.username,
         password = createUser.password,
         email = createUser.email,
@@ -105,7 +106,7 @@ private suspend fun Context.createUser()
         return if (this == null) call.respond(HttpStatus.EmailExist)
         else
         {
-            AdminOperationDatabase.addOperation(getLoginUser()!!.id, createUser)
+            operations.addOperation(getLoginUser()!!.id, createUser)
             call.respond(HttpStatus.OK)
         }
     }
@@ -113,15 +114,18 @@ private suspend fun Context.createUser()
 
 @Serializable
 private data class ProhibitUser(val id: UserId, val prohibit: Boolean, val time: Long, val reason: String)
-
 private suspend fun Context.prohibitUser()
 {
+    val users = get<Users>()
+    val prohibits = get<Prohibits>()
+    val operations = get<Operations>()
+
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val prohibitUser = call.receive<ProhibitUser>()
-    val user = UserDatabase.getUser(prohibitUser.id) ?: return call.respond(HttpStatus.NotFound)
+    val user = users.getUser(prohibitUser.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)
-    if (prohibitUser.prohibit) ProhibitDatabase.addProhibit(
+    if (prohibitUser.prohibit) prohibits.addProhibit(
         Prohibit(
             user = prohibitUser.id,
             time = prohibitUser.time,
@@ -129,8 +133,8 @@ private suspend fun Context.prohibitUser()
             operator = loginUser.id
         )
     )
-    else ProhibitDatabase.removeProhibit(prohibitUser.id)
-    AdminOperationDatabase.addOperation(loginUser.id, prohibitUser)
+    else prohibits.removeProhibit(prohibitUser.id)
+    operations.addOperation(loginUser.id, prohibitUser)
     call.respond(HttpStatus.OK)
 }
 
@@ -139,20 +143,20 @@ private suspend fun Context.prohibitList()
     checkPermission { hasGlobalAdmin() }
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    call.respond(ProhibitDatabase.getProhibitList(begin, count))
+    call.respond(get<Prohibits>().getProhibitList(begin, count))
 }
 
 @Serializable
 private data class ChangePermission(val id: UserId, val permission: PermissionLevel)
-
 private suspend fun Context.changePermission()
 {
+    val users = get<Users>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val changePermission = call.receive<ChangePermission>()
-    val user = UserDatabase.getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
+    val user = users.getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)
-    UserDatabase.changePermission(changePermission.id, changePermission.permission)
-    AdminOperationDatabase.addOperation(loginUser.id, changePermission)
+    users.changePermission(changePermission.id, changePermission.permission)
+    get<Operations>().addOperation(loginUser.id, changePermission)
     call.respond(HttpStatus.OK)
 }

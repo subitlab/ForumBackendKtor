@@ -5,144 +5,176 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.config.*
+import io.ktor.server.config.ConfigLoader.Companion.load
+import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.fusesource.jansi.AnsiConsole
-import subit.console.Console
+import org.koin.dsl.bind
+import org.koin.dsl.module
+import org.koin.ktor.ext.inject
+import org.koin.ktor.plugin.Koin
+import org.koin.logger.slf4jLogger
+import subit.config.apiDocsConfig
 import subit.console.command.CommandSet
-import subit.database.DatabaseSingleton.initDatabase
-import subit.database.UserDatabase
+import subit.database.Users
+import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
 import subit.router.router
 import subit.utils.FileUtils
 import subit.utils.HttpStatus
+import subit.JWTAuth.initJwtAuth
+import java.io.File
 
-object ForumBackend
+lateinit var version: String
+    private set
+
+fun main(args: Array<String>)
 {
-    lateinit var version: String
-        private set
-
-    /**
-     * 论坛,启动!
-     */
-    @JvmStatic
-    fun main(args: Array<String>)
-    {
-        AnsiConsole.systemInstall() // 支持终端颜色码
-        CommandSet.registerAll() // 注册所有命令
-        Console.init() // 初始化终端(启动命令处理线程)
-        FileUtils.init() // 初始化文件系统
-        EngineMain.main(args) // 启动ktor
-    }
-
-    /**
-     * 应用程序入口
-     */
-    @Suppress("unused")
-    fun Application.module()
-    {
-        version = environment.config.property("version").getString()
-        val databaseLazyInit = environment.config.propertyOrNull("datasource.lazyInit")?.getString().toBoolean()
-        initDatabase(environment.config, databaseLazyInit)
-
-        installAuthentication()
-        installDeserialization()
-        installStatusPages()
-        installApiDoc()
-
-        router()
-    }
-
-    /**
-     * 安装登陆验证服务
-     */
-    private fun Application.installAuthentication() = install(Authentication)
-    {
-        JWTAuth.initJwtAuth(this@installAuthentication.environment.config) // 初始化JWT验证
-        jwt()
-        {
-            verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
-            validate() // 设置验证函数
+    ForumLogger
+    val argsMap = args.mapNotNull {
+        it.indexOf("=").let { idx ->
+            when (idx)
             {
-                ForumLogger.config("用户token: id=${it.payload.getClaim("id").asInt()}, password=${it.payload.getClaim("password").asString()}")
-                val (b, user) = UserDatabase.checkUserLoginByEncryptedPassword(
-                    it.payload.getClaim("id").asInt(),
-                    it.payload.getClaim("password").asString()
-                ) ?: return@validate null
-                if (b) user
-                else null
+                -1 -> null
+                else -> Pair(it.take(idx), it.drop(idx+1))
             }
         }
-
-        @Serializable
-        data class ApiDocsUser(val name: String = "username", val password: String = "password")
-        val reloadApiDocsUser:()->ApiDocsUser = { Loader.getConfigOrCreate("auth-api-docs.yml", ApiDocsUser()) }
-        var apiDocsUser: ApiDocsUser = reloadApiDocsUser()
-
-        Loader.reloadTasks.add {
-            apiDocsUser = reloadApiDocsUser()
-            ForumLogger.config("Reload auth-api-docs configs: $apiDocsUser")
-        }
-
-        basic("auth-api-docs")
-        {
-            realm = "Access to the Swagger UI"
-            validate()
-            {
-                if (it.name == apiDocsUser.name && it.password == apiDocsUser.password)
-                    UserIdPrincipal(it.name)
-                else null
-            }
-        }
-    }
-
-    /**
-     * 安装反序列化/序列化服务(用于处理json)
-     */
-    private fun Application.installDeserialization() = install(ContentNegotiation)
+    }.toMap()
+    val args1 = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
+    val configFile = File("config.yaml")
+    if (!configFile.exists())
     {
-        json(Json()
+        configFile.createNewFile()
+        val defaultConfig =
+            Loader.getResource("default_config.yaml")?.readAllBytes() ?: error("default_config.yaml not found")
+        configFile.writeBytes(defaultConfig)
+        ForumLogger.severe("config.yaml not found, the default config has been created, please modify it and restart the program")
+        return
+    }
+    val customConfig = ConfigLoader.load("config.yaml")
+    val environment = commandLineEnvironment(args = args1)
+    {
+        this.config = this.config.withFallback(customConfig)
+    }
+    embeddedServer(Netty, environment).start(wait = true)
+}
+
+/**
+ * 应用程序入口
+ */
+@Suppress("unused")
+fun Application.init()
+{
+    version = environment.config.property("version").getString()
+
+    AnsiConsole.systemInstall() // 支持终端颜色码
+    CommandSet.apply { startCommandThread() }
+
+    FileUtils.init() // 初始化文件系统
+    installAuthentication()
+    installDeserialization()
+    installStatusPages()
+    installApiDoc()
+    installKoin()
+
+    loadDatabaseImpl()
+
+    router()
+}
+
+/**
+ * 安装登陆验证服务
+ */
+private fun Application.installAuthentication() = install(Authentication)
+{
+    this@installAuthentication.initJwtAuth()
+    jwt()
+    {
+        verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
+        validate() // 设置验证函数
         {
-            // 设置默认值也序列化, 否则不默认值不会被序列化
-            encodeDefaults = true
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
+            val users: Users by inject()
+            ForumLogger.config(
+                "用户token: id=${
+                    it.payload.getClaim("id")
+                        .asInt()
+                }, password=${it.payload.getClaim("password").asString()}"
+            )
+            val (_, user) = users.checkUserLoginByEncryptedPassword(
+                it.payload.getClaim("id").asInt(),
+                it.payload.getClaim("password").asString()
+            ) ?: return@validate null
+            user
+        }
     }
 
-    /**
-     * 对于不同的状态码返回不同的页面
-     */
-    private fun Application.installStatusPages() = install(StatusPages)
+    basic("auth-api-docs")
     {
-        exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
-        exception<Throwable>
-        { call, throwable ->
-            ForumLogger.warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
-            call.respond(HttpStatus.InternalServerError)
+        realm = "Access to the Swagger UI"
+        validate()
+        {
+            if (it.name == apiDocsConfig.name && it.password == apiDocsConfig.password)
+                UserIdPrincipal(it.name)
+            else null
         }
     }
+}
 
-    private fun Application.installApiDoc() = install(SwaggerUI)
+/**
+ * 安装反序列化/序列化服务(用于处理json)
+ */
+private fun Application.installDeserialization() = install(ContentNegotiation)
+{
+    json(Json()
     {
-        swagger()
-        {
-            swaggerUrl = "api-docs"
-            forwardRoot = true
-            authentication = "auth-api-docs"
-        }
-        info()
-        {
-            title = "论坛后端API文档"
-            version = ForumBackend.version
-            description = "SubIT论坛后端API文档"
-        }
+        // 设置默认值也序列化, 否则不默认值不会被序列化
+        encodeDefaults = true
+        prettyPrint = true
+        isLenient = true
+        ignoreUnknownKeys = true
+    })
+}
+
+/**
+ * 对于不同的状态码返回不同的页面
+ */
+private fun Application.installStatusPages() = install(StatusPages)
+{
+    exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
+    exception<Throwable>
+    { call, throwable ->
+        ForumLogger.warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
+        call.respond(HttpStatus.InternalServerError)
     }
+}
+
+private fun Application.installApiDoc() = install(SwaggerUI)
+{
+    swagger()
+    {
+        swaggerUrl = "api-docs"
+        forwardRoot = true
+        authentication = "auth-api-docs"
+    }
+    info()
+    {
+        title = "论坛后端API文档"
+        version = subit.version
+        description = "SubIT论坛后端API文档"
+    }
+}
+
+private fun Application.installKoin() = install(Koin)
+{
+    slf4jLogger()
+    modules(module {
+        single { this@installKoin } bind Application::class
+    })
 }

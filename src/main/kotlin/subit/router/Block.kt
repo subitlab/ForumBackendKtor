@@ -9,12 +9,10 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.AdminOperationDatabase
-import subit.database.BlockDatabase
-import subit.database.PermissionDatabase
-import subit.database.checkPermission
+import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
+import subit.router.get
 import subit.router.paged
 import subit.utils.HttpStatus
 import subit.utils.respond
@@ -122,8 +120,9 @@ private suspend fun Context.newBlock()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val newBlock = call.receive<NewBlock>()
     checkPermission { checkHasAdminIn(newBlock.parent) }
-    BlockDatabase.getBlock(newBlock.parent) ?: return call.respond(HttpStatus.BadRequest)
-    BlockDatabase.createBlock(
+    val blocks = get<Blocks>()
+    blocks.getBlock(newBlock.parent) ?: return call.respond(HttpStatus.BadRequest)
+    blocks.createBlock(
         name = newBlock.name,
         description = newBlock.description,
         parent = newBlock.parent,
@@ -133,7 +132,7 @@ private suspend fun Context.newBlock()
         readingPermission = newBlock.readingPermission,
         anonymousPermission = newBlock.anonymousPermission
     )
-    AdminOperationDatabase.addOperation(loginUser.id, newBlock)
+    get<Operations>().addOperation(loginUser.id, newBlock)
     call.respond(HttpStatus.OK)
 }
 
@@ -153,14 +152,14 @@ private suspend fun Context.editBlockInfo()
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val editBlockInfo = call.receive<EditBlockInfo>()
     checkPermission { checkHasAdminIn(id) }
-    BlockDatabase.setPermission(
+    get<Blocks>().setPermission(
         block = id,
         posting = editBlockInfo.postingPermission,
         commenting = editBlockInfo.commentingPermission,
         reading = editBlockInfo.readingPermission,
         anonymous = editBlockInfo.anonymousPermission
     )
-    AdminOperationDatabase.addOperation(loginUser.id, editBlockInfo)
+    get<Operations>().addOperation(loginUser.id, editBlockInfo)
     call.respond(HttpStatus.OK)
 }
 
@@ -168,7 +167,7 @@ private suspend fun Context.getBlockInfo()
 {
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     checkPermission { checkCanRead(id) }
-    BlockDatabase.getBlock(id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Blocks>().getBlock(id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.deleteBlock()
@@ -176,8 +175,8 @@ private suspend fun Context.deleteBlock()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     checkPermission { checkHasAdminIn(id) }
-    BlockDatabase.setState(id, State.DELETED)
-    AdminOperationDatabase.addOperation(loginUser.id, id)
+    get<Blocks>().setState(id, State.DELETED)
+    get<Operations>().addOperation(loginUser.id, id)
     call.respond(HttpStatus.OK)
 }
 
@@ -192,12 +191,12 @@ private suspend fun Context.changePermission()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val changePermission = call.receive<ChangePermission>()
     checkPermission { checkHasAdminIn(changePermission.block) }
-    PermissionDatabase.setPermission(
+    get<Permissions>().setPermission(
         bid = changePermission.block,
         uid = changePermission.user,
         permission = changePermission.permission
     )
-    AdminOperationDatabase.addOperation(loginUser.id, changePermission)
+    get<Operations>().addOperation(loginUser.id, changePermission)
     call.respond(HttpStatus.OK)
 }
 
@@ -205,8 +204,8 @@ private suspend fun Context.getChildren()
 {
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = checkPermission { checkCanRead(id); user } ?: return call.respond(HttpStatus.Unauthorized)
-    BlockDatabase.getChildren(id).filter {
-        PermissionDatabase.getPermission(it.id, loginUser.id) >= it.reading
+    get<Blocks>().getChildren(id).filter {
+        get<Permissions>().getPermission(it.id, loginUser.id) >= it.reading
     }.map { it.id }.let { call.respond(it) }
 }
 
@@ -215,6 +214,6 @@ private suspend fun Context.searchBlock()
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val blocks = BlockDatabase.searchBlock(getLoginUser()?.id, key, begin, count).map(BlockFull::id)
+    val blocks = get<Blocks>().searchBlock(getLoginUser()?.id, key, begin, count).map(BlockFull::id)
     call.respond(blocks)
 }

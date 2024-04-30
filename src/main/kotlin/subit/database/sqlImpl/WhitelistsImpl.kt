@@ -1,13 +1,14 @@
-package subit.database
+package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import subit.database.Whitelists
 
-object WhitelistDatabase: DataAccessObject<WhitelistDatabase.Whitelist>(Whitelist)
+class WhitelistsImpl: DaoSqlImpl<WhitelistsImpl.WhitelistTable>(WhitelistTable), Whitelists
 {
-    object Whitelist: IdTable<String>("whitelist")
+    object WhitelistTable: IdTable<String>("whitelist")
     {
         val email = varchar("email", 100).entityId()
         override val id: Column<EntityID<String>>
@@ -16,28 +17,28 @@ object WhitelistDatabase: DataAccessObject<WhitelistDatabase.Whitelist>(Whitelis
             get() = PrimaryKey(email)
     }
 
-    suspend fun add(email: String) = query()
+    override suspend fun add(email: String): Unit = query()
     {
         insert {
-            it[Whitelist.email] = email
+            it[WhitelistTable.email] = email
         }
     }
 
-    suspend fun remove(email: String) = query()
+    override suspend fun remove(email: String): Unit = query()
     {
         deleteWhere {
-            Whitelist.email eq email
+            WhitelistTable.email eq email
         }
     }
 
-    suspend fun isWhitelisted(email: String): Boolean = query()
+    override suspend fun isWhitelisted(email: String): Boolean = query()
     {
         select {
-            Whitelist.email eq email
+            WhitelistTable.email eq email
         }.count() > 0
     }
 
-    suspend fun getWhitelist(): List<String> = query()
+    override suspend fun getWhitelist(): List<String> = query()
     {
         selectAll().map { it[email].value }
     }
