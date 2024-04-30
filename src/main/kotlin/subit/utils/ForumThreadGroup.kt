@@ -1,16 +1,15 @@
 package subit.utils
 
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.response.*
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
-import subit.console.AnsiStyle
-import subit.console.SimpleAnsiColor
+import subit.console.AnsiStyle.Companion.RESET
+import subit.console.SimpleAnsiColor.Companion.CYAN
+import subit.console.SimpleAnsiColor.Companion.PURPLE
 import subit.logger.ForumLogger
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
 import kotlin.system.exitProcess
 
 object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
@@ -22,7 +21,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
     }
     fun Application.shutdown(code: Int, cause: String = "unknown"): Nothing
     {
-        ForumLogger.warning("${SimpleAnsiColor.PURPLE}Server is shutting down: ${SimpleAnsiColor.CYAN}$cause${AnsiStyle.RESET}")
+        ForumLogger.warning("${PURPLE}Server is shutting down: ${CYAN}$cause${RESET}")
         val environment = this.environment
         environment.monitor.raise(ApplicationStopPreparing, environment)
         if (environment is ApplicationEngineEnvironment) environment.stop()

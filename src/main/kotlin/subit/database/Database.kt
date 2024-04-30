@@ -4,25 +4,33 @@ import io.ktor.server.application.*
 import subit.console.AnsiStyle.Companion.RESET
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.GREEN
+import subit.console.SimpleAnsiColor.Companion.RED
 import subit.database.sqlImpl.SqlDatabaseImpl
 import subit.logger.ForumLogger
+import subit.utils.ForumThreadGroup.shutdown
+import java.util.*
+import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
-const val DEFAULT_DATABASE_IMPL = "sql"
-val impls: Map<String, IDatabase> = mapOf(
-    "sql" to SqlDatabaseImpl,
+val databaseImpls: List<IDatabase> = listOf(
+    SqlDatabaseImpl
 )
 
 fun Application.loadDatabaseImpl()
 {
+    val impls = databaseImpls.associateBy { it.name }
+    ForumLogger.config("Available database implementations: ${impls.keys.joinToString(", ")}")
+
     val databaseImpl = environment.config.propertyOrNull("database.impl")?.getString()?.lowercase()
 
     if (databaseImpl == null)
     {
         val implNames = impls.keys.joinToString(", ")
-        ForumLogger.warning("Database implementation not set, using default implementation: $DEFAULT_DATABASE_IMPL")
-        ForumLogger.warning("If you want to use another implementation, please set ${CYAN}database.impl${GREEN} (options: $implNames)${RESET}")
+        ForumLogger.severe("${RED}Database implementation not found")
+        ForumLogger.severe("${RED}Please add properties in application.conf: ${CYAN}database.impl ${GREEN}(options: $implNames)${RESET}")
+        shutdown(1, "Database implementation not found")
     }
+
     val impl = impls[databaseImpl]
     if (impl != null)
     {
@@ -32,25 +40,13 @@ fun Application.loadDatabaseImpl()
         }
         return
     }
-    val defaultImpl = impls[DEFAULT_DATABASE_IMPL]
-    if (defaultImpl != null)
-    {
-        if (databaseImpl != null)
-        {
-            ForumLogger.warning(
-                "Unknown database implementation: $databaseImpl, using default implementation: $DEFAULT_DATABASE_IMPL"
-            )
-        }
-        defaultImpl.apply {
-            init()
-        }
-        return
-    }
-    ForumLogger.severe("No database implementation found")
-    exitProcess(1)
+    ForumLogger.severe("${RED}Database implementation not found: $GREEN$databaseImpl")
+    ForumLogger.severe("${RED}Available implementations: $GREEN${impls.keys.joinToString(", ")}")
+    shutdown(1, "Database implementation not found")
 }
 
 interface IDatabase
 {
+    val name: String
     fun Application.init()
 }

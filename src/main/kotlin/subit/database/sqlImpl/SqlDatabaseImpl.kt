@@ -4,9 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
 import io.ktor.server.config.*
-import io.ktor.server.netty.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.Table
@@ -19,16 +17,13 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.ktor.ext.get
-import subit.console.AnsiColor
-import subit.console.SimpleAnsiColor.Companion.CYAN
-import subit.console.SimpleAnsiColor.Companion.RED
 import subit.console.AnsiStyle.Companion.RESET
+import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.GREEN
+import subit.console.SimpleAnsiColor.Companion.RED
 import subit.database.*
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup
 import subit.utils.ForumThreadGroup.shutdown
-import kotlin.system.exitProcess
 
 /**
  * @param T 表类型
@@ -78,6 +73,8 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
         this.poolName = "subit"
         validate()
     })
+
+    override val name: String = "sql"
 
     /**
      * 初始化数据库.
