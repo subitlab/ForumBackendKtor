@@ -157,7 +157,7 @@ object ToConsoleHandler: Handler()
         )
 
         messages.forEach { message ->
-            Console.println("$head $message")
+            Console.println("$head $message $RESET")
         }
     }
 
