@@ -1,6 +1,5 @@
 package subit.logger
 
-import org.fusesource.jansi.AnsiConsole
 import subit.Loader
 import subit.config.loggerConfig
 import subit.console.AnsiStyle.Companion.RESET
@@ -35,6 +34,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     /**
      * 日志输出流
      */
+    @Suppress("MemberVisibilityCanBePrivate")
     val out: PrintStream = PrintStream(LoggerOutputStream(Level.INFO))
 
     /**
@@ -145,7 +145,7 @@ object ToConsoleHandler: Handler()
         val ansiStyle = if (level.intValue() >= Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
         else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
         else if (level.intValue() >= Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
-        else SimpleAnsiColor.GREEN.bright() // if level.name.length<5 then add space
+        else SimpleAnsiColor.GREEN.bright()
 
         val head = String.format(
             "%s[%s]%s[%s]%s",

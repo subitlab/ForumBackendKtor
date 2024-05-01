@@ -1,3 +1,4 @@
+@file:Suppress("unused")
 package subit.dataClasses
 
 import org.jetbrains.exposed.sql.Table

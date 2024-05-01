@@ -5,7 +5,6 @@ import kotlinx.coroutines.withContext
 import subit.config.emailConfig
 import subit.database.EmailCodes
 import java.util.*
-import java.util.regex.Pattern
 import javax.mail.Address
 import javax.mail.Message
 import javax.mail.Session

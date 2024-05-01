@@ -8,9 +8,6 @@ import subit.console.SimpleAnsiColor.Companion.RED
 import subit.database.sqlImpl.SqlDatabaseImpl
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup.shutdown
-import java.util.*
-import kotlin.reflect.KClass
-import kotlin.system.exitProcess
 
 val databaseImpls: List<IDatabase> = listOf(
     SqlDatabaseImpl

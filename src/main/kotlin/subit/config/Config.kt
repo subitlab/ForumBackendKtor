@@ -5,6 +5,7 @@ import kotlinx.serialization.serializer
 import net.mamoe.yamlkt.Yaml
 import net.mamoe.yamlkt.YamlElement
 import net.mamoe.yamlkt.YamlMap
+import subit.logger.ForumLogger
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.*
@@ -26,7 +27,7 @@ class ConfigLoader<T: Any> private constructor(
     private val default: T,
     private val filename: String,
     private val type: KType,
-    var listeners: MutableSet<(T, T)->Unit> = mutableSetOf()
+    private var listeners: MutableSet<(T, T)->Unit> = mutableSetOf()
 )
 {
     init
@@ -38,13 +39,9 @@ class ConfigLoader<T: Any> private constructor(
         set(value)
         {
             listeners.forEach {
-                try
+                ForumLogger.severe("Error in config listener")
                 {
                     it(field, value)
-                }
-                catch (e: Exception)
-                {
-//                    ForumLogger.severe("Error in config listener", e)
                 }
             }
             field = value
@@ -67,6 +64,7 @@ class ConfigLoader<T: Any> private constructor(
 //        }
     }
 
+    @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object
     {
         /**

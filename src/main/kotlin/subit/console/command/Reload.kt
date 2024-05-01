@@ -1,7 +1,6 @@
 package subit.console.command
 
 import org.jline.reader.Candidate
-import subit.Loader
 import subit.config.ConfigLoader
 
 /**

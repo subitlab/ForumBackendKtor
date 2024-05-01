@@ -5,11 +5,9 @@ import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.config.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
-import subit.console.SimpleAnsiColor
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.RED
 import subit.dataClasses.UserFull
@@ -66,7 +64,7 @@ object JWTAuth: KoinComponent
      * @param id 用户ID
      * @param password 用户密码(加密后)
      */
-    fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
+    private fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id)
         .withClaim("password", password)

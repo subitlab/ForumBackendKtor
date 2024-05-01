@@ -17,7 +17,7 @@ object Console
     /**
      * 终端对象
      */
-    val terminal: Terminal = TerminalBuilder.builder().jansi(true).build()
+    private val terminal: Terminal = TerminalBuilder.builder().jansi(true).build()
 
     /**
      * 颜色显示模式

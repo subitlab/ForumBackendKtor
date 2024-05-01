@@ -1,4 +1,5 @@
 // 取消命名不合法警告
+@file:Suppress("PropertyName")
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project

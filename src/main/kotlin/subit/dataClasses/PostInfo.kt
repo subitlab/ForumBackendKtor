@@ -75,11 +75,6 @@ enum class State
     NORMAL,
 
     /**
-     * 被隐藏(审核不通过)
-     */
-    HIDDEN,
-
-    /**
      * 被删除
      */
     DELETED;

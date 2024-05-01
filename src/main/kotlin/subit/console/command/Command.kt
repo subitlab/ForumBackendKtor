@@ -111,11 +111,11 @@ object CommandSet: TreeCommand(
                 success = false
                 if (command==null)
                 {
-                    CommandSet.err.println("Unknown command: ${words[0]}, use \"help\" to get help")
+                    err.println("Unknown command: ${words[0]}, use \"help\" to get help")
                 }
                 else if (!command.execute(words.subList(1, words.size)))
                 {
-                    CommandSet.err.println("Command is illegal, use \"help ${words[0]}\" to get help")
+                    err.println("Command is illegal, use \"help ${words[0]}\" to get help")
                 }
                 else success = true
             }

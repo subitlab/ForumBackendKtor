@@ -1,3 +1,4 @@
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
 package subit.console
 
 import subit.console.AnsiStyle.Companion.ansi
@@ -164,15 +165,14 @@ data class RGBAnsiColor(private val r: Int, private val g: Int, private val b: I
     override fun background() = RGBAnsiColor(r, g, b, true)
     override fun toSimpleColor(): SimpleAnsiColor
     {
-        val color: SimpleAnsiColor
-        if (r>g&&r>b&&r-g-b>100) color = SimpleAnsiColor.RED
-        else if (g>r&&g>b&&g-r-b>100) color = SimpleAnsiColor.GREEN
-        else if (b>r&&b>g&&b-r-g>100) color = SimpleAnsiColor.BLUE
-        else if (r-b>100&&g-b>100) color = SimpleAnsiColor.YELLOW
-        else if (r-g>100&&b-g>100) color = SimpleAnsiColor.PURPLE
-        else if (g-r>100&&b-r>100) color = SimpleAnsiColor.CYAN
-        else if (r+g+b>450) color = SimpleAnsiColor.WHITE
-        else color = SimpleAnsiColor.BLACK
+        val color = if (r > g && r > b && r-g-b > 100) SimpleAnsiColor.RED
+        else if (g>r&&g>b&&g-r-b>100) SimpleAnsiColor.GREEN
+        else if (b>r&&b>g&&b-r-g>100) SimpleAnsiColor.BLUE
+        else if (r-b>100&&g-b>100) SimpleAnsiColor.YELLOW
+        else if (r-g>100&&b-g>100) SimpleAnsiColor.PURPLE
+        else if (g-r>100&&b-r>100) SimpleAnsiColor.CYAN
+        else if (r+g+b>450) SimpleAnsiColor.WHITE
+        else SimpleAnsiColor.BLACK
         return if (isBackground) color.background() else color.foreground()
     }
 

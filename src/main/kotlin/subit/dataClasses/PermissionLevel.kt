@@ -11,6 +11,7 @@ enum class PermissionLevel
     SUPER_ADMIN,
     ROOT;
 
+    @Suppress("unused")
     fun toLevel() = when (this)
     {
         BANNED      -> 0
@@ -22,6 +23,7 @@ enum class PermissionLevel
 
     companion object
     {
+        @Suppress("unused")
         fun fromLevel(level: Int): PermissionLevel
         {
             return when (level)

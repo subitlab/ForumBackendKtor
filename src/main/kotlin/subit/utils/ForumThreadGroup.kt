@@ -12,6 +12,7 @@ import kotlin.collections.mutableMapOf
 import kotlin.collections.set
 import kotlin.system.exitProcess
 
+@Suppress("unused")
 object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
 {
     fun shutdown(code: Int, cause: String = "unknown"): Nothing
@@ -59,7 +60,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
         override fun hashCode(): Int = name.hashCode()
     }
 
-    val tasks = mutableMapOf<Task, Thread>()
+    private val tasks = mutableMapOf<Task, Thread>()
 
     /**
      * 启动一个任务
@@ -94,6 +95,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
         startTask(task)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun stopTask(task: Task)
     {
         tasks[task]?.interrupt()

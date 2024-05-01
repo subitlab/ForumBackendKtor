@@ -69,7 +69,7 @@ object FileUtils
     fun UserFull?.canDelete(file: FileInfo) =
         this != null && (this.id == file.user || this.filePermission >= PermissionLevel.ADMIN)
 
-    fun getFileInfo(file: File): FileInfo? = runCatching {
+    private fun getFileInfo(file: File): FileInfo? = runCatching {
         fileInfoSerializer.decodeFromString(FileInfo.serializer(), file.readText())
     }.getOrNull()
 
@@ -140,11 +140,6 @@ object FileUtils
             .mapNotNull { id -> getFileInfo(id)?.let { id to it } }
     }
 
-    /**
-     * 获取一个文件的内容
-     * @param id 文件id
-     */
-    fun getFile(id: UUID): File? = getFileInfo(id)?.let { getFile(id, it) }
     fun getFile(id: UUID, info: FileInfo): File?
     {
         val userFolder = File(rawFolder, info.user.toString(16))
@@ -155,8 +150,7 @@ object FileUtils
     @Serializable
     data class SpaceInfo(val max: Long, val used: Long, val fileCount: Int)
     {
-        val remain get() = max - used
-        fun canUpload(size: Long) = remain >= size
+        fun canUpload(size: Long) = max - used >= size
     }
     /**
      * 获取使用空间与剩余空间
@@ -182,7 +176,7 @@ object FileUtils
         deleteFile(id, info)
     }
 
-    fun deleteFile(id: UUID, info: FileInfo) = deleteFile(id, info.user)
+    private fun deleteFile(id: UUID, info: FileInfo) = deleteFile(id, info.user)
     private fun deleteFile(id: UUID, user: UserId)
     {
         File(rawFolder, "${user}.${id}.file").delete()

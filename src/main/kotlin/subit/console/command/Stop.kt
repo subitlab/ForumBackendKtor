@@ -1,7 +1,6 @@
 package subit.console.command
 
 import subit.utils.ForumThreadGroup
-import kotlin.system.exitProcess
 
 /**
  * 杀死服务器

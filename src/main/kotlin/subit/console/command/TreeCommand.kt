@@ -29,6 +29,7 @@ abstract class TreeCommand(): Command
     /**
      * 添加一条命令
      */
+    @Suppress("MemberVisibilityCanBePrivate")
     fun addCommand(command: Command)
     {
         map[parseName(command.name)] = command
@@ -44,11 +45,6 @@ abstract class TreeCommand(): Command
      * 所有命令对象
      */
     fun allCommands(): Set<Command> = Collections.unmodifiableSet(HashSet(map.values))
-
-    /**
-     * 所有命令名/别名
-     */
-    fun allCommandNames(): Set<String> = Collections.unmodifiableSet(map.keys)
 
     override val args: String
         get()

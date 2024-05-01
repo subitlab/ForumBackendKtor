@@ -1,6 +1,5 @@
 package subit
 
-import subit.logger.ForumLogger
 import java.io.InputStream
 
 object Loader

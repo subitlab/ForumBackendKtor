@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import net.mamoe.yamlkt.Comment
+import subit.logger.ForumLogger
 import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.util.regex.Pattern
@@ -26,4 +27,4 @@ data class LoggerConfig(
     fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
 }
 
-var loggerConfig: LoggerConfig by config("logger.yml", LoggerConfig())
+var loggerConfig: LoggerConfig by config("logger.yml", LoggerConfig(), { _, new -> ForumLogger.setLevel(new.level) })

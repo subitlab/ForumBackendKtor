@@ -18,6 +18,7 @@ import subit.router.block.block
 import subit.router.comment.comment
 import subit.router.files.files
 import subit.router.home.home
+import subit.router.notice.notice
 import subit.router.posts.posts
 import subit.router.privateChat.privateChat
 import subit.router.report.report
@@ -89,7 +90,7 @@ fun Application.router() = routing()
         comment()
         files()
         home()
-        // todo notice()
+        notice()
         posts()
         privateChat()
         report()

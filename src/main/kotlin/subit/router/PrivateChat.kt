@@ -9,9 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.PrivateChat
-import subit.dataClasses.Slice
-import subit.dataClasses.UserId
+import subit.dataClasses.*
 import subit.database.PrivateChats
 import subit.router.*
 import subit.utils.HttpStatus
@@ -41,7 +39,7 @@ fun Route.privateChat()
             response {
                 statuses<Slice<UserId>>(HttpStatus.OK, HttpStatus.Unauthorized)
             }
-        }) { getPrivateChats() }
+        }) { getPrivateChatUsers() }
 
         get("/listChat/{userId}", {
             description = "获取与某人的私信列表"
@@ -71,7 +69,7 @@ private suspend fun Context.sendPrivateChat()
     call.respond(HttpStatus.OK)
 }
 
-private suspend fun Context.getPrivateChats()
+private suspend fun Context.getPrivateChatUsers()
 {
     val privateChats = get<PrivateChats>()
     val (begin, count) = call.getPage()
@@ -80,10 +78,11 @@ private suspend fun Context.getPrivateChats()
     call.respond(chats)
 }
 
-private suspend fun Context.getPrivateChats(userId: UserId)
+private suspend fun Context.getPrivateChats()
 {
     val privateChats = get<PrivateChats>()
     val (begin, count) = call.getPage()
+    val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val chats = privateChats.getPrivateChats(loginUser.id, userId, begin, count)
     call.respond(chats)

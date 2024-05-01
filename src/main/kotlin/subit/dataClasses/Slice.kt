@@ -21,6 +21,7 @@ data class Slice<T>(
     val list: List<T>
 )
 {
+    @Suppress("unused")
     companion object
     {
         /**
