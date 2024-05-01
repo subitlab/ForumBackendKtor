@@ -3,9 +3,11 @@ package subit.logger
 import org.fusesource.jansi.AnsiConsole
 import subit.Loader
 import subit.config.loggerConfig
-import subit.console.AnsiStyle
+import subit.console.AnsiStyle.Companion.RESET
 import subit.console.Console
 import subit.console.SimpleAnsiColor
+import subit.console.SimpleAnsiColor.Companion.PURPLE
+import subit.logger.ForumLogger.nativeOut
 import subit.logger.ForumLogger.safe
 import java.io.*
 import java.text.SimpleDateFormat
@@ -22,6 +24,9 @@ import java.util.zip.ZipOutputStream
  */
 object ForumLogger: LoggerUtils(Logger.getLogger(""))
 {
+    internal val nativeOut: PrintStream = System.out
+    internal val nativeErr: PrintStream = System.err
+
     /**
      * logger中的日期格式
      */
@@ -55,6 +60,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     {
         loggerConfig = loggerConfig.copy(level = level)
     }
+
     /**
      * 获取过滤器
      */
@@ -65,11 +71,11 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
      * 未避免此类问题, 在涉及需要打印内容的地方, 应使用此方法.
      * 此当[block]出现错误时, 将绕过终端相关组件, 直接打印在标准输出流上. 以避免[StackOverflowError]的发生.
      */
-    internal inline fun safe(block: () -> Unit)
+    internal inline fun safe(block: ()->Unit)
     {
         runCatching(block).onFailure()
         {
-            it.printStackTrace(AnsiConsole.sysErr())
+            it.printStackTrace(nativeErr)
         }
     }
 
@@ -84,19 +90,6 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         ForumLogger.logger.handlers.forEach { ForumLogger.logger.removeHandler(it) }
         ForumLogger.logger.addHandler(ToConsoleHandler)
         ForumLogger.logger.addHandler(ToFileHandler)
-        ForumLogger.logger.addHandler(object: Handler()
-        {
-            override fun publish(record: LogRecord?): Unit = safe()
-            {
-                val throwable = record?.thrown ?: return
-                val out = ByteArrayOutputStream()
-                throwable.printStackTrace(PrintStream(out))
-                out.toString().split('\n').forEach { ForumLogger.logger.log(record.level, it) }
-            }
-
-            override fun flush() = Unit
-            override fun close() = Unit
-        })
         Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
     }
 
@@ -127,35 +120,45 @@ object ToConsoleHandler: Handler()
 {
     override fun publish(record: LogRecord) = safe()
     {
+        if (!loggerConfig.check(record)) return
+
+        val messages = mutableListOf(record.message)
+
+        if (record.thrown != null)
+        {
+            val str = record.thrown.stackTraceToString()
+            str.split("\n").forEach { messages.add(it) }
+        }
+
         if (record.sourceClassName.startsWith("org.jline"))
         {
-            String.format(
-                "[%s][%s] %s",
+            val head = String.format(
+                "[%s][%s]",
                 ForumLogger.loggerDateFormat.format(record.millis),
-                record.level.name,
-                record.message
-            ).let { AnsiConsole.sysOut().println(it) }
+                record.level.name
+            )
+            messages.forEach { message -> nativeOut.println("$head $message") }
             return
         }
 
-        if (!loggerConfig.check(record)) return
         val level = record.level
         val ansiStyle = if (level.intValue() >= Level.SEVERE.intValue()) SimpleAnsiColor.RED.bright()
         else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
         else if (level.intValue() >= Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
         else SimpleAnsiColor.GREEN.bright() // if level.name.length<5 then add space
 
-        Console.println(
-            String.format(
-                "%s[%s]%s[%s]%s %s",
-                SimpleAnsiColor.PURPLE.bright(),
-                ForumLogger.loggerDateFormat.format(record.millis),
-                ansiStyle,
-                level.name,
-                AnsiStyle.RESET,
-                record.message
-            )
+        val head = String.format(
+            "%s[%s]%s[%s]%s",
+            PURPLE.bright(),
+            ForumLogger.loggerDateFormat.format(record.millis),
+            ansiStyle,
+            level.name,
+            RESET,
         )
+
+        messages.forEach { message ->
+            Console.println("$head $message")
+        }
     }
 
     override fun flush() = Unit
@@ -228,26 +231,42 @@ object ToFileHandler: Handler()
         fos.close()
     }
 
+    private fun check()
+    {
+        if ((cnt ushr 10) > 0) new()
+    }
+
+    private fun append(lines: List<String>) = synchronized(this)
+    {
+        if (!logFile.exists()) new()
+        val writer = FileWriter(logFile, true)
+        lines.forEach { writer.appendLine(it) }
+        writer.close()
+        check()
+    }
+
+    private val colorMatcher = Regex("\u001B\\[[;\\d]*m")
     override fun publish(record: LogRecord) = safe()
     {
-        if (record.sourceClassName.startsWith("org.jline")) return
-
         if (!loggerConfig.check(record)) return
-        if (!logFile.exists()) new()
-        // 去除颜色码
-        val message = record.message.replace(Regex("\u001B\\[[;\\d]*m"), "")
-        val fos = FileOutputStream(logFile, true)
-        fos.write(
-            String.format(
-                "[%s][%s] %s\n",
-                ForumLogger.loggerDateFormat.format(record.millis),
-                record.level.name,
-                message
-            ).toByteArray()
+
+        val messages = mutableListOf(record.message)
+
+        if (record.thrown != null)
+        {
+            val str = record.thrown.stackTraceToString()
+            str.split("\n").forEach { messages.add(it) }
+        }
+
+        val messagesWithOutColor = messages.map { colorMatcher.replace(it, "") }
+
+        val head = String.format(
+            "[%s][%s]",
+            ForumLogger.loggerDateFormat.format(record.millis),
+            record.level.name
         )
-        fos.close()
-        ++cnt
-        if ((cnt ushr 10) > 0) new()
+
+        append(messagesWithOutColor.map { "$head $it" })
     }
 
     override fun flush() = Unit

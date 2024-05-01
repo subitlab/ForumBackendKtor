@@ -3,6 +3,7 @@ package subit.database.sqlImpl
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
@@ -34,8 +35,6 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         val create = timestamp("create").defaultExpression(CurrentTimestamp()).index()
         val lastModified = timestamp("last_modified").defaultExpression(CurrentTimestamp()).index()
         val view = long("view").default(0L)
-//        val like = long("like").default(0L)
-//        val star = long("star").default(0L)
         val state = enumeration("state", State::class).default(State.NORMAL)
         val top = bool("top").default(false)
         override val primaryKey = PrimaryKey(id)
@@ -111,32 +110,24 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         }.map(::deserializePost)
     }
 
-    private suspend fun getBlockHotPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = query()
-    {
-        TODO("Not implemented")
-    }
-
     override suspend fun getBlockPosts(
         block: BlockId,
         type: Posts.PostListSort,
         begin: Long,
         count: Int
-    ): Slice<PostInfo> =
-        if (type != Posts.PostListSort.HOT) query()
+    ): Slice<PostInfo> = query()
+    {
+        val order = when (type)
         {
-            val order = when (type)
-            {
-                Posts.PostListSort.NEW -> create to SortOrder.DESC
-                Posts.PostListSort.OLD       -> create to SortOrder.ASC
-                Posts.PostListSort.MORE_VIEW -> view to SortOrder.DESC
-                else                         -> throw IllegalArgumentException("Unknown type")
-            }
-            PostsTable.select { (PostsTable.block eq block) and (state eq State.NORMAL) }
-                .orderBy(order.first, order.second)
-                .asSlice(begin, count)
-                .map(::deserializePost)
+            Posts.PostListSort.NEW       -> create to SortOrder.DESC
+            Posts.PostListSort.OLD       -> create to SortOrder.ASC
+            Posts.PostListSort.MORE_VIEW -> view to SortOrder.DESC
         }
-        else getBlockHotPosts(block, begin, count)
+        PostsTable.select { (PostsTable.block eq block) and (state eq State.NORMAL) }
+            .orderBy(order.first, order.second)
+            .asSlice(begin, count)
+            .map(::deserializePost)
+    }
 
     override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = query()
     {
@@ -153,7 +144,12 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         }.map { it?.let(::deserializePost) }
     }
 
-    override suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<PostInfo> = query()
+    override suspend fun searchPosts(
+        loginUser: UserId?,
+        key: String,
+        begin: Long,
+        count: Int
+    ): Slice<PostInfo> = query()
     {
         PostsTable.select { ((title like "%$key%") or (content like "%$key%")) and (state eq State.NORMAL) }
             .asSlice(begin, count) {
@@ -169,13 +165,8 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         PostsTable.update({ id eq pid }) { it[view] = view+1 }
     }
 
-//    override suspend fun addLike(pid: PostId): Unit = query()
-//    {
-//        PostsTable.update({ id eq pid }) { it[like] = like+1 }
-//    }
-//
-//    override suspend fun addStar(pid: PostId): Unit = query()
-//    {
-//        PostsTable.update({ id eq pid }) { it[star] = star+1 }
-//    }
+    override suspend fun getRecommendPosts(count: Int): Slice<PostId>
+    {
+        TODO("Not yet implemented")
+    }
 }

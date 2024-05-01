@@ -14,16 +14,13 @@ import subit.database.Likes
 import subit.database.Posts
 import subit.database.Stars
 import subit.database.checkPermission
-import subit.router.Context
-import subit.router.authenticated
-import subit.router.get
-import subit.router.paged
+import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.statuses
 
 fun Route.posts()
 {
-    route("post", {
+    route("/post", {
         tags = listOf("帖子")
     }) {
         get("/{id}", {
@@ -137,6 +134,19 @@ fun Route.posts()
                 statuses<Slice<PostId>>(HttpStatus.OK)
             }
         }) { searchPost() }
+
+        post("/view", {
+            description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
+            request {
+                authenticated(true)
+                body<PostId> { required = true; description = "帖子ID" }
+            }
+            response {
+                statuses(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
+                statuses(HttpStatus.BadRequest)
+            }
+        }) { addView() }
     }
 }
 
@@ -236,8 +246,7 @@ private suspend fun Context.getUserPosts()
 {
     val loginUser = getLoginUser()
     val author = call.parameters["user"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val (begin, count) = call.getPage()
     val posts = get<Posts>().getUserPosts(loginUser, author, begin, count)
     call.respond(posts)
 }
@@ -245,10 +254,8 @@ private suspend fun Context.getUserPosts()
 private suspend fun Context.getBlockPosts()
 {
     val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val type =
-        call.parameters["sort"]?.let { Posts.PostListSort.valueOf(it) } ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val type = call.parameters["sort"]?.let(Posts.PostListSort::valueOf) ?: return call.respond(HttpStatus.BadRequest)
+    val (begin, count) = call.getPage()
     checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockPosts(block, type, begin, count)
     call.respond(posts)
@@ -257,8 +264,7 @@ private suspend fun Context.getBlockPosts()
 private suspend fun Context.getBlockTopPosts()
 {
     val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val (begin, count) = call.getPage()
     checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockTopPosts(block, begin, count)
     call.respond(posts)
@@ -267,8 +273,14 @@ private suspend fun Context.getBlockTopPosts()
 private suspend fun Context.searchPost()
 {
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val (begin, count) = call.getPage()
     val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
     call.respond(posts)
+}
+
+private suspend fun Context.addView()
+{
+    val pid = call.receive<PostId>()
+    get<Posts>().addView(pid)
+    call.respond(HttpStatus.OK)
 }

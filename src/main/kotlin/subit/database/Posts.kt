@@ -10,8 +10,7 @@ interface Posts
     {
         NEW,
         OLD,
-        MORE_VIEW,
-        HOT
+        MORE_VIEW
     }
 
     suspend fun createPost(
@@ -28,7 +27,8 @@ interface Posts
     suspend fun getPost(pid: PostId): PostInfo?
 
     /**
-     * 获取帖子列表
+     * 获取用户发布的帖子
+     * @param loginUser 当前操作用户, null表示未登录, 返回的帖子应是该用户可见的.
      */
     suspend fun getUserPosts(
         loginUser: UserFull? = null,
@@ -48,6 +48,10 @@ interface Posts
     suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?>
     suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<PostInfo>
     suspend fun addView(pid: PostId)
-//    suspend fun addLike(pid: PostId)
-//    suspend fun addStar(pid: PostId)
+
+    /**
+     * 获取首页推荐, 应按照时间/浏览量/点赞等参数随机, 即越新/点赞越高/浏览量越高...随机到的几率越大.
+     * @param count 推荐数量
+     */
+    suspend fun getRecommendPosts(count: Int): Slice<PostId>
 }

@@ -15,12 +15,12 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
-import org.fusesource.jansi.AnsiConsole
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import subit.JWTAuth.initJwtAuth
 import subit.config.apiDocsConfig
 import subit.console.command.CommandSet
 import subit.database.Users
@@ -29,7 +29,6 @@ import subit.logger.ForumLogger
 import subit.router.router
 import subit.utils.FileUtils
 import subit.utils.HttpStatus
-import subit.JWTAuth.initJwtAuth
 import java.io.File
 
 lateinit var version: String
@@ -37,7 +36,7 @@ lateinit var version: String
 
 fun main(args: Array<String>)
 {
-    ForumLogger
+    ForumLogger // 初始化日志
     val argsMap = args.mapNotNull {
         it.indexOf("=").let { idx ->
             when (idx)
@@ -74,7 +73,6 @@ fun Application.init()
 {
     version = environment.config.property("version").getString()
 
-    AnsiConsole.systemInstall() // 支持终端颜色码
     CommandSet.apply { startCommandThread() }
 
     FileUtils.init() // 初始化文件系统
