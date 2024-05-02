@@ -24,7 +24,9 @@ data class LoggerConfig(
     val pattern: Pattern = Pattern.compile(matchers.joinToString("|") { "($it)" }),
 )
 {
+    fun copyWithLevel(level: Level) = copy(levelName = level.name, level = level)
+    fun copyWithMatchers(matchers: List<String>) = copy(matchers = matchers, pattern = Pattern.compile(matchers.joinToString("|") { "($it)" }))
     fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
 }
 
-var loggerConfig: LoggerConfig by config("logger.yml", LoggerConfig(), { _, new -> ForumLogger.setLevel(new.level) })
+var loggerConfig: LoggerConfig by config("logger.yml", LoggerConfig(), { _, new -> ForumLogger.logger.setLevel(new.level) })

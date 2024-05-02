@@ -30,38 +30,33 @@ class ConfigLoader<T: Any> private constructor(
     private var listeners: MutableSet<(T, T)->Unit> = mutableSetOf()
 )
 {
-    init
-    {
-        reload()
-    }
+    @Suppress("UNCHECKED_CAST")
+    private var config: T = getConfigOrCreate(filename, default as Any, type) as T
 
-    private var config: T = default
-        set(value)
-        {
-            listeners.forEach {
-                ForumLogger.severe("Error in config listener")
-                {
-                    it(field, value)
-                }
+    private fun setValue(value: T)
+    {
+        listeners.forEach {
+            ForumLogger.severe("Error in config listener")
+            {
+                it(config, value)
             }
-            field = value
         }
-
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): T = config
-    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
-    {
         config = value
+        ForumLogger.config("Config $filename changed to $value")
         saveConfig(filename, value, type)
     }
+
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T = config
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) = setValue(value)
 
     @Suppress("UNCHECKED_CAST")
     fun reload()
     {
-//        ForumLogger.config("Reloading config $filename")
-//        ForumLogger.severe("Could not reload config $filename")
-//        {
-            config = getConfigOrCreate(filename, default as Any, type) as T
-//        }
+        ForumLogger.config("Reloading config $filename")
+        ForumLogger.severe("Could not reload config $filename")
+        {
+            setValue(getConfigOrCreate(filename, default as Any, type) as T)
+        }
     }
 
     @Suppress("unused", "MemberVisibilityCanBePrivate")
@@ -76,8 +71,7 @@ class ConfigLoader<T: Any> private constructor(
 
         fun configs() = configMap.keys
         fun reload(name: String) = configMap[name]?.let {
-            if (it.get() != null) it.get()!!.reload()
-            else configMap.remove(name)
+            it.get()?.apply { reload() } ?: configMap.remove(name)
         }
         fun reloadAll() = configMap.keys.forEach(::reload)
 
