@@ -39,16 +39,13 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
         content: String
     ): CommentId? = query()
     {
-        parent?.let {
-            val comment = getComment(it) ?: return@query null
-            if (comment.post != post) return@query null
-        }
-        if (post == null) return@query null
+        if (post == null && parent == null) return@query null
+        val post1 = post ?: parent?.let { getComment(it)?.post } ?: return@query null
         insertAndGetId {
-            it[CommentsTable.post] = post
-            it[CommentsTable.parent] = parent
-            it[CommentsTable.author] = author
-            it[CommentsTable.content] = content
+            it[this.post] = post1
+            it[this.parent] = parent
+            it[this.author] = author
+            it[this.content] = content
         }.value
     }
 
