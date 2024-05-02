@@ -10,7 +10,11 @@ interface Posts
     {
         NEW,
         OLD,
-        MORE_VIEW
+        MORE_VIEW,
+        MORE_LIKE,
+        MORE_STAR,
+        MORE_COMMENT,
+        LAST_COMMENT
     }
 
     suspend fun createPost(

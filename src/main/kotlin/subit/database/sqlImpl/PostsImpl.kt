@@ -3,6 +3,7 @@ package subit.database.sqlImpl
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
@@ -11,9 +12,8 @@ import org.koin.core.component.inject
 import subit.dataClasses.*
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
-import subit.database.Blocks
-import subit.database.Permissions
-import subit.database.Posts
+import subit.database.*
+import subit.database.Posts.PostListSort.*
 
 /**
  * 帖子数据库交互类
@@ -21,6 +21,9 @@ import subit.database.Posts
 class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinComponent
 {
     private val blocks: Blocks by inject()
+    private val likes: Likes by inject()
+    private val stars: Stars by inject()
+    private val comments: Comments by inject()
     private val permissions: Permissions by inject()
 
     object PostsTable: IdTable<PostId>("posts")
@@ -116,16 +119,48 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         count: Int
     ): Slice<PostInfo> = query()
     {
-        val order = when (type)
+        val op = (PostsTable.block eq block) and (state eq State.NORMAL)
+
+        val r: Query = when (type)
         {
-            Posts.PostListSort.NEW       -> create to SortOrder.DESC
-            Posts.PostListSort.OLD       -> create to SortOrder.ASC
-            Posts.PostListSort.MORE_VIEW -> view to SortOrder.DESC
+            NEW       -> select(op).orderBy(create, SortOrder.DESC)
+            OLD       -> select(op).orderBy(create, SortOrder.ASC)
+            MORE_VIEW -> select(op).orderBy(view, SortOrder.DESC)
+            MORE_LIKE -> {
+                val likesTable = (likes as LikesImpl).table
+                PostsTable.join(likesTable, JoinType.LEFT, id, LikesImpl.LikesTable.post)
+                    .slice(columns)
+                    .select(op)
+                    .groupBy(id)
+                    .orderBy(likesTable.like.sum(), SortOrder.DESC)
+            }
+            MORE_STAR -> {
+                val starsTable = (stars as StarsImpl).table
+                PostsTable.join(starsTable, JoinType.LEFT, id, StarsImpl.StarsTable.post)
+                    .slice(columns)
+                    .select(op)
+                    .groupBy(id)
+                    .orderBy(starsTable.post.count(), SortOrder.DESC)
+            }
+            MORE_COMMENT -> {
+                val commentsTable = (comments as CommentsImpl).table
+                PostsTable.join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
+                    .slice(columns)
+                    .select(op)
+                    .groupBy(id)
+                    .orderBy(commentsTable.id.count(), SortOrder.DESC)
+            }
+            LAST_COMMENT -> {
+                val commentsTable = (comments as CommentsImpl).table
+                PostsTable.join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
+                    .slice(columns)
+                    .select(op)
+                    .groupBy(id)
+                    .orderBy(commentsTable.create.max(), SortOrder.DESC)
+            }
         }
-        PostsTable.select { (PostsTable.block eq block) and (state eq State.NORMAL) }
-            .orderBy(order.first, order.second)
-            .asSlice(begin, count)
-            .map(::deserializePost)
+
+        r.asSlice(begin,count).map(::deserializePost)
     }
 
     override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = query()
