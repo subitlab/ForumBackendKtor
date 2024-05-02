@@ -38,10 +38,12 @@ fun Route.notice()
         get("/{id}", {
             description = """
                 获取通知, 通知有多种类型, 每种类型有结构不同, 可通过type区分. 请注意处理.
+                
                 相应中的type字段为通知类型, 可能为SYSTEM, COMMENT, LIKE, STAR, PRIVATE_CHAT, REPORT
-                当type为SYSTEM时, content字段为通知内容, count/post为null, 其余类型content字段为null
-                当type为COMMENT, LIKE, STAR时, post字段为帖子ID, count字段为数量即这一帖子被评论/点赞/收藏的数量, 否则post字段为null
-                当type为PRIVATE_CHAT时, count字段为未读消息数量
+                
+                - 当type为SYSTEM时, content字段为通知内容, count/post为null, 其余类型content字段为null
+                - 当type为COMMENT, LIKE, STAR时, post字段为帖子ID, count字段为数量即这一帖子被评论/点赞/收藏的数量, 否则post字段为null
+                - 当type为PRIVATE_CHAT时, count字段为未读消息数量
                 """.trimIndent()
             request {
                 authenticated(true)
