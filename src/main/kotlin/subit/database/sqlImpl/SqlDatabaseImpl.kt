@@ -31,8 +31,9 @@ import subit.utils.ForumThreadGroup.shutdown
  */
 abstract class DaoSqlImpl<T: Table>(table: T): KoinComponent
 {
-    suspend inline fun <R> query(crossinline block: suspend T.()->R) =
-        newSuspendedTransaction(Dispatchers.IO) { table.block() }
+    suspend inline fun <R> query(crossinline block: suspend T.()->R) = table.run {
+        newSuspendedTransaction(Dispatchers.IO) { block() }
+    }
 
     private val database: Database by inject()
     val table: T by lazy {
@@ -110,7 +111,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
             single {
                 Database.connect(createHikariDataSource(url, driver, user, password))
-            }
+            }.bind<Database>()
 
             singleOf(::BlocksImpl).bind<Blocks>()
             singleOf(::CommentsImpl).bind<Comments>()
