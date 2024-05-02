@@ -1,6 +1,6 @@
 ktor:
   deployment:
-    port: "$PORT:29719"
+    port: "$PORT:8080"
   application:
     modules:
       - subit.ForumBackendKt.init
