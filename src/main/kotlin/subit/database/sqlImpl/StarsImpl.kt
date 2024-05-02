@@ -14,9 +14,9 @@ import subit.database.Stars
 /**
  * 收藏数据库交互类
  */
-class StarsImpl: DaoSqlImpl<StarsImpl.StarTable>(StarTable), Stars
+class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
 {
-    object StarTable: Table("stars")
+    object StarsTable: Table("stars")
     {
         val user = reference("user", UsersImpl.UserTable).index()
         val post = reference("post", PostsImpl.PostsTable, ReferenceOption.CASCADE, ReferenceOption.SET_NULL).nullable().default(null)
@@ -24,9 +24,9 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarTable>(StarTable), Stars
     }
 
     private fun deserialize(row: ResultRow) = Star(
-        user = row[StarTable.user].value,
-        post = row[StarTable.post]?.value,
-        time = row[StarTable.time].toEpochMilli()
+        user = row[StarsTable.user].value,
+        post = row[StarsTable.post]?.value,
+        time = row[StarsTable.time].toEpochMilli()
     )
 
     override suspend fun addStar(uid: UserId, pid: PostId): Unit = query()
@@ -53,7 +53,7 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarTable>(StarTable), Stars
 
     override suspend fun getStarsCount(pid: PostId): Long = query()
     {
-        StarTable.select { post eq pid }.count()
+        StarsTable.select { post eq pid }.count()
     }
 
     override suspend fun getStars(
@@ -66,8 +66,8 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarTable>(StarTable), Stars
         select()
         {
             var op: Op<Boolean> = Op.TRUE
-            if (user != null) op = op and (StarTable.user eq user)
-            if (post != null) op = op and (StarTable.post eq post)
+            if (user != null) op = op and (StarsTable.user eq user)
+            if (post != null) op = op and (StarsTable.post eq post)
             op
         }.asSlice(begin, limit).map(::deserialize)
     }
