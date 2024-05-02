@@ -28,6 +28,11 @@ fun Table.reportId(name: String) = long(name)
 fun String.toReportId() = toLong()
 fun String.toReportIdOrNull() = toLongOrNull()
 fun Number.toReportId() = toLong()
+typealias NoticeId = Long
+fun Table.noticeId(name: String) = long(name)
+fun String.toNoticeId() = toLong()
+fun String.toNoticeIdOrNull() = toLongOrNull()
+fun Number.toNoticeId() = toLong()
 
 typealias RawBlockUserId = ULong
 @JvmInline

@@ -117,6 +117,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             singleOf(::CommentsImpl).bind<Comments>()
             singleOf(::EmailCodesImpl).bind<EmailCodes>()
             singleOf(::LikesImpl).bind<Likes>()
+            singleOf(::NoticesImpl).bind<Notices>()
             singleOf(::OperationsImpl).bind<Operations>()
             singleOf(::PermissionsImpl).bind<Permissions>()
             singleOf(::PostsImpl).bind<Posts>()
@@ -138,6 +139,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             (get<Comments>() as DaoSqlImpl<*>).table
             (get<EmailCodes>() as DaoSqlImpl<*>).table
             (get<Likes>() as DaoSqlImpl<*>).table
+            (get<Notices>() as DaoSqlImpl<*>).table
             (get<Operations>() as DaoSqlImpl<*>).table
             (get<Permissions>() as DaoSqlImpl<*>).table
             (get<Posts>() as DaoSqlImpl<*>).table
