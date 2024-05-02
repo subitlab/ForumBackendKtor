@@ -3,6 +3,7 @@ package subit.router.privateChat
 
 import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
+import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -17,7 +18,9 @@ import subit.utils.statuses
 
 fun Route.privateChat()
 {
-    route("/privateChat")
+    route("/privateChat", {
+        tags = listOf("私信")
+    })
     {
         post("/send", {
             description = "发送私信"
