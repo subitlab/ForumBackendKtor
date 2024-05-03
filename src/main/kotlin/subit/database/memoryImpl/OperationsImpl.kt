@@ -15,6 +15,7 @@ class OperationsImpl: Operations
         operations.add(Operation(admin, operation, type))
     }
 
+    @Suppress("unused")
     fun getOperations(admin: UserId? = null): List<*>
     {
         return operations.filter { admin == null || it.admin == admin }

@@ -1,6 +1,5 @@
 package subit.database.memoryImpl
 
-import org.koin.core.component.KoinComponent
 import subit.dataClasses.*
 import subit.database.Comments
 import java.util.*
