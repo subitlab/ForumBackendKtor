@@ -37,6 +37,7 @@ lateinit var version: String
 fun main(args: Array<String>)
 {
     ForumLogger // 初始化日志
+    subit.config.ConfigLoader.init() // 初始化配置文件加载器
     val argsMap = args.mapNotNull {
         it.indexOf("=").let { idx ->
             when (idx)

@@ -62,6 +62,14 @@ class ConfigLoader<T: Any> private constructor(
     @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object
     {
+        fun init() // 初始化所有配置
+        {
+            apiDocsConfig
+            emailConfig
+            filesConfig
+            loggerConfig
+        }
+
         /**
          * [WeakReference] 采用弱引用, 避免不被回收
          * @author nullaqua
