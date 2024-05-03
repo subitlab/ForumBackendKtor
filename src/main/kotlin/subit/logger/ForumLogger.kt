@@ -132,6 +132,7 @@ object ToConsoleHandler: Handler()
 
         if (record.sourceClassName.startsWith("org.jline"))
         {
+            if (record.level.intValue() < Level.INFO.intValue()) return@safe
             val head = String.format(
                 "[%s][%s]",
                 ForumLogger.loggerDateFormat.format(record.millis),
