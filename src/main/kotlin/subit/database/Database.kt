@@ -5,12 +5,14 @@ import subit.console.AnsiStyle.Companion.RESET
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.GREEN
 import subit.console.SimpleAnsiColor.Companion.RED
+import subit.database.memoryImpl.MemoryDatabaseImpl
 import subit.database.sqlImpl.SqlDatabaseImpl
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup.shutdown
 
 val databaseImpls: List<IDatabase> = listOf(
-    SqlDatabaseImpl
+    SqlDatabaseImpl,
+    MemoryDatabaseImpl
 )
 
 fun Application.loadDatabaseImpl()

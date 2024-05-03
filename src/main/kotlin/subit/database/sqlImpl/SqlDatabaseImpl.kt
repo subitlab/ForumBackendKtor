@@ -58,7 +58,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
     /**
      * 创建Hikari数据源,即数据库连接池
      */
-    private fun createHikariDataSource(
+    fun createHikariDataSource(
         url: String,
         driver: String,
         user: String?,
@@ -85,7 +85,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
         config = environment.config
         val lazyInit = config.propertyOrNull("database.sql.lazyInit")?.getString()?.toBoolean() ?: true
 
-        ForumLogger.info("Init database. LazyInit: $lazyInit")
+        ForumLogger.info("Init database. impl: sql, LazyInit: $lazyInit")
         val url = config.propertyOrNull("database.sql.url")?.getString()
         val driver = config.propertyOrNull("database.sql.driver")?.getString()
         val user = config.propertyOrNull("database.sql.user")?.getString()
