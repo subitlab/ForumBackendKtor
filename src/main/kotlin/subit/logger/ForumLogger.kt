@@ -43,12 +43,12 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     val err: PrintStream = PrintStream(LoggerOutputStream(Level.SEVERE))
     fun addFilter(pattern: String)
     {
-        loggerConfig = loggerConfig.copyWithMatchers(matchers = loggerConfig.matchers+pattern)
+        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers+pattern)
     }
 
     fun removeFilter(pattern: String)
     {
-        loggerConfig = loggerConfig.copyWithMatchers(matchers = loggerConfig.matchers.filter { it != pattern })
+        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers.filter { it != pattern })
     }
 
     fun setWhiteList(whiteList: Boolean)
@@ -58,7 +58,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
 
     fun setLevel(level: Level)
     {
-        loggerConfig = loggerConfig.copyWithLevel(level)
+        loggerConfig = loggerConfig.copy(levelName = level.name)
     }
 
     /**

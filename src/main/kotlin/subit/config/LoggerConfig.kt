@@ -18,14 +18,13 @@ data class LoggerConfig(
     @Comment("日志等级 (OFF, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL)")
     @SerialName("level")
     val levelName: String = Level.INFO.name,
-    @Transient
-    val level: Level = Level.parse(levelName),
-    @Transient
-    val pattern: Pattern = Pattern.compile(matchers.joinToString("|") { "($it)" }),
 )
 {
-    fun copyWithLevel(level: Level) = copy(levelName = level.name, level = level)
-    fun copyWithMatchers(matchers: List<String>) = copy(matchers = matchers, pattern = Pattern.compile(matchers.joinToString("|") { "($it)" }))
+    @Transient
+    val level: Level = Level.parse(levelName)
+    @Transient
+    val pattern: Pattern = Pattern.compile(matchers.joinToString("|") { "($it)" })
+
     fun check(record: LogRecord): Boolean = (matchers.isEmpty() || pattern.matcher(record.message).find() == whiteList)
 }
 

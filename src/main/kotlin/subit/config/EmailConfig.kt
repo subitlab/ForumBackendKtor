@@ -21,9 +21,11 @@ data class EmailConfig(
     val verifyEmailTitle: String,
     @Comment("用户邮箱格式要求(正则表达式)")
     val emailFormat: String,
+)
+{
     @Transient
     val pattern: Pattern = Pattern.compile(emailFormat)
-)
+}
 
 var emailConfig: EmailConfig by config(
     "email.yml",
