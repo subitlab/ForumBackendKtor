@@ -64,7 +64,7 @@ object JWTAuth: KoinComponent
      * @param id 用户ID
      * @param password 用户密码(加密后)
      */
-    private fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
+    fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id)
         .withClaim("password", password)
