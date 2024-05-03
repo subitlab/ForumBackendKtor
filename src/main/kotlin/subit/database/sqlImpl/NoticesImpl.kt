@@ -10,8 +10,6 @@ import subit.dataClasses.Notice.Type.*
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.Notices
-import subit.utils.toUUIDOrNull
-import java.util.*
 
 class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, KoinComponent
 {
@@ -20,48 +18,51 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
         override val id = noticeId("id").autoIncrement().entityId()
         val user = reference("user", UsersImpl.UserTable).index()
         val type = enumerationByName<Type>("type", 20).index()
+        val obj = long("object").nullable()
         val content = text("content")
         override val primaryKey: PrimaryKey = PrimaryKey(id)
     }
 
     private fun deserialize(row: ResultRow) = table.run()
     {
-        when (row[type])
-        {
-            SYSTEM       -> SystemNotice(row[id].value, row[user].value, row[content])
-            COMMENT      -> {
-                val (post, count) = row[content].let { it.toUUIDOrNull() }
-                                        ?.let { it.mostSignificantBits to it.leastSignificantBits } ?: (0L to 1L)
-                CommentNotice(row[id].value, row[user].value, post, count)
-            }
-            LIKE         -> {
-                val (post, count) = row[content].let { it.toUUIDOrNull() }
-                                        ?.let { it.mostSignificantBits to it.leastSignificantBits } ?: (0L to 1L)
-                LikeNotice(row[id].value, row[user].value, post, count)
-            }
-            STAR         -> {
-                val (post, count) = row[content].let { it.toUUIDOrNull() }
-                                        ?.let { it.mostSignificantBits to it.leastSignificantBits } ?: (0L to 1L)
-                StarNotice(row[id].value, row[user].value, post, count)
-            }
-            PRIVATE_CHAT -> PrivateChatNotice(row[id].value, row[user].value, row[content].toLongOrNull() ?: 1)
-            REPORT       -> ReportNotice(row[id].value, row[user].value, row[content].toLongOrNull() ?: 1)
-        }
+        val id = row[id].value
+        val obj = row[obj]
+        // 如果是系统通知
+        if (row[type] == SYSTEM) Notice.makeSystemNotice(id, row[user].value, row[content])
+        // 否则一定是对象消息
+        else Notice.makeObjectMessage(id, row[user].value, row[type], obj!!, row[content].toLong())
     }
 
-    override suspend fun createNotice(notice: Notice): NoticeId = query()
+    override suspend fun createNotice(notice: Notice): Unit = query()
     {
-        val serialized = when (notice)
-        {
-            is PostNotice -> UUID(notice.post, notice.count).toString()
-            is CountNotice -> notice.count.toString()
-            is SystemNotice -> notice.content
-        }
-        insertAndGetId {
+        // 如果是系统通知，直接插入一条新消息
+        if (notice is SystemNotice) insert {
             it[user] = notice.user
             it[type] = notice.type
-            it[content] = serialized
-        }.value
+            it[obj] = null
+            it[content] = notice.content
+        }
+        // 否则需要考虑同类型消息的合并
+        else if (notice is ObjectNotice)
+        {
+            val result = select {
+                (user eq notice.user) and (type eq notice.type) and (table.obj eq notice.obj)
+            }.singleOrNull()
+
+            if (result == null) insert {
+                it[user] = notice.user
+                it[type] = notice.type
+                it[this.obj] = obj
+                it[this.content] = content
+            }
+            else
+            {
+                val id = result[table.id].value
+                val count = (result[table.content].toLongOrNull() ?: 1) + notice.count
+                update({ table.id eq id }) { it[content] = count.toString() }
+            }
+        }
+        else error("Unknown notice type: $notice")
     }
 
     override suspend fun getNotice(id: NoticeId): Notice? = query()
@@ -69,9 +70,12 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
         select { table.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
-    override suspend fun getNotices(user: UserId, begin: Long, count: Int): Slice<Notice> = query()
+    override suspend fun getNotices(user: UserId, type: Type?, begin: Long, count: Int): Slice<Notice> = query()
     {
-        select { table.user eq user }.orderBy(table.id, SortOrder.DESC).asSlice(begin, count).map(::deserialize)
+        select {
+            if (type == null) table.user eq user
+            else (table.user eq user) and (table.type eq type)
+        }.orderBy(table.id, SortOrder.DESC).asSlice(begin, count).map(::deserialize)
     }
 
     override suspend fun deleteNotice(id: NoticeId): Unit = query()

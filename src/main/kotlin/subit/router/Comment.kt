@@ -12,6 +12,7 @@ import io.ktor.server.routing.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.database.Comments
+import subit.database.Notices
 import subit.database.Posts
 import subit.database.checkPermission
 import subit.router.Context
@@ -112,28 +113,42 @@ private suspend fun Context.commentPost()
 {
     val postId = call.parameters["postId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val content = call.receive<CommentContent>().content
-    get<Posts>().getPost(postId)?.let { postInfo ->
+    val author = get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanComment(postInfo) }
+        postInfo.author
     } ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
     get<Comments>().createComment(post = postId, parent = null, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
+
+    if (loginUser.id != author) get<Notices>().createNotice(Notice.makeObjectMessage(
+        type = Notice.Type.POST_COMMENT,
+        user = author,
+        obj = postId,
+    ))
 }
 
 private suspend fun Context.commentComment()
 {
     val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val content = call.receive<CommentContent>().content
-    get<Comments>().getComment(commentId)?.let { comment ->
+    val author = get<Comments>().getComment(commentId)?.let { comment ->
         get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanComment(postInfo) }
         }
+        comment.author
     } ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
     get<Comments>().createComment(post = null, parent = commentId, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
+
+    if (loginUser.id != author) get<Notices>().createNotice(Notice.makeObjectMessage(
+        type = Notice.Type.COMMENT_REPLY,
+        user = author,
+        obj = commentId,
+    ))
 }
 
 private suspend fun Context.deleteComment()

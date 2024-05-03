@@ -44,7 +44,8 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         posting = row[BlocksTable.posting],
         commenting = row[BlocksTable.commenting],
         reading = row[BlocksTable.reading],
-        anonymous = row[BlocksTable.anonymous]
+        anonymous = row[BlocksTable.anonymous],
+        state = row[BlocksTable.state]
     )
 
     override suspend fun createBlock(

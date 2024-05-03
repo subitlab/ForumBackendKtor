@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.notice
 
 import io.github.smiley4.ktorswaggerui.dsl.delete
@@ -24,10 +25,20 @@ fun Route.notice()
     })
     {
         get("/list", {
-            description = "获取通知列表"
+            description = """
+                获取通知列表
+                
+                除去此接口获取的通知外, 待处理的举报和未读的私信也应在通知中显示, 
+                详细请参阅 获取举报列表接口(/report/list) 和 获取所有未读私信数量接口(/privateChat/unread/all)
+                """.trimIndent()
             request {
                 authenticated(true)
                 paged()
+                queryParameter<Type>("type")
+                {
+                    required = false
+                    description = "通知类型, 可选值为${Type.entries.joinToString { it.name }}, 不填则获取所有通知"
+                }
             }
             response {
                 statuses<Slice<NoticeId>>(HttpStatus.OK)
@@ -39,11 +50,11 @@ fun Route.notice()
             description = """
                 获取通知, 通知有多种类型, 每种类型有结构不同, 可通过type区分. 请注意处理.
                 
-                相应中的type字段为通知类型, 可能为SYSTEM, COMMENT, LIKE, STAR, PRIVATE_CHAT, REPORT
+                相应中的type字段为通知类型, 可能为${Type.entries.joinToString { it.name }}
                 
-                - 当type为SYSTEM时, content字段为通知内容, count/post为null, 其余类型content字段为null
-                - 当type为COMMENT, LIKE, STAR时, post字段为帖子ID, count字段为数量即这一帖子被评论/点赞/收藏的数量, 否则post字段为null
-                - 当type为PRIVATE_CHAT时, count字段为未读消息数量
+                - obj: 对象, 当类型为点赞/收藏/评论/回复时, 为帖子ID/评论ID, 其他情况下为null
+                - count: 数量, 当类型为点赞/收藏/评论/回复/待处理举报时, 为数量, 其他情况下为null
+                - content: 内容, 当类型为系统通知时, 为通知内容, 其他情况下为null
                 """.trimIndent()
             request {
                 authenticated(true)
@@ -87,9 +98,10 @@ fun Route.notice()
 private suspend fun Context.getList()
 {
     val (begin, count) = call.getPage()
+    val type = call.parameters["type"]?.runCatching { Type.valueOf(this) }?.getOrNull()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val notices = get<Notices>()
-    notices.getNotices(loginUser.id, begin, count).map(Notice::id).let { call.respond(it) }
+    notices.getNotices(loginUser.id, type, begin, count).map(Notice::id).let { call.respond(it) }
 }
 
 @Serializable
@@ -97,25 +109,30 @@ private data class NoticeResponse(
     val id: NoticeId,
     val user: UserId,
     val type: Type,
-    val post: PostId?,
+    val obj: Long?,
     val count: Long?,
     val content: String?
 )
+
 private suspend fun Context.getNotice()
 {
     val id = call.parameters["id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val notices = get<Notices>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val notice = notices.getNotice(id)?.takeIf { it.user == user.id } ?: return call.respond(HttpStatus.NotFound)
-    /**
+    /*
      * 注意由于[Notice.type]不在构造函数中等问题, 无法序列化, 故手动转为[NoticeResponse]
      */
-    val response = when (notice)
-    {
-        is PostNotice -> NoticeResponse(notice.id, notice.user, notice.type, notice.post, notice.count, null)
-        is CountNotice -> NoticeResponse(notice.id, notice.user, notice.type, null, notice.count, null)
-        is SystemNotice -> NoticeResponse(notice.id, notice.user, notice.type, null, null, notice.content)
-    }
+    val (obj, count) = (notice as? ObjectNotice).let { it?.obj to it?.count }
+    val content = (notice as? SystemNotice)?.content
+    val response = NoticeResponse(
+        id = notice.id,
+        user = notice.user,
+        type = notice.type,
+        obj = obj,
+        count = count,
+        content = content
+    )
     call.respond(response)
 }
 

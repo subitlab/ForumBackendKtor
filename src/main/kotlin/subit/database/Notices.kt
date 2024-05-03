@@ -7,11 +7,9 @@ import subit.dataClasses.UserId
 
 interface Notices
 {
-    suspend fun createNotice(
-        notice: Notice
-    ): NoticeId
+    suspend fun createNotice(notice: Notice)
     suspend fun getNotice(id: NoticeId): Notice?
-    suspend fun getNotices(user: UserId, begin: Long, count: Int): Slice<Notice>
+    suspend fun getNotices(user: UserId, type: Notice.Type?, begin: Long, count: Int): Slice<Notice>
     suspend fun deleteNotice(id: NoticeId)
     suspend fun deleteNotices(user: UserId)
 }

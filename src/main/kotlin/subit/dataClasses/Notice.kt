@@ -10,14 +10,14 @@ sealed interface Notice
         SYSTEM,
 
         /**
-         * 私聊消息
+         * 帖子被评论
          */
-        PRIVATE_CHAT,
+        POST_COMMENT,
 
         /**
-         * 评论
+         * 评论被回复
          */
-        COMMENT,
+        COMMENT_REPLY,
 
         /**
          * 点赞
@@ -28,25 +28,29 @@ sealed interface Notice
          * 收藏
          */
         STAR,
+    }
 
-        /**
-         * 待处理的举报(管理员)
-         */
-        REPORT,
+    companion object
+    {
+        fun makeSystemNotice(id: Long = 0, user: UserId, content: String): Notice = SystemNotice(id, user, content)
+        fun makeObjectMessage(id: Long = 0, user: UserId, type: Type, obj: Long, count: Long = 0): ObjectNotice = when (type)
+        {
+            Type.POST_COMMENT -> PostCommentNotice(id, user, obj, count)
+            Type.COMMENT_REPLY -> CommentReplyNotice(id, user, obj, count)
+            Type.LIKE -> LikeNotice(id, user, obj, count)
+            Type.STAR -> StarNotice(id, user, obj, count)
+            else -> throw IllegalArgumentException("Invalid type: $type")
+        }
     }
 
     val id: NoticeId
     val type: Type
     val user: UserId
 
-    interface CountNotice: Notice
+    interface ObjectNotice: Notice
     {
+        val obj: Long
         val count: Long
-    }
-
-    interface PostNotice: CountNotice
-    {
-        val post: PostId
     }
 
     /**
@@ -63,31 +67,33 @@ sealed interface Notice
     }
 
     /**
-     * 私信通知, 仅记录有多少条未读私信
-     * @property count 未读私信数量
-     */
-    data class PrivateChatNotice(
-        override val id: NoticeId,
-        override val user: UserId,
-        override val count: Long
-    ): CountNotice
-    {
-        override val type: Type get() = Type.PRIVATE_CHAT
-    }
-
-    /**
      * 评论通知, 即有人评论了用户的帖子. 对于同一个帖子的多个评论, 累加[count]
      * @property post 帖子
      * @property count 这个帖子的评论数量
      */
-    data class CommentNotice(
+    data class PostCommentNotice(
         override val id: NoticeId,
         override val user: UserId,
-        override val post: PostId,
+        val post: PostId,
         override val count: Long
-    ): PostNotice
+    ): ObjectNotice
     {
-        override val type: Type get() = Type.COMMENT
+        override val type: Type get() = Type.POST_COMMENT
+        override val obj: Long get() = post
+    }
+
+    /**
+     * 评论回复通知, 即有人回复了用户的评论. 对于同一个评论的多个回复, 累加[count]
+     */
+    data class CommentReplyNotice(
+        override val id: NoticeId,
+        override val user: UserId,
+        val comment: CommentId,
+        override val count: Long
+    ): ObjectNotice
+    {
+        override val type: Type get() = Type.COMMENT_REPLY
+        override val obj: Long get() = comment
     }
 
     /**
@@ -98,11 +104,12 @@ sealed interface Notice
     data class LikeNotice(
         override val id: NoticeId,
         override val user: UserId,
-        override val post: PostId,
+        val post: PostId,
         override val count: Long
-    ): PostNotice
+    ): ObjectNotice
     {
         override val type: Type get() = Type.LIKE
+        override val obj: Long get() = post
     }
 
     /**
@@ -113,23 +120,11 @@ sealed interface Notice
     data class StarNotice(
         override val id: NoticeId,
         override val user: UserId,
-        override val post: PostId,
+        val post: PostId,
         override val count: Long
-    ): PostNotice
+    ): ObjectNotice
     {
         override val type: Type get() = Type.STAR
-    }
-
-    /**
-     * 待处理的举报通知, 该通知只有管理员才会收到
-     * @property count 有多少个待处理的举报
-     */
-    data class ReportNotice(
-        override val id: NoticeId,
-        override val user: UserId,
-        override val count: Long
-    ): CountNotice
-    {
-        override val type: Type get() = Type.REPORT
+        override val obj: Long get() = post
     }
 }

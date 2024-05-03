@@ -175,8 +175,14 @@ private suspend fun Context.deleteBlock()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     checkPermission { checkHasAdminIn(id) }
-    get<Blocks>().setState(id, State.DELETED)
+    val blocks = get<Blocks>()
+    val block = blocks.getBlock(id) ?: return call.respond(HttpStatus.NotFound)
+    blocks.setState(id, State.DELETED)
     get<Operations>().addOperation(loginUser.id, id)
+    if (loginUser.id != block.id) get<Notices>().createNotice(Notice.makeSystemNotice(
+        user = block.creator,
+        content = "您的板块 ${block.name} 已被删除"
+    ))
     call.respond(HttpStatus.OK)
 }
 
@@ -197,6 +203,10 @@ private suspend fun Context.changePermission()
         permission = changePermission.permission
     )
     get<Operations>().addOperation(loginUser.id, changePermission)
+    get<Notices>().createNotice(Notice.makeSystemNotice(
+        user = changePermission.user,
+        content = "您在板块 ${get<Blocks>().getBlock(changePermission.block)?.name} 的权限已被修改"
+    ))
     call.respond(HttpStatus.OK)
 }
 

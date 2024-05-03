@@ -10,10 +10,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.Likes
-import subit.database.Posts
-import subit.database.Stars
-import subit.database.checkPermission
+import subit.database.*
 import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.statuses
@@ -180,8 +177,15 @@ private suspend fun Context.deletePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val post = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
+    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanDelete(post) }
     get<Posts>().setPostState(id, State.DELETED).also { call.respond(HttpStatus.OK) }
+    if (post.author != loginUser.id) get<Notices>().createNotice(
+        Notice.makeSystemNotice(
+            user = post.author,
+            content = "您的帖子 ${post.title} 已被删除"
+        )
+    )
 }
 
 @Serializable
@@ -206,12 +210,20 @@ private suspend fun Context.likePost()
     checkPermission { checkCanRead(post) }
     when (type)
     {
-        LikeType.LIKE -> get<Likes>().like(loginUser.id, id, true)
+        LikeType.LIKE    -> get<Likes>().like(loginUser.id, id, true)
         LikeType.DISLIKE -> get<Likes>().like(loginUser.id, id, false)
-        LikeType.UNLIKE -> get<Likes>().unlike(loginUser.id, id)
-        LikeType.STAR -> get<Stars>().addStar(loginUser.id, id)
-        LikeType.UNSTAR -> get<Stars>().removeStar(loginUser.id, id)
+        LikeType.UNLIKE  -> get<Likes>().unlike(loginUser.id, id)
+        LikeType.STAR    -> get<Stars>().addStar(loginUser.id, id)
+        LikeType.UNSTAR  -> get<Stars>().removeStar(loginUser.id, id)
     }
+    if (loginUser.id != post.author && (type == LikeType.LIKE || type == LikeType.STAR))
+        get<Notices>().createNotice(
+            Notice.makeObjectMessage(
+                type = if (type == LikeType.LIKE) Notice.Type.LIKE else Notice.Type.STAR,
+                user = post.author,
+                obj = id
+            )
+        )
     call.respond(HttpStatus.OK)
 }
 
