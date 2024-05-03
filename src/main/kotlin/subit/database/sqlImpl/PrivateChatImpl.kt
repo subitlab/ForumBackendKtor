@@ -125,6 +125,11 @@ class PrivateChatImpl: DaoSqlImpl<PrivateChatImpl.PrivateChatsTable>(PrivateChat
     }
 
     override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unreadCount(uid, other)
+    override suspend fun getUnreadCount(uid: UserId): Long = query()
+    {
+        select { (from eq uid) and (time eq Instant.MIN) }.mapNotNull { it[content].toLongOrNull() }.sum()
+    }
+
     override suspend fun setRead(uid: UserId, other: UserId)
     {
         unreadCount(uid, other) { 0 }

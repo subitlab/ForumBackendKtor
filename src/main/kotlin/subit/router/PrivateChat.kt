@@ -55,6 +55,27 @@ fun Route.privateChat()
                 statuses<Slice<PrivateChat>>(HttpStatus.OK, HttpStatus.Unauthorized)
             }
         }) { getPrivateChats() }
+
+        get("/unread/all", {
+            description = "获取所有未读私信数量"
+            request {
+                authenticated(true)
+            }
+            response {
+                statuses<UnreadCount>(HttpStatus.OK, HttpStatus.Unauthorized)
+            }
+        }) { getUnreadCount(false) }
+
+        get("/unread/{userId}", {
+            description = "获取与某人的未读私信数量"
+            request {
+                authenticated(true)
+                pathParameter<UserId>("userId") { required = true; description = "对方的id" }
+            }
+            response {
+                statuses<UnreadCount>(HttpStatus.OK, HttpStatus.Unauthorized)
+            }
+        }) { getUnreadCount(true) }
     }
 }
 
@@ -89,4 +110,19 @@ private suspend fun Context.getPrivateChats()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val chats = privateChats.getPrivateChats(loginUser.id, userId, begin, count)
     call.respond(chats)
+}
+
+@JvmInline
+@Serializable
+private value class UnreadCount(val count: Long)
+private suspend fun Context.getUnreadCount(withObj: Boolean)
+{
+    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+
+    if (!withObj) return call.respond(UnreadCount(get<PrivateChats>().getUnreadCount(loginUser.id)))
+
+    val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val privateChats = get<PrivateChats>()
+    val count = privateChats.getUnreadCount(loginUser.id, userId)
+    call.respond(UnreadCount(count))
 }

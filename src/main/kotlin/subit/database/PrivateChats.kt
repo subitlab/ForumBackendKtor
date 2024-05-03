@@ -10,6 +10,7 @@ interface PrivateChats
     suspend fun getPrivateChats(from: UserId, to: UserId, begin: Long, count: Int): Slice<PrivateChat>
     suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId>
     suspend fun getUnreadCount(uid: UserId, other: UserId): Long
+    suspend fun getUnreadCount(uid: UserId): Long
     suspend fun setRead(uid: UserId, other: UserId)
     suspend fun setReadAll(uid: UserId)
 }
