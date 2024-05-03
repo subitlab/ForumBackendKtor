@@ -24,4 +24,5 @@ data class BlockFull(
     val commenting: PermissionLevel,
     val reading: PermissionLevel,
     val anonymous: PermissionLevel,
+    val state: State
 )
