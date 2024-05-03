@@ -121,7 +121,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             singleOf(::OperationsImpl).bind<Operations>()
             singleOf(::PermissionsImpl).bind<Permissions>()
             singleOf(::PostsImpl).bind<Posts>()
-            singleOf(::PrivateChatImpl).bind<PrivateChats>()
+            singleOf(::PrivateChatsImpl).bind<PrivateChats>()
             singleOf(::ProhibitsImpl).bind<Prohibits>()
             singleOf(::ReportsImpl).bind<Reports>()
             singleOf(::StarsImpl).bind<Stars>()

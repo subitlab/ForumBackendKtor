@@ -11,7 +11,7 @@ import subit.dataClasses.UserId
 import subit.database.PrivateChats
 import java.time.Instant
 
-class PrivateChatImpl: DaoSqlImpl<PrivateChatImpl.PrivateChatsTable>(PrivateChatsTable), PrivateChats
+class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateChatsTable), PrivateChats
 {
     object PrivateChatsTable: Table("private_chats")
     {
@@ -94,10 +94,11 @@ class PrivateChatImpl: DaoSqlImpl<PrivateChatImpl.PrivateChatsTable>(PrivateChat
         unreadCount(from, to) { it+1 }
     }
 
-    override suspend fun getPrivateChats(from: UserId, to: UserId, begin: Long, count: Int) = query()
+    override suspend fun getPrivateChats(user1: UserId, user2: UserId, begin: Long, count: Int) = query()
     {
         select {
-            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time neq Instant.MIN)
+            (((from eq user1) and (to eq user2)) or ((from eq user2) and (to eq user1)))
+                .and(time neq Instant.MIN)
         }.asSlice(begin, count).map(::deserialize)
     }
 
