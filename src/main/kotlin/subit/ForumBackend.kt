@@ -13,7 +13,6 @@ import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -29,6 +28,7 @@ import subit.logger.ForumLogger
 import subit.router.router
 import subit.utils.FileUtils
 import subit.utils.HttpStatus
+import subit.utils.respond
 import java.io.File
 
 lateinit var version: String
