@@ -10,6 +10,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth
 import subit.JWTAuth.getLoginUser
+import subit.config.emailConfig
 import subit.dataClasses.UserId
 import subit.database.EmailCodes
 import subit.database.Users
@@ -126,7 +127,8 @@ private suspend fun Context.register()
     checkUserInfo(registerInfo.username, registerInfo.password, registerInfo.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
     }
-    if (!get<Whitelists>().isWhitelisted(registerInfo.email)) return call.respond(HttpStatus.NotInWhitelist)
+    if (emailConfig.enableWhiteList && !get<Whitelists>().isWhitelisted(registerInfo.email))
+        return call.respond(HttpStatus.NotInWhitelist)
     // 验证邮箱验证码
     if (!get<EmailCodes>().verifyEmailCode(
             registerInfo.email,

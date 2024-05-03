@@ -21,6 +21,8 @@ data class EmailConfig(
     val verifyEmailTitle: String,
     @Comment("用户邮箱格式要求(正则表达式)")
     val emailFormat: String,
+    @Comment("是否启用白名单")
+    val enableWhiteList: Boolean,
 )
 {
     @Transient
@@ -36,6 +38,7 @@ var emailConfig: EmailConfig by config(
         password = "your_email_password",
         codeValidTime = 600,
         verifyEmailTitle = "论坛验证码",
-        emailFormat = ".*@.*\\..*"
+        emailFormat = ".*@.*\\..*",
+        enableWhiteList = false
     )
 )
