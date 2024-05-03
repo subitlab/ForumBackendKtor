@@ -11,10 +11,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.PermissionLevel
-import subit.dataClasses.Prohibit
-import subit.dataClasses.Slice
-import subit.dataClasses.UserId
+import subit.dataClasses.*
 import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
@@ -158,5 +155,9 @@ private suspend fun Context.changePermission()
         return call.respond(HttpStatus.Forbidden)
     users.changePermission(changePermission.id, changePermission.permission)
     get<Operations>().addOperation(loginUser.id, changePermission)
+    if (loginUser.id != changePermission.id) get<Notices>().createNotice(Notice.makeSystemNotice(
+        user = changePermission.id,
+        content = "您的全局权限已被修改"
+    ))
     call.respond(HttpStatus.OK)
 }
