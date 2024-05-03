@@ -63,19 +63,3 @@ data class PostFull(
     val dislike: Long,
     val star: Long,
 )
-
-/**
- * 帖子当前状态,
- */
-enum class State
-{
-    /**
-     * 正常
-     */
-    NORMAL,
-
-    /**
-     * 被删除
-     */
-    DELETED;
-}
