@@ -73,13 +73,13 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
     override suspend fun makeJwtToken(id: UserId): JWTAuth.Token? = query()
     {
         select { UserTable.id eq id }.singleOrNull()
-            ?.let { JWTAuth.makeTokenByEncryptPassword(it[UserTable.id].value, it[password]) }
+            ?.let { JWTAuth.makeTokenByEncryptedPassword(it[UserTable.id].value, it[password]) }
     }
 
     override suspend fun makeJwtToken(email: String): JWTAuth.Token? = query()
     {
         select { UserTable.email eq email }.singleOrNull()
-            ?.let { JWTAuth.makeTokenByEncryptPassword(it[id].value, it[password]) }
+            ?.let { JWTAuth.makeTokenByEncryptedPassword(it[id].value, it[password]) }
     }
 
     override suspend fun getUser(id: UserId): UserFull? = query()

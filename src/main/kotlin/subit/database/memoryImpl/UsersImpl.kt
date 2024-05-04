@@ -45,7 +45,7 @@ class UsersImpl: Users
     override suspend fun makeJwtToken(id: UserId): JWTAuth.Token?
     {
         val password = passwords[id] ?: return null
-        return JWTAuth.makeTokenByEncryptPassword(id, password)
+        return JWTAuth.makeTokenByEncryptedPassword(id, password)
     }
 
     override suspend fun makeJwtToken(email: String): JWTAuth.Token?

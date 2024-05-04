@@ -64,7 +64,7 @@ object JWTAuth: KoinComponent
      * @param id 用户ID
      * @param password 用户密码(加密后)
      */
-    fun makeTokenByEncryptPassword(id: UserId, password: String): Token = JWT.create()
+    fun makeTokenByEncryptedPassword(id: UserId, password: String): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id)
         .withClaim("password", password)
@@ -72,7 +72,7 @@ object JWTAuth: KoinComponent
         .sign(algorithm)
         .let(::Token)
 
-    fun makeToken(id: UserId, password: String): Token = makeTokenByEncryptPassword(id, encryptPassword(password))
+    fun makeToken(id: UserId, password: String): Token = makeTokenByEncryptedPassword(id, encryptPassword(password))
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)
     fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserFull? = call.principal<UserFull>()
