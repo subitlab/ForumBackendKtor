@@ -24,7 +24,7 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         // 操作需要登陆, 未登陆 401
         val Unauthorized = HttpStatus(HttpStatusCode.Unauthorized, "未登录, 请先登录")
         // 密码错误 401
-        val PasswordError = HttpStatus(HttpStatusCode.Unauthorized, "密码错误")
+        val PasswordError = HttpStatus(HttpStatusCode.Unauthorized, "账户或密码错误")
         // 无法创建用户, 邮箱已被注册 406
         val EmailExist = HttpStatus(HttpStatusCode.NotAcceptable, "邮箱已被注册")
         // 不在白名单中 401

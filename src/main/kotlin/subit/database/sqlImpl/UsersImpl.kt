@@ -58,28 +58,13 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
         }.value
     }
 
-    override suspend fun checkUserLoginByEncryptedPassword(email: String, password: String): Pair<Boolean, UserFull>? = query()
+    override suspend fun getEncryptedPassword(id: UserId): String? = query()
     {
-        select { (UserTable.email eq email) }.singleOrNull()
-            ?.let { (it[UserTable.password] == password) to (deserialize(it)) }
+        select { UserTable.id eq id }.singleOrNull()?.get(password)
     }
-
-    override suspend fun checkUserLoginByEncryptedPassword(id: UserId, password: String): Pair<Boolean, UserFull>? = query()
+    override suspend fun getEncryptedPassword(email: String): String? = query()
     {
-        select { (UserTable.id eq id) }.singleOrNull()
-            ?.let { (it[UserTable.password] == password) to (deserialize(it)) }
-    }
-
-    override suspend fun makeJwtToken(id: UserId): JWTAuth.Token? = query()
-    {
-        select { UserTable.id eq id }.singleOrNull()
-            ?.let { JWTAuth.makeTokenByEncryptedPassword(it[UserTable.id].value, it[password]) }
-    }
-
-    override suspend fun makeJwtToken(email: String): JWTAuth.Token? = query()
-    {
-        select { UserTable.email eq email }.singleOrNull()
-            ?.let { JWTAuth.makeTokenByEncryptedPassword(it[id].value, it[password]) }
+        select { UserTable.email eq email }.singleOrNull()?.get(password)
     }
 
     override suspend fun getUser(id: UserId): UserFull? = query()

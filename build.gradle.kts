@@ -77,4 +77,7 @@ dependencies {
     implementation("io.insert-koin:koin-core")
     implementation("io.insert-koin:koin-ktor")
     implementation("io.insert-koin:koin-logger-slf4j")
+
+    // 密码加密算法
+    implementation("at.favre.lib:bcrypt:0.10.2")
 }

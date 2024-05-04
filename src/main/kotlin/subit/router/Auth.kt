@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.auth
 
 import io.github.smiley4.ktorswaggerui.dsl.post
@@ -23,7 +24,7 @@ import subit.utils.*
 
 fun Route.auth()
 {
-    route("/auth",{
+    route("/auth", {
         tags = listOf("账户")
     })
     {
@@ -59,7 +60,7 @@ fun Route.auth()
             }
         }) { login() }
 
-        post("/loginByCode",{
+        post("/loginByCode", {
             description = "通过邮箱验证码登陆, 若成功返回token"
             request {
                 body<LoginByCodeInfo> { required = true; description = "登陆信息" }
@@ -73,7 +74,7 @@ fun Route.auth()
             }
         }) { loginByCode() }
 
-        post("/resetPassword",{
+        post("/resetPassword", {
             description = "重置密码(忘记密码)"
             request {
                 body<ResetPasswordInfo> { required = true; description = "重置密码信息" }
@@ -85,9 +86,9 @@ fun Route.auth()
                     HttpStatus.AccountNotExist,
                 )
             }
-        }){ resetPassword() }
+        }) { resetPassword() }
 
-        post("/sendEmailCode",{
+        post("/sendEmailCode", {
             description = "发送邮箱验证码"
             request {
                 body<EmailInfo> { required = true; description = "邮箱信息" }
@@ -100,7 +101,7 @@ fun Route.auth()
             }
         }) { sendEmailCode() }
 
-        post("/changePassword",{
+        post("/changePassword", {
             description = "修改密码"
             request {
                 authenticated(true)
@@ -120,6 +121,7 @@ fun Route.auth()
 
 @Serializable
 private data class RegisterInfo(val username: String, val password: String, val email: String, val code: String)
+
 private suspend fun Context.register()
 {
     val registerInfo: RegisterInfo = call.receive()
@@ -137,34 +139,38 @@ private suspend fun Context.register()
         )
     ) return call.respond(HttpStatus.WrongEmailCode)
     // 创建用户
-    get<Users>().createUser(
+    val id = get<Users>().createUser(
         username = registerInfo.username,
         password = registerInfo.password,
         email = registerInfo.email,
-    ).apply {
-        return if (this == null) call.respond(HttpStatus.EmailExist)
-        else call.respond(JWTAuth.makeToken(this, registerInfo.password))
-    }
+    ) ?: return call.respond(HttpStatus.EmailExist)
+    // 创建成功, 返回token
+    val token = JWTAuth.makeToken(id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
+    return call.respond(token)
 }
 
 @Serializable
 private data class LoginInfo(val email: String? = null, val id: UserId? = null, val password: String)
+
 private suspend fun Context.login()
 {
     val users = get<Users>()
     val loginInfo = call.receive<LoginInfo>()
-    val user = if (loginInfo.id != null)
-        users.checkUserLogin(loginInfo.id, loginInfo.password)
-    else if (loginInfo.email != null)
-        users.checkUserLogin(loginInfo.email, loginInfo.password)
+    val checked = if (loginInfo.id != null) JWTAuth.checkLogin(loginInfo.id, loginInfo.password)
+    else if (loginInfo.email != null) JWTAuth.checkLogin(loginInfo.email, loginInfo.password)
     else return call.respond(HttpStatus.BadRequest)
-    if (user == null) return call.respond(HttpStatus.NotFound)
-    if (!user.first) return call.respond(HttpStatus.PasswordError)
-    return call.respond(JWTAuth.makeToken(user.second.id, loginInfo.password))
+    // 若登陆失败，返回错误信息
+    if (!checked) return call.respond(HttpStatus.PasswordError)
+    val id = loginInfo.id
+             ?: users.getUser(loginInfo.email!!)?.id
+             ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
+    val token = JWTAuth.makeToken(id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
+    return call.respond(token)
 }
 
 @Serializable
 private data class LoginByCodeInfo(val email: String? = null, val id: UserId? = null, val code: String)
+
 private suspend fun Context.loginByCode()
 {
     val loginInfo = call.receive<LoginByCodeInfo>()
@@ -177,14 +183,14 @@ private suspend fun Context.loginByCode()
         ?: return call.respond(HttpStatus.BadRequest) // id和email都为空，返回错误的请求
     if (!get<EmailCodes>().verifyEmailCode(email, loginInfo.code, EmailCodes.EmailCodeUsage.LOGIN))
         return call.respond(HttpStatus.WrongEmailCode)
-    get<Users>().makeJwtToken(email).apply {
-        if (this != null) call.respond(this)
-        else call.respond(HttpStatus.AccountNotExist)
-    }
+    val user = get<Users>().getUser(email) ?: return call.respond(HttpStatus.AccountNotExist)
+    val token = JWTAuth.makeToken(user.id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
+    return call.respond(token)
 }
 
 @Serializable
 private data class ResetPasswordInfo(val email: String, val code: String, val password: String)
+
 private suspend fun Context.resetPassword()
 {
     // 接收重置密码的信息
@@ -205,22 +211,23 @@ private suspend fun Context.resetPassword()
 
 @Serializable
 private data class ChangePasswordInfo(val oldPassword: String, val newPassword: String)
+
 private suspend fun Context.changePassword()
 {
     val users = get<Users>()
 
     val (oldPassword, newPassword) = call.receive<ChangePasswordInfo>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    users.checkUserLogin(user.id, oldPassword).apply {
-        if (this == null) return call.respond(HttpStatus.PasswordError)
-    }
+    if (!JWTAuth.checkLogin(user.id, oldPassword)) return call.respond(HttpStatus.PasswordError)
     if (!checkPassword(newPassword)) return call.respond(HttpStatus.PasswordFormatError)
     users.setPassword(user.email, newPassword)
-    return call.respond(JWTAuth.makeToken(user.id, newPassword))
+    val token = JWTAuth.makeToken(user.id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
+    return call.respond(token)
 }
 
 @Serializable
 private data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeUsage)
+
 private suspend fun Context.sendEmailCode()
 {
     val emailInfo = call.receive<EmailInfo>()

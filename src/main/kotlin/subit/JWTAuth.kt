@@ -1,5 +1,6 @@
 package subit
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
@@ -8,10 +9,12 @@ import io.ktor.server.auth.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.RED
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
+import subit.database.Users
 import subit.logger.ForumLogger
 import java.util.*
 
@@ -62,23 +65,38 @@ object JWTAuth: KoinComponent
     /**
      * 生成Token
      * @param id 用户ID
-     * @param password 用户密码(加密后)
+     * @param encryptedPassword 用户密码(加密后)
      */
-    fun makeTokenByEncryptedPassword(id: UserId, password: String): Token = JWT.create()
+    private fun makeTokenByEncryptedPassword(id: UserId, encryptedPassword: String): Token = JWT.create()
         .withSubject("Authentication")
         .withClaim("id", id)
-        .withClaim("password", password)
+        .withClaim("password", encryptedPassword)
         .withExpiresAt(getExpiration())
         .sign(algorithm)
         .let(::Token)
 
-    fun makeToken(id: UserId, password: String): Token = makeTokenByEncryptedPassword(id, encryptPassword(password))
+    private val users: Users by inject()
+
+    suspend fun checkLoginByEncryptedPassword(id: UserId, encryptedPassword: String): Boolean =
+        users.getEncryptedPassword(id) == encryptedPassword
+
+    suspend fun checkLogin(id: UserId, password: String): Boolean =
+        users.getEncryptedPassword(id)?.let { verifyPassword(password, it) } ?: false
+    suspend fun checkLogin(email: String, password: String): Boolean =
+        users.getEncryptedPassword(email)?.let { verifyPassword(password, it) } ?: false
+
+    suspend fun makeToken(id: UserId): Token? =
+        users.getEncryptedPassword(id)?.let { makeTokenByEncryptedPassword(id, it) }
 
     private fun getExpiration() = Date(System.currentTimeMillis()+VALIDITY)
     fun PipelineContext<*, ApplicationCall>.getLoginUser(): UserFull? = call.principal<UserFull>()
 
+    private val hasher = BCrypt.with(BCrypt.Version.VERSION_2B)
+    private val verifier = BCrypt.verifyer(BCrypt.Version.VERSION_2B)
+
     /**
      * 在数据库中保存密码的加密,暂未实现,现在为不加密,明文存储
      */
-    fun encryptPassword(password: String): String = password
+    fun encryptPassword(password: String): String = hasher.hashToString(12, password.toCharArray())
+    fun verifyPassword(password: String, hash: String): Boolean = verifier.verify(password.toCharArray(), hash).verified
 }

@@ -30,29 +30,8 @@ class UsersImpl: Users
         return id
     }
 
-    override suspend fun checkUserLoginByEncryptedPassword(email: String, password: String): Pair<Boolean, UserFull>?
-    {
-        val id = emailMap[email] ?: return null
-        return checkUserLoginByEncryptedPassword(id, password)
-    }
-
-    override suspend fun checkUserLoginByEncryptedPassword(id: UserId, password: String): Pair<Boolean, UserFull>?
-    {
-        val user = map[id] ?: return null
-        return (passwords[id] == password) to user
-    }
-
-    override suspend fun makeJwtToken(id: UserId): JWTAuth.Token?
-    {
-        val password = passwords[id] ?: return null
-        return JWTAuth.makeTokenByEncryptedPassword(id, password)
-    }
-
-    override suspend fun makeJwtToken(email: String): JWTAuth.Token?
-    {
-        val id = emailMap[email] ?: return null
-        return makeJwtToken(id)
-    }
+    override suspend fun getEncryptedPassword(id: UserId): String? = passwords[id]
+    override suspend fun getEncryptedPassword(email: String): String? = emailMap[email]?.let { passwords[it] }
 
     override suspend fun getUser(id: UserId): UserFull? = map[id]
     override suspend fun getUser(email: String): UserFull? = emailMap[email]?.let { map[it] }

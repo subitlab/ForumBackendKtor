@@ -29,49 +29,9 @@ interface Users
         email: String,
     ): UserId?
 
-    /**
-     * 检查用户登录
-     * @param email 邮箱
-     * @param password 密码(加密前)
-     * @return 用户信息, 若不存在则返回null
-     */
-    suspend fun checkUserLogin(email: String, password: String): Pair<Boolean, UserFull>? =
-        checkUserLoginByEncryptedPassword(email, JWTAuth.encryptPassword(password))
+    suspend fun getEncryptedPassword(id: UserId): String?
+    suspend fun getEncryptedPassword(email: String): String?
 
-    /**
-     * 检查用户登录
-     * @param email 邮箱
-     * @param password 密码(加密后)
-     * @return 若用户不存在返回null,若存在且密码正确第一位为true,否则为false
-     */
-    suspend fun checkUserLoginByEncryptedPassword(email: String, password: String): Pair<Boolean, UserFull>?
-
-    /**
-     * 检查用户登录
-     * @param id 用户ID
-     * @param password 密码(加密前)
-     * @return 用户信息, 若不存在则返回null
-     */
-    suspend fun checkUserLogin(id: UserId, password: String): Pair<Boolean, UserFull>? =
-        checkUserLoginByEncryptedPassword(id, JWTAuth.encryptPassword(password))
-
-    /**
-     * 检查用户登录
-     * @param id 用户ID
-     * @param password 密码(加密后)
-     * @return 若用户不存在返回null,若存在且密码正确第一位为true,否则为false
-     */
-    suspend fun checkUserLoginByEncryptedPassword(id: UserId, password: String): Pair<Boolean, UserFull>?
-
-    /**
-     * 通过ID直接生成JWT Token, 若用户不存在则返回null
-     */
-    suspend fun makeJwtToken(id: UserId): JWTAuth.Token?
-
-    /**
-     * 通过邮箱直接生成JWT Token, 若用户不存在则返回null
-     */
-    suspend fun makeJwtToken(email: String): JWTAuth.Token?
     suspend fun getUser(id: UserId): UserFull?
     suspend fun getUser(email: String): UserFull?
 

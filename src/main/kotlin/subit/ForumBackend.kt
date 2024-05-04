@@ -106,11 +106,12 @@ private fun Application.installAuthentication() = install(Authentication)
                         .asInt()
                 }, password=${it.payload.getClaim("password").asString()}"
             )
-            val (_, user) = users.checkUserLoginByEncryptedPassword(
-                it.payload.getClaim("id").asInt(),
-                it.payload.getClaim("password").asString()
-            ) ?: return@validate null
-            user
+            if (!JWTAuth.checkLoginByEncryptedPassword(
+                    it.payload.getClaim("id").asInt(),
+                    it.payload.getClaim("password").asString()
+                )
+            ) null
+            else users.getUser(it.payload.getClaim("id").asInt())
         }
     }
 
