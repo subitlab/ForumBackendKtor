@@ -20,7 +20,7 @@ object MemoryDatabaseImpl: IDatabase, KoinComponent
         ForumLogger.info("Init database. impl: $name")
         ForumLogger.warning("${YELLOW}注意: 您正在使用${RED}内存数据库实现${YELLOW}.")
         ForumLogger.warning("${YELLOW}该实现所有数据将保存于内存中, 当程序退出时数据将${RED}全部丢失${YELLOW}.")
-        ForumLogger.warning("${YELLOW}该实现仅适用于数据量较小的测试环境, 请勿在生产环境中使用该实现.")
+        ForumLogger.warning("${YELLOW}该实现仅适用于数据量较小的${RED}测试环境${YELLOW}, 请勿在生产环境中使用该实现.")
 
         val module = module()
         {
