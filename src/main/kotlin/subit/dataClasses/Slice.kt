@@ -27,7 +27,7 @@ data class Slice<T>(
         /**
          * 生成一个空切片
          */
-        fun <T> empty() = Slice<T>(0, 0, emptyList())
+        fun <T> empty() = Slice<T>(0, 1, emptyList())
         inline fun <T> Sequence<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T> =
             asIterable().asSlice(begin, limit, filter)
 
