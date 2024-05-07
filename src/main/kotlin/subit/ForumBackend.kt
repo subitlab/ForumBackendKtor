@@ -1,6 +1,7 @@
 package subit
 
 import io.github.smiley4.ktorswaggerui.SwaggerUI
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -152,6 +153,10 @@ private fun Application.installStatusPages() = install(StatusPages)
     { call, throwable ->
         ForumLogger.warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
         call.respond(HttpStatus.InternalServerError)
+    }
+    status(HttpStatusCode.NotFound)
+    { _ ->
+        call.respond(HttpStatus.NotFound)
     }
 }
 
