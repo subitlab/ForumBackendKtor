@@ -209,8 +209,35 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         PostsTable.update({ id eq pid }) { it[view] = view+1 }
     }
 
-    override suspend fun getRecommendPosts(count: Int): Slice<PostId>
+    override suspend fun getRecommendPosts(count: Int): Slice<PostId> = query()
     {
-        TODO("Not yet implemented")
+        val blocksTable = (blocks as BlocksImpl).table
+        val likesTable = (likes as LikesImpl).table
+        val starsTable = (stars as StarsImpl).table
+        val commentsTable = (comments as CommentsImpl).table
+
+        /**
+         * 选择所属板块的reading权限小于等于NORMAL的帖子
+         *
+         * 按照 浏览量+点赞数*3+收藏数*5+评论数*2 加权随机
+         */
+        val minute = object: Expression<Any>()
+        {
+            override fun toQueryBuilder(queryBuilder: QueryBuilder) = queryBuilder { append("MINUTE") }
+        }
+        val now = CustomFunction("NOW", KotlinInstantColumnType())
+        val time = CustomFunction("TIMESTAMPDIFF", LongColumnType(), minute, create, now)
+        val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2)
+        val order = x/time
+        table.join(blocksTable, JoinType.INNER, block, BlocksImpl.BlocksTable.id)
+            .join(likesTable, JoinType.LEFT, id, LikesImpl.LikesTable.post)
+            .join(starsTable, JoinType.LEFT, id, StarsImpl.StarsTable.post)
+            .join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
+            .select(id)
+            .where { (blocksTable.reading lessEq PermissionLevel.NORMAL) and (state eq State.NORMAL) }
+            .groupBy(id)
+            .orderBy(order, SortOrder.DESC)
+            .asSlice(1, count)
+            .map { it[id].value }
     }
 }
