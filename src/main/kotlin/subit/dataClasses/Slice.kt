@@ -64,6 +64,9 @@ data class Slice<T>(
             }
             return Slice(i, begin, list)
         }
+
+        fun Query.single() = asSlice(1, 1).list[0]
+        fun Query.singleOrNull() = asSlice(1,1).run { if (list.isEmpty()) null else list[0] }
     }
 
     fun <R> map(transform: (T)->R) = Slice(totalSize, begin, list.map(transform))

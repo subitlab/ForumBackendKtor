@@ -33,7 +33,7 @@ class WhitelistsImpl: DaoSqlImpl<WhitelistsImpl.WhitelistTable>(WhitelistTable),
 
     override suspend fun isWhitelisted(email: String): Boolean = query()
     {
-        select {
+        selectAll().where {
             WhitelistTable.email eq email
         }.count() > 0
     }

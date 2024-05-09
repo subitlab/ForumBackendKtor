@@ -1,9 +1,10 @@
 package subit.database.sqlImpl
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import subit.dataClasses.PostId
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
@@ -20,20 +21,20 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
     {
         val user = reference("user", UsersImpl.UserTable).index()
         val post = reference("post", PostsImpl.PostsTable, ReferenceOption.CASCADE, ReferenceOption.SET_NULL).nullable().default(null)
-        val time = timestamp("time").defaultExpression(CurrentTimestamp()).index()
+        val time = timestamp("time").defaultExpression(CurrentTimestamp).index()
     }
 
     private fun deserialize(row: ResultRow) = Star(
         user = row[StarsTable.user].value,
         post = row[StarsTable.post]?.value,
-        time = row[StarsTable.time].toEpochMilli()
+        time = row[StarsTable.time].toEpochMilliseconds()
     )
 
     override suspend fun addStar(uid: UserId, pid: PostId): Unit = query()
     {
         insert {
-            it[user] = uid
-            it[post] = pid
+            it[user] = EntityID(uid, UsersImpl.UserTable)
+            it[post] = EntityID(pid, PostsImpl.PostsTable)
         }
     }
 
@@ -46,14 +47,12 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
 
     override suspend fun getStar(uid: UserId, pid: PostId): Boolean = query()
     {
-        select {
-            (user eq uid) and (post eq pid)
-        }.count() > 0
+        selectAll().where { (user eq uid) and (post eq pid) }.count() > 0
     }
 
     override suspend fun getStarsCount(pid: PostId): Long = query()
     {
-        StarsTable.select { post eq pid }.count()
+        StarsTable.selectAll().where { post eq pid }.count()
     }
 
     override suspend fun getStars(
@@ -63,7 +62,7 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
         limit: Int,
     ): Slice<Star> = query()
     {
-        select()
+        selectAll().where()
         {
             var op: Op<Boolean> = Op.TRUE
             if (user != null) op = op and (StarsTable.user eq user)

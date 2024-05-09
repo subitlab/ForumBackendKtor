@@ -3,10 +3,14 @@ package subit.database.sqlImpl
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
-import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CustomTimestampWithTimeZoneFunction
+import org.jetbrains.exposed.sql.kotlin.datetime.KotlinInstantColumnType
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import subit.dataClasses.*
@@ -34,10 +38,10 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         val author = reference("author", UsersImpl.UserTable).index()
         val anonymous = bool("anonymous").default(false)
         val block = reference("block", BlocksImpl.BlocksTable, ReferenceOption.CASCADE, ReferenceOption.CASCADE).index()
-        val create = timestamp("create").defaultExpression(CurrentTimestamp()).index()
-        val lastModified = timestamp("last_modified").defaultExpression(CurrentTimestamp()).index()
+        val create = timestamp("create").defaultExpression(CurrentTimestamp).index()
+        val lastModified = timestamp("last_modified").defaultExpression(CurrentTimestamp).index()
         val view = long("view").default(0L)
-        val state = enumeration("state", State::class).default(State.NORMAL)
+        val state = enumerationByName<State>("state", 20).default(State.NORMAL)
         val top = bool("top").default(false)
         override val primaryKey = PrimaryKey(id)
     }
@@ -48,8 +52,8 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         content = row[PostsTable.content],
         author = row[PostsTable.author].value,
         anonymous = row[PostsTable.anonymous],
-        create = row[PostsTable.create].toEpochMilli(),
-        lastModified = row[PostsTable.lastModified].toEpochMilli(),
+        create = row[PostsTable.create].toEpochMilliseconds(),
+        lastModified = row[PostsTable.lastModified].toEpochMilliseconds(),
         view = row[PostsTable.view],
         block = row[PostsTable.block].value,
         state = row[PostsTable.state]
@@ -80,7 +84,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         {
             it[PostsTable.title] = title
             it[PostsTable.content] = content
-            it[lastModified] = CurrentTimestamp()
+            it[lastModified] = CurrentTimestamp
         }
     }
 
@@ -91,7 +95,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
 
     override suspend fun getPost(pid: PostId): PostInfo? = query()
     {
-        select { id eq pid }.firstOrNull()?.let(::deserializePost)
+        selectAll().where { id eq pid }.firstOrNull()?.let(::deserializePost)
     }
 
     /**
@@ -104,7 +108,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         limit: Int,
     ): Slice<PostInfo> = query()
     {
-        select { PostsTable.author eq author }.asSlice(begin, limit) { row ->
+        selectAll().where { PostsTable.author eq author }.asSlice(begin, limit) { row ->
             val blockFull = blocks.getBlock(row[block].value) ?: return@asSlice false
             val permission = loginUser?.let { permissions.getPermission(loginUser.id, blockFull.id) }
                              ?: PermissionLevel.NORMAL
@@ -117,55 +121,61 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         type: Posts.PostListSort,
         begin: Long,
         count: Int
-    ): Slice<PostInfo> = query()
+    ): Slice<PostId> = query()
     {
         val op = (PostsTable.block eq block) and (state eq State.NORMAL)
-
         val r: Query = when (type)
         {
-            NEW       -> select(op).orderBy(create, SortOrder.DESC)
-            OLD       -> select(op).orderBy(create, SortOrder.ASC)
-            MORE_VIEW -> select(op).orderBy(view, SortOrder.DESC)
-            MORE_LIKE -> {
+            NEW          -> select(id).where(op).orderBy(create, SortOrder.DESC)
+            OLD          -> select(id).where(op).orderBy(create, SortOrder.ASC)
+            MORE_VIEW    -> select(id).where(op).orderBy(view, SortOrder.DESC)
+            MORE_LIKE    ->
+            {
                 val likesTable = (likes as LikesImpl).table
                 PostsTable.join(likesTable, JoinType.LEFT, id, LikesImpl.LikesTable.post)
-                    .slice(columns)
-                    .select(op)
+                    .select(id)
+                    .where(op)
                     .groupBy(id)
                     .orderBy(likesTable.like.sum(), SortOrder.DESC)
             }
-            MORE_STAR -> {
+
+            MORE_STAR    ->
+            {
                 val starsTable = (stars as StarsImpl).table
                 PostsTable.join(starsTable, JoinType.LEFT, id, StarsImpl.StarsTable.post)
-                    .slice(columns)
-                    .select(op)
+                    .select(id)
+                    .where(op)
                     .groupBy(id)
                     .orderBy(starsTable.post.count(), SortOrder.DESC)
             }
-            MORE_COMMENT -> {
+
+            MORE_COMMENT ->
+            {
                 val commentsTable = (comments as CommentsImpl).table
                 PostsTable.join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
-                    .slice(columns)
-                    .select(op)
+                    .select(id)
+                    .where(op)
                     .groupBy(id)
                     .orderBy(commentsTable.id.count(), SortOrder.DESC)
             }
-            LAST_COMMENT -> {
+
+            LAST_COMMENT ->
+            {
                 val commentsTable = (comments as CommentsImpl).table
                 PostsTable.join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
-                    .slice(columns)
-                    .select(op)
+                    .select(id)
+                    .where(op)
                     .groupBy(id)
                     .orderBy(commentsTable.create.max(), SortOrder.DESC)
             }
         }
 
-        r.asSlice(begin,count).map(::deserializePost)
+        r.asSlice(begin, count).map { it[id].value }
     }
 
     override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = query()
     {
-        PostsTable.select { (PostsTable.block eq block) and (top eq true) and (state eq State.NORMAL) }
+        PostsTable.selectAll().where { (PostsTable.block eq block) and (top eq true) and (state eq State.NORMAL) }
             .asSlice(begin, count)
             .map(::deserializePost)
     }
@@ -173,7 +183,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
     override suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?> = query()
     {
         list.map {
-            if (it != null) select { id eq it }.firstOrNull()
+            if (it != null) selectAll().where { id eq it }.firstOrNull()
             else null
         }.map { it?.let(::deserializePost) }
     }
@@ -185,7 +195,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         count: Int
     ): Slice<PostInfo> = query()
     {
-        PostsTable.select { ((title like "%$key%") or (content like "%$key%")) and (state eq State.NORMAL) }
+        PostsTable.selectAll().where { ((title like "%$key%") or (content like "%$key%")) and (state eq State.NORMAL) }
             .asSlice(begin, count) {
                 val blockFull = blocks.getBlock(it[block].value) ?: return@asSlice false
                 val permission = loginUser?.let { permissions.getPermission(loginUser, blockFull.id) }

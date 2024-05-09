@@ -1,15 +1,15 @@
 package subit.database.sqlImpl
 
+import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import subit.dataClasses.PrivateChat
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserId
 import subit.database.PrivateChats
-import java.time.Instant
 
 class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateChatsTable), PrivateChats
 {
@@ -17,14 +17,14 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
     {
         val from = reference("from", UsersImpl.UserTable).index()
         val to = reference("to", UsersImpl.UserTable).index()
-        val time = timestamp("time").index().defaultExpression(CurrentTimestamp())
+        val time = timestamp("time").index().defaultExpression(CurrentTimestamp)
         val content = text("content")
     }
 
     private fun deserialize(row: ResultRow) = PrivateChat(
         from = row[PrivateChatsTable.from].value,
         to = row[PrivateChatsTable.to].value,
-        time = row[PrivateChatsTable.time].toEpochMilli(),
+        time = row[PrivateChatsTable.time].toEpochMilliseconds(),
         content = row[PrivateChatsTable.content]
     )
 
@@ -53,8 +53,8 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
          * 这样可以保证数据库中只有一条记录, 且未读消息数为0时不占用额外空间.
          * 若有更好的实现方法, 可以自行修改.
          */
-        val count = select {
-            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.MIN)
+        val count = select(content).where {
+            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_PAST)
         }.singleOrNull()?.get(content)?.toLongOrNull() ?: 0
         if (block != null)
         {
@@ -64,16 +64,16 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
                 if (newCount == 0L) deleteWhere {
                     (PrivateChatsTable.from eq from)
                         .and(PrivateChatsTable.to eq to)
-                        .and(time eq Instant.MIN)
+                        .and(time eq Instant.DISTANT_PAST)
                 }
                 else if (count == 0L) insert {
                     it[PrivateChatsTable.from] = from
                     it[PrivateChatsTable.to] = to
-                    it[time] = Instant.MIN
+                    it[time] = Instant.DISTANT_PAST
                     it[content] = newCount.toString()
                 }
                 else update({
-                    (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.MIN)
+                    (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_PAST)
                 })
                 {
                     it[content] = newCount.toString()
@@ -96,9 +96,9 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
 
     override suspend fun getPrivateChats(user1: UserId, user2: UserId, begin: Long, count: Int) = query()
     {
-        select {
+        selectAll().where {
             (((from eq user1) and (to eq user2)) or ((from eq user2) and (to eq user1)))
-                .and(time neq Instant.MIN)
+                .and(time neq Instant.DISTANT_PAST)
         }.asSlice(begin, count).map(::deserialize)
     }
 
@@ -106,8 +106,8 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
     {
         val from = from
         val to = PrivateChatsTable.to
-        slice(from, to, time) // 选择 from, to, time 三列, 避免加载不必要的数据
-            .select { (from eq uid) or (to eq uid) } // 发送或接受消息者是要查询的用户
+        select(from, to, time) // 选择 from, to, time 三列, 避免加载不必要的数据
+            .where { (from eq uid) or (to eq uid) } // 发送或接受消息者是要查询的用户
             .orderBy(time, SortOrder.DESC) // 按照时间降序排序
             .withDistinct(true) // 去重
             .map {
@@ -128,7 +128,9 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
     override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unreadCount(uid, other)
     override suspend fun getUnreadCount(uid: UserId): Long = query()
     {
-        select { (from eq uid) and (time eq Instant.MIN) }.mapNotNull { it[content].toLongOrNull() }.sum()
+        select(content).where { (from eq uid) and (time eq Instant.DISTANT_PAST) }
+            .mapNotNull { it[content].toLongOrNull() }
+            .sum()
     }
 
     override suspend fun setRead(uid: UserId, other: UserId)
@@ -138,6 +140,6 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
 
     override suspend fun setReadAll(uid: UserId): Unit = query()
     {
-        deleteWhere { (from eq uid) and (time eq Instant.MIN) }
+        deleteWhere { (from eq uid) and (time eq Instant.DISTANT_PAST) }
     }
 }

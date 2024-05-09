@@ -9,6 +9,7 @@ import subit.dataClasses.Notice.*
 import subit.dataClasses.Notice.Type.*
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Notices
 
 class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, KoinComponent
@@ -45,7 +46,7 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
         // 否则需要考虑同类型消息的合并
         else if (notice is ObjectNotice)
         {
-            val result = select {
+            val result = select(id, content).where {
                 (user eq notice.user) and (type eq notice.type) and (table.obj eq notice.obj)
             }.singleOrNull()
 
@@ -67,12 +68,12 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
 
     override suspend fun getNotice(id: NoticeId): Notice? = query()
     {
-        select { table.id eq id }.singleOrNull()?.let(::deserialize)
+        selectAll().where { table.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
     override suspend fun getNotices(user: UserId, type: Type?, begin: Long, count: Int): Slice<Notice> = query()
     {
-        select {
+        selectAll().where {
             if (type == null) table.user eq user
             else (table.user eq user) and (table.type eq type)
         }.orderBy(table.id, SortOrder.DESC).asSlice(begin, count).map(::deserialize)

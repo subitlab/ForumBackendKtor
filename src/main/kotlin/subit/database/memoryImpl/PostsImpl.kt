@@ -78,7 +78,7 @@ class PostsImpl: Posts, KoinComponent
         type: Posts.PostListSort,
         begin: Long,
         count: Int
-    ): Slice<PostInfo> = map.values
+    ): Slice<PostId> = map.values
         .filter { it.first.block == block }
         .map { it.first }
         .sortedBy {
@@ -93,7 +93,7 @@ class PostsImpl: Posts, KoinComponent
                 Posts.PostListSort.LAST_COMMENT -> -(comments as CommentsImpl).getLastComment(it.id).time
             }
         }
-        .asSlice(begin, count)
+        .asSlice(begin, count).map { it.id }
 
     override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = map.values
         .filter { it.first.block == block && it.second }

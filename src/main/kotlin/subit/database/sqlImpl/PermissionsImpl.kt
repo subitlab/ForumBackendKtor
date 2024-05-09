@@ -2,13 +2,11 @@ package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.*
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import subit.dataClasses.*
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Blocks
 import subit.database.Permissions
 import subit.database.Users
@@ -36,7 +34,7 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
     override suspend fun setPermission(bid: BlockId, uid: UserId, permission: PermissionLevel): Unit = query()
     {
         val id = BlockUserId(uid = uid, bid = bid)
-        if (select { PermissionTable.id eq id.raw }.any()) update({ PermissionTable.id eq id.raw })
+        if (selectAll().where { PermissionTable.id eq id.raw }.count() > 0) update({ PermissionTable.id eq id.raw })
         {
             it[PermissionTable.permission] = permission
         }
@@ -53,7 +51,7 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
     private suspend fun getRawPermission(bid: BlockId, user: UserId): PermissionLevel = query()
     {
         val id = BlockUserId(uid = user, bid = bid).raw
-        select { PermissionTable.id eq id }.firstOrNull()?.getOrNull(permission) // 这里若找不到这个用户在这个数据库中的权限记录, 说明这个用户在这个数据库里没有被更改过权限, 则去查找这个数据库的默认权限
+        select(permission).where { PermissionTable.id eq id }.singleOrNull()?.getOrNull(permission) // 这里若找不到这个用户在这个数据库中的权限记录, 说明这个用户在这个数据库里没有被更改过权限, 则去查找这个数据库的默认权限
         ?: PermissionLevel.NORMAL // 没有就返回默认值即全是NORMAL
     }
 

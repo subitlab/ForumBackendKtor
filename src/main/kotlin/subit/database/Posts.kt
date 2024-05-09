@@ -46,7 +46,7 @@ interface Posts
         type: PostListSort,
         begin: Long,
         count: Int
-    ): Slice<PostInfo>
+    ): Slice<PostId>
 
     suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo>
     suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?>

@@ -1,16 +1,23 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.sql.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.KoinComponent
 import subit.config.emailConfig
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.EmailCodes
 import subit.database.EmailCodes.EmailCodeUsage
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup
-import java.time.Instant
 
 class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), EmailCodes, KoinComponent
 {
@@ -43,7 +50,7 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
             it[EmailsTable.email] = email
             it[EmailsTable.code] = code
             it[EmailsTable.usage] = usage
-            it[time] = Instant.now().plusSeconds(emailConfig.codeValidTime)
+            it[time] = Clock.System.now().plus(emailConfig.codeValidTime, unit = DateTimeUnit.SECOND)
         }
     }
 
@@ -52,7 +59,7 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
      */
     override suspend fun verifyEmailCode(email: String, code: String, usage: EmailCodeUsage): Boolean = query()
     {
-        val result = select {
+        val result = select(time).where {
             (EmailsTable.email eq email) and (EmailsTable.code eq code) and (EmailsTable.usage eq usage)
         }.singleOrNull()?.let { it[time] }
 
@@ -63,11 +70,11 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
             }
         }
 
-        result != null && result >= Instant.now()
+        result != null && result >= Clock.System.now()
     }
 
     private suspend fun clearExpiredEmailCode(): Unit = query()
     {
-        EmailsTable.deleteWhere { time lessEq Instant.now() }
+        EmailsTable.deleteWhere { time lessEq CurrentTimestamp }
     }
 }

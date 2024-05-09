@@ -3,8 +3,8 @@ package subit.database.sqlImpl
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import subit.JWTAuth
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.Slice
@@ -24,7 +24,7 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
         val username = varchar("username", 100).index()
         val password = text("password")
         val email = varchar("email", 100).uniqueIndex()
-        val registrationTime = timestamp("registration_time").defaultExpression(CurrentTimestamp())
+        val registrationTime = timestamp("registration_time").defaultExpression(CurrentTimestamp)
         val introduction = text("introduction").nullable().default(null)
         val showStars = bool("show_stars").default(true)
         val permission = enumeration<PermissionLevel>("permission").default(PermissionLevel.NORMAL)
@@ -36,7 +36,7 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
         id = row[UserTable.id].value,
         username = row[UserTable.username],
         email = row[UserTable.email],
-        registrationTime = row[UserTable.registrationTime].toEpochMilli(),
+        registrationTime = row[UserTable.registrationTime].toEpochMilliseconds(),
         introduction = row[UserTable.introduction] ?: "",
         showStars = row[UserTable.showStars],
         permission = row[UserTable.permission],
@@ -49,7 +49,7 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
         email: String,
     ): UserId? = query()
     {
-        if (select { UserTable.email eq email }.count() > 0) return@query null // 邮箱已存在
+        if (selectAll().where { UserTable.email eq email }.count() > 0) return@query null // 邮箱已存在
         val psw = JWTAuth.encryptPassword(password) // 加密密码
         insertAndGetId {
             it[UserTable.username] = username
@@ -60,21 +60,21 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
 
     override suspend fun getEncryptedPassword(id: UserId): String? = query()
     {
-        select { UserTable.id eq id }.singleOrNull()?.get(password)
+        select(password).where { UserTable.id eq id }.singleOrNull()?.get(password)
     }
     override suspend fun getEncryptedPassword(email: String): String? = query()
     {
-        select { UserTable.email eq email }.singleOrNull()?.get(password)
+        select(password).where { UserTable.email eq email }.singleOrNull()?.get(password)
     }
 
     override suspend fun getUser(id: UserId): UserFull? = query()
     {
-        select { UserTable.id eq id }.singleOrNull()?.let(::deserialize)
+        selectAll().where { UserTable.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
     override suspend fun getUser(email: String): UserFull? = query()
     {
-        select { UserTable.email eq email }.singleOrNull()?.let(::deserialize)
+        selectAll().where { UserTable.email eq email }.singleOrNull()?.let(::deserialize)
     }
 
     override suspend fun setPassword(email: String, password: String): Boolean = query()
@@ -110,6 +110,6 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
 
     override suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull> = query()
     {
-        UserTable.select { UserTable.username like "%$username%" }.asSlice(begin, count).map(::deserialize)
+        selectAll().where { UserTable.username like "%$username%" }.asSlice(begin, count).map(::deserialize)
     }
 }

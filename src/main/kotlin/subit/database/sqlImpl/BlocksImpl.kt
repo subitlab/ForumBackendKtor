@@ -8,6 +8,7 @@ import org.koin.core.component.inject
 import subit.dataClasses.*
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Blocks
 import subit.database.Permissions
 
@@ -27,7 +28,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
             .default(null)
             .index()
         val creator = reference("creator", UsersImpl.UserTable).index()
-        val state = enumeration<State>("state").default(State.NORMAL)
+        val state = enumerationByName<State>("state", 20).default(State.NORMAL)
         val posting = enumeration<PermissionLevel>("posting").default(PermissionLevel.NORMAL)
         val commenting = enumeration<PermissionLevel>("commenting").default(PermissionLevel.NORMAL)
         val reading = enumeration<PermissionLevel>("reading").default(PermissionLevel.NORMAL)
@@ -90,7 +91,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
 
     override suspend fun getBlock(block: BlockId): BlockFull? = query()
     {
-        select { id eq block }.firstOrNull()?.let(::deserializeBlock)
+        selectAll().where { id eq block }.singleOrNull()?.let(::deserializeBlock)
     }
 
     override suspend fun setState(block: BlockId, state: State): Unit = query()
@@ -103,15 +104,15 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
 
     override suspend fun getChildren(parent: BlockId): List<BlockFull> = query()
     {
-        select { BlocksTable.parent eq parent }.map(::deserializeBlock)
+        selectAll().where { BlocksTable.parent eq parent }.map(::deserializeBlock)
     }
 
     override suspend fun searchBlock(user: UserId?, key: String, begin: Long, count: Int): Slice<BlockFull> = query()
     {
-        val r = BlocksTable.selectBatched()
+        val r = BlocksTable.selectAll().where()
         {
             (name like "%$key%") or (description like "%$key%")
-        }.flattenAsIterable().asSlice(begin, count)
+        }.fetchBatchedResults().flattenAsIterable().asSlice(begin, count)
         {
             val block = it[id].value
             val permission = user?.let { permissions.getPermission(user, block) } ?: PermissionLevel.NORMAL

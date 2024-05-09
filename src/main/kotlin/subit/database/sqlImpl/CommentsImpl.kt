@@ -2,10 +2,11 @@ package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.KoinComponent
 import subit.dataClasses.*
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Comments
 
 class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comments, KoinComponent
@@ -17,7 +18,7 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
         val parent = reference("parent", CommentsTable).nullable().index()
         val author = reference("author", UsersImpl.UserTable).index()
         val content = text("content")
-        val create = timestamp("create").defaultExpression(CurrentTimestamp()).index()
+        val create = timestamp("create").defaultExpression(CurrentTimestamp).index()
         val state = enumeration<State>("state").default(State.NORMAL)
         override val primaryKey = PrimaryKey(id)
     }
@@ -28,7 +29,7 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
         parent = row[CommentsTable.parent]?.value,
         author = row[CommentsTable.author].value,
         content = row[CommentsTable.content],
-        create = row[CommentsTable.create].toEpochMilli(),
+        create = row[CommentsTable.create].toEpochMilliseconds(),
         state = row[CommentsTable.state]
     )
 
@@ -51,9 +52,7 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
 
     override suspend fun getComment(id: CommentId): Comment? = query()
     {
-        select {
-            CommentsTable.id eq id
-        }.firstOrNull()?.let(::deserialize)
+        selectAll().where { CommentsTable.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
     override suspend fun setCommentState(id: CommentId, state: State): Unit = query()
@@ -71,6 +70,6 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
     {
         if (post == null && parent == null) return@query null
         val post0 = post ?: parent?.let { getComment(it)?.post } ?: return@query null
-        select { (CommentsTable.post eq post0) and (CommentsTable.parent eq parent) }.map(::deserialize)
+        selectAll().where { (CommentsTable.post eq post0) and (CommentsTable.parent eq parent) }.map(::deserialize)
     }
 }

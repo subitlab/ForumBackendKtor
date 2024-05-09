@@ -1,15 +1,16 @@
 package subit.database.sqlImpl
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import subit.dataClasses.Prohibit
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserId
 import subit.database.Prohibits
-import java.time.Instant
 
 class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), Prohibits
 {
@@ -23,7 +24,7 @@ class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), P
 
     private fun deserialize(row: ResultRow) = Prohibit(
         row[ProhibitsTable.user].value,
-        row[ProhibitsTable.time].toEpochMilli(),
+        row[ProhibitsTable.time].toEpochMilliseconds(),
         row[ProhibitsTable.reason],
         row[ProhibitsTable.operator].value
     )
@@ -32,7 +33,7 @@ class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), P
     {
         insert {
             it[user] = prohibit.user
-            it[time] = Instant.ofEpochMilli(prohibit.time)
+            it[time] = Instant.fromEpochMilliseconds(prohibit.time)
             it[reason] = prohibit.reason
             it[operator] = prohibit.operator
         }
@@ -48,8 +49,8 @@ class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), P
      */
     override suspend fun isProhibited(uid: UserId): Boolean = query()
     {
-        deleteWhere { time lessEq Instant.now() }
-        select { user eq uid }.count() > 0
+        deleteWhere { time lessEq Clock.System.now() }
+        selectAll().where { user eq uid }.count() > 0
     }
 
     override suspend fun getProhibitList(begin: Long, count: Int): Slice<Prohibit> = query()

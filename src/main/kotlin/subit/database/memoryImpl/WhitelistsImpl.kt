@@ -5,7 +5,7 @@ import java.util.Collections
 
 class WhitelistsImpl: Whitelists
 {
-    private val set = Collections.synchronizedSet(setOf<String>())
+    private val set = Collections.synchronizedSet(mutableSetOf<String>())
 
     override suspend fun add(email: String)
     {
