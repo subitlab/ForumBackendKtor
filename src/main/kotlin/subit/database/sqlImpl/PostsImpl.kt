@@ -7,8 +7,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.wrap
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
-import org.jetbrains.exposed.sql.kotlin.datetime.CustomTimestampWithTimeZoneFunction
 import org.jetbrains.exposed.sql.kotlin.datetime.KotlinInstantColumnType
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.koin.core.component.KoinComponent
@@ -221,18 +221,18 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
          *
          * 按照 浏览量+点赞数*3+收藏数*5+评论数*2 加权随机
          */
-        val minute = object: Expression<Any>()
+        val minute = object: Expression<Nothing>()
         {
             override fun toQueryBuilder(queryBuilder: QueryBuilder) = queryBuilder { append("MINUTE") }
         }
         val now = CustomFunction("NOW", KotlinInstantColumnType())
-        val time = CustomFunction("TIMESTAMPDIFF", LongColumnType(), minute, create, now)
+        val time = CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0
         val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2)
-        val order = x/time
-        table.join(blocksTable, JoinType.INNER, block, BlocksImpl.BlocksTable.id)
-            .join(likesTable, JoinType.LEFT, id, LikesImpl.LikesTable.post)
-            .join(starsTable, JoinType.LEFT, id, StarsImpl.StarsTable.post)
-            .join(commentsTable, JoinType.LEFT, id, CommentsImpl.CommentsTable.post)
+        val order = x/CustomFunction("POW", LongColumnType(), time, doubleParam(1.8))
+        table.join(blocksTable, JoinType.INNER, block, blocksTable.id)
+            .join(likesTable, JoinType.LEFT, id, likesTable.post)
+            .join(starsTable, JoinType.LEFT, id, starsTable.post)
+            .join(commentsTable, JoinType.LEFT, id, commentsTable.post)
             .select(id)
             .where { (blocksTable.reading lessEq PermissionLevel.NORMAL) and (state eq State.NORMAL) }
             .groupBy(id)

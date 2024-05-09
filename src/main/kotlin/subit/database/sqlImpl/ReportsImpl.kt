@@ -1,11 +1,15 @@
 package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import subit.dataClasses.Report
 import subit.dataClasses.ReportObject
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.dataClasses.UserId
 import subit.database.Reports
 
@@ -42,7 +46,7 @@ class ReportsImpl: DaoSqlImpl<ReportsImpl.ReportTable>(ReportTable), Reports
 
     override suspend fun getReport(id: Long): Report? = query()
     {
-        ReportTable.select { ReportTable.id eq id }.singleOrNull()?.let(::deserialize)
+        ReportTable.selectAll().where { ReportTable.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
     override suspend fun handleReport(id: Long, user: UserId): Unit = query()
@@ -57,7 +61,7 @@ class ReportsImpl: DaoSqlImpl<ReportsImpl.ReportTable>(ReportTable), Reports
     ):Slice<Report> = query()
     {
         return@query (if (handled == null) ReportTable.selectAll()
-        else ReportTable.select {
+        else ReportTable.selectAll().where {
             if (handled) (handledBy neq null)
             else (handledBy eq null)
         }).asSlice(begin, count).map(::deserialize)
