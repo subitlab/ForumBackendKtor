@@ -219,13 +219,21 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         /**
          * 选择所属板块的reading权限小于等于NORMAL的帖子
          *
-         * 按照 浏览量+点赞数*3+收藏数*5+评论数*2 加权随机
+         * 按照 (浏览量+点赞数*3+收藏数*5+评论数*2)/(发帖到现在的时间(单位: 时间)的1.8次方)
+         *
+         * 计算发帖到现在的时间需要使用函数TIMESTAMPDIFF(MINUTE, create, NOW())
          */
+
+        // 定义一个MINUTE, 因为不是函数(不能在后面加括号"MINUTE()", 会报错)只能自己定义一个 Expression
+        // 类型这里写的是Nothing, 这里无论填什么类型都不影响SQL请求, 只是方便在代码中处理
         val minute = object: Expression<Nothing>()
         {
+            // 转换到SQL语句, 直接转换称"MINUTE"
             override fun toQueryBuilder(queryBuilder: QueryBuilder) = queryBuilder { append("MINUTE") }
         }
+        // SQL中的NOW()函数
         val now = CustomFunction("NOW", KotlinInstantColumnType())
+        // 调用TIMESTAMPDIFF函数, 返回类型是DoubleColumnType, 传参分别为minute, create, now
         val time = CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0
         val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2)
         val order = x/CustomFunction("POW", LongColumnType(), time, doubleParam(1.8))
