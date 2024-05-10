@@ -33,6 +33,7 @@ dependencies {
     implementation(kotlin("reflect")) // kotlin 反射库
 
     implementation("io.ktor:ktor-server-core-jvm") // core
+    implementation("io.ktor:ktor-server-netty-jvm") // netty
     implementation("io.ktor:ktor-server-auth-jvm") // 登陆验证
     implementation("io.ktor:ktor-server-auth-jwt-jvm") // jwt登陆验证
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
@@ -52,7 +53,6 @@ dependencies {
     implementation("com.h2database:h2:$h2_version") // 数据库
     implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池
 
-    implementation("io.ktor:ktor-server-netty-jvm") // netty
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
     implementation("io.ktor:ktor-server-call-logging-jvm:2.3.7") // 日志
 
@@ -66,13 +66,6 @@ dependencies {
     implementation("org.jline:jline-terminal:$jline_version") // 终端打印、命令等
     implementation("org.jline:jline-style:$jline_version") // 终端打印、命令等
 
-    testImplementation("io.ktor:ktor-server-tests-jvm")
-    testImplementation("io.ktor:ktor-server-test-host")
-    testImplementation("io.ktor:ktor-client-content-negotiation")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.7")
-
     // koin
     implementation(platform("io.insert-koin:koin-bom:$koin_version"))
     implementation("io.insert-koin:koin-core")
@@ -81,4 +74,13 @@ dependencies {
 
     // 密码加密算法
     implementation("at.favre.lib:bcrypt:0.10.2")
+
+
+
+    testImplementation("io.ktor:ktor-server-tests-jvm")
+    testImplementation("io.ktor:ktor-server-test-host")
+    testImplementation("io.ktor:ktor-client-content-negotiation")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.7")
 }

@@ -11,27 +11,7 @@ import kotlin.test.Test
 
 class ForumBackendTest
 {
-    companion object
-    {
-        private const val TEST_EMAIL = "test@pkuschool.edu.cn"
-        private const val TEST_PASSWORD = "test1234"
-        private const val TEST_USERNAME = "test"
-    }
-
-    @Serializable
-    data class LoginResponse(val token: String)
-
-    private suspend fun clearDatabase()
-    {
-    }
-
-    private suspend fun setWhiteList()
-    {
-    }
-
-    @Test
-    fun test() = Unit
-    fun test0() = testApplication()
+    fun test() = testApplication()
     {
         val client = createClient()
         {
@@ -44,17 +24,6 @@ class ForumBackendTest
                     ignoreUnknownKeys = true
                 })
             }
-        }
-
-        val token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBdXRoZW50aWNhdGlvbiIsImlkIjoxLCJwYXNzd29yZCI6InRlc3QxMjM0IiwiZXhwIjoxNzEyOTQyODA3fQ.gE5ZoNs0qzb_rUqwJJY0KLBrZQbwEZEZToPwuqKYkQvdhIPcQDs2fgn3G5ygvsjkIsFCqATtucgtebt5GOJuLg"
-
-        client.get("/user/info/0")
-        {
-            this.header("Content-Type", "application/json")
-            this.header("Authorization", "Bearer $token")
-        }.apply {
-            println(status)
-            println(bodyAsText())
         }
     }
 }

@@ -94,18 +94,48 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
         unreadCount(from, to) { it+1 }
     }
 
-    override suspend fun getPrivateChats(user1: UserId, user2: UserId, begin: Long, count: Int) = query()
+    private suspend fun getPrivateChats(
+        user1: UserId,
+        user2: UserId,
+        before: Instant? = null,
+        after: Instant? = null,
+        begin: Long,
+        count: Int
+    ): Slice<PrivateChat> = query()
     {
         selectAll().where {
-            (((from eq user1) and (to eq user2)) or ((from eq user2) and (to eq user1)))
-                .and(time neq Instant.DISTANT_PAST)
+            val time = if (before != null) time lessEq before
+            else if (after != null) time greaterEq after
+            else Op.TRUE
+            val x = (from eq user1) and (to eq user2)
+            val y = (from eq user2) and (to eq user1)
+            time and (x or y)
+        }.apply {
+            if (before != null) orderBy(time, SortOrder.DESC)
+            else orderBy(time, SortOrder.ASC)
         }.asSlice(begin, count).map(::deserialize)
     }
+
+    override suspend fun getPrivateChatsBefore(
+        user1: UserId,
+        user2: UserId,
+        time: Instant,
+        begin: Long,
+        count: Int
+    ): Slice<PrivateChat> = getPrivateChats(user1, user2, before = time, begin = begin, count = count)
+
+    override suspend fun getPrivateChatsAfter(
+        user1: UserId,
+        user2: UserId,
+        time: Instant,
+        begin: Long,
+        count: Int
+    ): Slice<PrivateChat> = getPrivateChats(user1, user2, after = time, begin = begin, count = count)
 
     override suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId> = query()
     {
         val from = from
-        val to = PrivateChatsTable.to
+        val to = to
         select(from, to, time) // 选择 from, to, time 三列, 避免加载不必要的数据
             .where { (from eq uid) or (to eq uid) } // 发送或接受消息者是要查询的用户
             .orderBy(time, SortOrder.DESC) // 按照时间降序排序

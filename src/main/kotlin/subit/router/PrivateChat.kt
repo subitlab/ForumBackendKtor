@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.privateChat
 
 import io.github.smiley4.ktorswaggerui.dsl.get
@@ -8,12 +9,17 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.*
+import subit.dataClasses.PrivateChat
+import subit.dataClasses.Slice
+import subit.dataClasses.UserId
+import subit.dataClasses.toUserIdOrNull
 import subit.database.PrivateChats
 import subit.router.*
 import subit.utils.HttpStatus
+import subit.utils.respond
 import subit.utils.statuses
 
 fun Route.privateChat()
@@ -40,7 +46,8 @@ fun Route.privateChat()
                 paged()
             }
             response {
-                statuses<Slice<UserId>>(HttpStatus.OK, HttpStatus.Unauthorized)
+                statuses<Slice<UserId>>(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
             }
         }) { getPrivateChatUsers() }
 
@@ -49,10 +56,31 @@ fun Route.privateChat()
             request {
                 authenticated(true)
                 pathParameter<UserId>("userId") { required = true; description = "对方的id" }
+                queryParameter<Long>("after")
+                {
+                    required = false
+                    description = """
+                        传入时间戳, 此项非必须的, 传入后将返回从此时间起向后从begin开始count条数据
+                        
+                        与before互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间正向排序,
+                        即若begin为1, count为3, 将放回晚于after的最早的3条消息, 且这3条消息的时间依次递增
+                        """.trimIndent()
+                }
+                queryParameter<Int>("before")
+                {
+                    required = false
+                    description = """
+                        传入时间戳, 此项非必须的, 传入后将返回从此时间起向前从begin开始count条数据
+                        
+                        与after互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间逆向排序,
+                        即若begin为1, count为3, 将放回早于before的最晚的3条消息, 且这3条消息的时间依次递减
+                        """.trimIndent()
+                }
                 paged()
             }
             response {
-                statuses<Slice<PrivateChat>>(HttpStatus.OK, HttpStatus.Unauthorized)
+                statuses<Slice<PrivateChat>>(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
             }
         }) { getPrivateChats() }
 
@@ -62,7 +90,8 @@ fun Route.privateChat()
                 authenticated(true)
             }
             response {
-                statuses<UnreadCount>(HttpStatus.OK, HttpStatus.Unauthorized)
+                statuses<UnreadCount>(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
             }
         }) { getUnreadCount(false) }
 
@@ -73,7 +102,8 @@ fun Route.privateChat()
                 pathParameter<UserId>("userId") { required = true; description = "对方的id" }
             }
             response {
-                statuses<UnreadCount>(HttpStatus.OK, HttpStatus.Unauthorized)
+                statuses<UnreadCount>(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
             }
         }) { getUnreadCount(true) }
     }
@@ -84,6 +114,7 @@ private data class SendPrivateChat(
     val to: UserId,
     val content: String
 )
+
 private suspend fun Context.sendPrivateChat()
 {
     val (to, content) = call.receive<SendPrivateChat>()
@@ -107,20 +138,25 @@ private suspend fun Context.getPrivateChats()
     val privateChats = get<PrivateChats>()
     val (begin, count) = call.getPage()
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val after = call.parameters["after"]?.toLongOrNull()
+    val before = call.parameters["before"]?.toLongOrNull()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val chats = privateChats.getPrivateChats(loginUser.id, userId, begin, count)
-    call.respond(chats)
+    if (after != null)
+        privateChats.getPrivateChatsAfter(loginUser.id, userId, Instant.fromEpochMilliseconds(after), begin, count)
+    else if (before != null)
+        privateChats.getPrivateChatsBefore(loginUser.id, userId, Instant.fromEpochMilliseconds(before), begin, count)
+    else call.respond(HttpStatus.BadRequest)
 }
 
 @JvmInline
 @Serializable
 private value class UnreadCount(val count: Long)
+
 private suspend fun Context.getUnreadCount(withObj: Boolean)
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
     if (!withObj) return call.respond(UnreadCount(get<PrivateChats>().getUnreadCount(loginUser.id)))
-
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val privateChats = get<PrivateChats>()
     val count = privateChats.getUnreadCount(loginUser.id, userId)
