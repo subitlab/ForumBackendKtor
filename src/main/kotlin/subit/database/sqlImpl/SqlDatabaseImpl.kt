@@ -113,6 +113,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
                 Database.connect(createHikariDataSource(url, driver, user, password))
             }.bind<Database>()
 
+            singleOf(::BannedWordsImpl).bind<BannedWords>()
             singleOf(::BlocksImpl).bind<Blocks>()
             singleOf(::CommentsImpl).bind<Comments>()
             singleOf(::EmailCodesImpl).bind<EmailCodes>()
@@ -135,6 +136,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             ForumLogger.info("${CYAN}Using database implementation: ${RED}sql${CYAN}, and ${RED}lazyInit${CYAN} is ${GREEN}false.")
             ForumLogger.info("${CYAN}It may take a while to initialize the database. Please wait patiently.")
 
+            (get<BannedWords>() as DaoSqlImpl<*>).table
             (get<Blocks>() as DaoSqlImpl<*>).table
             (get<Comments>() as DaoSqlImpl<*>).table
             (get<EmailCodes>() as DaoSqlImpl<*>).table

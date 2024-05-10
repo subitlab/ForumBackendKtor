@@ -26,6 +26,7 @@ object MemoryDatabaseImpl: IDatabase, KoinComponent
         {
             named("database")
 
+            singleOf(::BannedWordsImpl).bind<BannedWords>()
             singleOf(::BlocksImpl).bind<Blocks>()
             singleOf(::CommentsImpl).bind<Comments>()
             singleOf(::EmailCodesImpl).bind<EmailCodes>()

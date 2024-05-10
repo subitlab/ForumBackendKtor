@@ -14,6 +14,7 @@ import subit.JWTAuth.getLoginUser
 import subit.database.Prohibits
 import subit.router.admin.admin
 import subit.router.auth.auth
+import subit.router.bannedWords.bannedWords
 import subit.router.block.block
 import subit.router.comment.comment
 import subit.router.files.files
@@ -86,6 +87,7 @@ fun Application.router() = routing()
 
         admin()
         auth()
+        bannedWords()
         block()
         comment()
         files()
