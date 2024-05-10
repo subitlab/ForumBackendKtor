@@ -232,8 +232,10 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         // SQL中的NOW()函数
         val now = CustomFunction("NOW", KotlinInstantColumnType())
         // 调用TIMESTAMPDIFF函数, 返回类型是DoubleColumnType, 传参分别为minute, create, now
-        val time = CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0
-        val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2)
+        // 除以1024是避免分母太大, 导致计算结果过小, 小于最低的精度
+        val time = (CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0)/1024.0
+        // 再加一是避免点赞收藏评论都是零, 此时分母时间将失去意义
+        val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2+1)
         val order = x/CustomFunction("POW", LongColumnType(), time, doubleParam(1.8))
         table.join(blocksTable, JoinType.INNER, block, blocksTable.id)
             .join(likesTable, JoinType.LEFT, id, likesTable.post)
