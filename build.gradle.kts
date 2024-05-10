@@ -45,11 +45,9 @@ dependencies {
     //mysql
     implementation("mysql:mysql-connector-java:8.0.33")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
-    implementation("org.jetbrains.exposed:exposed-crypt:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-json:$exposed_version") // 数据库
-//    implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version") // 数据库
     implementation("com.h2database:h2:$h2_version") // 数据库
     implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池

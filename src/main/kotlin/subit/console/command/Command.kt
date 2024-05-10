@@ -82,7 +82,7 @@ object CommandSet: TreeCommand(
     Logger,
     Shell,
     Color,
-    Whitelist, TEST
+    Whitelist
 )
 {
     /**
