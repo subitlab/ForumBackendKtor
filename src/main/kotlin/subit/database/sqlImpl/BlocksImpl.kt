@@ -1,6 +1,5 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.koin.core.component.KoinComponent
@@ -21,7 +20,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
 
     object BlocksTable: IdTable<BlockId>("blocks")
     {
-        override val id: Column<EntityID<BlockId>> = blockId("id").autoIncrement().entityId()
+        override val id = blockId("id").autoIncrement().entityId()
         val name = varchar("name", 100).index()
         val description = text("description")
         val parent = reference("parent", BlocksTable, ReferenceOption.CASCADE, ReferenceOption.CASCADE).nullable()

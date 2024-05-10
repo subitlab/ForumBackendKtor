@@ -1,6 +1,5 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.koin.core.component.KoinComponent
@@ -21,8 +20,8 @@ class LikesImpl: DaoSqlImpl<LikesImpl.LikesTable>(LikesTable), Likes, KoinCompon
     override suspend fun like(uid: UserId, pid: PostId, like: Boolean): Unit = query()
     {
         insert {
-            it[user] = EntityID(uid, UsersImpl.UserTable)
-            it[post] = EntityID(pid, PostsImpl.PostsTable)
+            it[user] = uid
+            it[post] = pid
             it[table.like] = like
         }
     }

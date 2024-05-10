@@ -1,13 +1,11 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.wrap
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.KotlinInstantColumnType
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
@@ -32,7 +30,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
 
     object PostsTable: IdTable<PostId>("posts")
     {
-        override val id: Column<EntityID<PostId>> = postId("id").autoIncrement().entityId()
+        override val id = postId("id").autoIncrement().entityId()
         val title = varchar("title", 100).index()
         val content = text("content")
         val author = reference("author", UsersImpl.UserTable).index()

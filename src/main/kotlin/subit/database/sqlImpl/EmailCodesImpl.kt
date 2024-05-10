@@ -26,7 +26,7 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
         val email = varchar("email", 100).index()
         val code = varchar("code", 10)
         val time = timestamp("time").index()
-        val usage = enumeration("usage", EmailCodeUsage::class)
+        val usage = enumerationByName<EmailCodeUsage>("usage", 20)
     }
 
     init

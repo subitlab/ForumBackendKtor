@@ -1,6 +1,5 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
@@ -20,7 +19,7 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
      */
     object UserTable: IdTable<Int>("users")
     {
-        override val id: Column<EntityID<UserId>> = integer("id").autoIncrement().entityId()
+        override val id = integer("id").autoIncrement().entityId()
         val username = varchar("username", 100).index()
         val password = text("password")
         val email = varchar("email", 100).uniqueIndex()

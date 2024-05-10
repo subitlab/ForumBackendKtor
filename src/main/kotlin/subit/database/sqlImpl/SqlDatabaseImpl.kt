@@ -58,7 +58,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
     /**
      * 创建Hikari数据源,即数据库连接池
      */
-    fun createHikariDataSource(
+    private fun createHikariDataSource(
         url: String,
         driver: String,
         user: String?,

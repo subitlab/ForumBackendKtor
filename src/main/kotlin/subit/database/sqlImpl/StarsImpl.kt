@@ -1,6 +1,5 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
@@ -33,8 +32,8 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
     override suspend fun addStar(uid: UserId, pid: PostId): Unit = query()
     {
         insert {
-            it[user] = EntityID(uid, UsersImpl.UserTable)
-            it[post] = EntityID(pid, PostsImpl.PostsTable)
+            it[user] = uid
+            it[post] = pid
         }
     }
 

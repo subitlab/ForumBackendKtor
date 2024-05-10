@@ -1,8 +1,9 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import subit.dataClasses.*
@@ -23,8 +24,8 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
 
     object PermissionTable: IdTable<ULong>("permissions")
     {
-        override val id: Column<EntityID<ULong>> = blockUserId("id").entityId()
-        val permission: Column<PermissionLevel> = enumeration("permission", PermissionLevel::class).default(PermissionLevel.NORMAL)
+        override val id = blockUserId("id").entityId()
+        val permission = enumeration("permission", PermissionLevel::class).default(PermissionLevel.NORMAL)
         override val primaryKey: PrimaryKey = PrimaryKey(id)
     }
 

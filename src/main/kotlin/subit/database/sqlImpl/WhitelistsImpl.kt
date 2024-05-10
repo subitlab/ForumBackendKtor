@@ -1,9 +1,10 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
 import subit.database.Whitelists
 
 class WhitelistsImpl: DaoSqlImpl<WhitelistsImpl.WhitelistTable>(WhitelistTable), Whitelists
@@ -11,10 +12,8 @@ class WhitelistsImpl: DaoSqlImpl<WhitelistsImpl.WhitelistTable>(WhitelistTable),
     object WhitelistTable: IdTable<String>("whitelist")
     {
         val email = varchar("email", 100).entityId()
-        override val id: Column<EntityID<String>>
-            get() = email
-        override val primaryKey: PrimaryKey
-            get() = PrimaryKey(email)
+        override val id = email
+        override val primaryKey: PrimaryKey = PrimaryKey(email)
     }
 
     override suspend fun add(email: String): Unit = query()

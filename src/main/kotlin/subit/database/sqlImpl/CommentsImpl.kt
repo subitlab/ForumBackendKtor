@@ -19,7 +19,7 @@ class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comme
         val author = reference("author", UsersImpl.UserTable).index()
         val content = text("content")
         val create = timestamp("create").defaultExpression(CurrentTimestamp).index()
-        val state = enumeration<State>("state").default(State.NORMAL)
+        val state = enumerationByName<State>("state", 20).default(State.NORMAL)
         override val primaryKey = PrimaryKey(id)
     }
 
