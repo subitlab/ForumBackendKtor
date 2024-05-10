@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.flattenAsIterable
 import subit.database.BannedWords
 
 class BannedWordsImpl: BannedWords, DaoSqlImpl<BannedWordsImpl.BannedWordsTable>(BannedWordsTable)
@@ -31,5 +32,9 @@ class BannedWordsImpl: BannedWords, DaoSqlImpl<BannedWordsImpl.BannedWordsTable>
     override suspend fun getBannedWords(begin: Long, count: Int): Slice<String> = query()
     {
         selectAll().asSlice(begin,count).map { it[word].value }
+    }
+    override suspend fun check(str: String): Boolean = query()
+    {
+        selectAll().fetchBatchedResults().flattenAsIterable().any { str.contains(it[word].value) }
     }
 }

@@ -24,4 +24,8 @@ class BannedWordsImpl: BannedWords
     {
         return set.toList().asSlice(begin, count)
     }
+    override suspend fun check(str: String): Boolean
+    {
+        return set.any { str.contains(it) }
+    }
 }
