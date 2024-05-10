@@ -7,7 +7,7 @@ import java.util.Collections
 
 class BlocksImpl: Blocks
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<BlockId, BlockFull>())
+    private val map = Collections.synchronizedMap(hashMapOf<BlockId, BlockFull>())
 
     override suspend fun createBlock(
         name: String,

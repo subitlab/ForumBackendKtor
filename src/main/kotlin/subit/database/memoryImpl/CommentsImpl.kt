@@ -6,7 +6,7 @@ import java.util.*
 
 class CommentsImpl: Comments
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<CommentId, Comment>())
+    private val map = Collections.synchronizedMap(hashMapOf<CommentId, Comment>())
     override suspend fun createComment(post: PostId?, parent: CommentId?, author: UserId, content: String): CommentId?
     {
         if (post == null && parent == null) return null

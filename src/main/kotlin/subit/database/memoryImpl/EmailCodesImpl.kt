@@ -10,7 +10,7 @@ import java.util.Date
 class EmailCodesImpl: EmailCodes
 {
     private val codes = Collections.synchronizedMap(
-        mutableMapOf<Pair<String, EmailCodes.EmailCodeUsage>, Pair<String, Date>>()
+        hashMapOf<Pair<String, EmailCodes.EmailCodeUsage>, Pair<String, Date>>()
     )
 
     init

@@ -8,9 +8,9 @@ import java.util.Collections
 
 class UsersImpl: Users
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<UserId, UserFull>())
-    private val emailMap = Collections.synchronizedMap(mutableMapOf<String, UserId>())
-    private val passwords = Collections.synchronizedMap(mutableMapOf<UserId, String>())
+    private val map = Collections.synchronizedMap(hashMapOf<UserId, UserFull>())
+    private val emailMap = Collections.synchronizedMap(hashMapOf<String, UserId>())
+    private val passwords = Collections.synchronizedMap(hashMapOf<UserId, String>())
     override suspend fun createUser(username: String, password: String, email: String): UserId?
     {
         if (emailMap.containsKey(email)) return null

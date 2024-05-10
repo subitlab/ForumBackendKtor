@@ -10,7 +10,7 @@ import java.util.*
 
 class StarsImpl: Stars
 {
-    private val set = Collections.synchronizedSet(mutableSetOf<Star>())
+    private val set = Collections.synchronizedSet(hashSetOf<Star>())
 
     override suspend fun addStar(uid: UserId, pid: PostId)
     {

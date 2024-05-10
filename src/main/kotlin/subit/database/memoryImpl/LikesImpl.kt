@@ -7,7 +7,7 @@ import java.util.Collections
 
 class LikesImpl: Likes
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<Pair<UserId,PostId>,Boolean>())
+    private val map = Collections.synchronizedMap(hashMapOf<Pair<UserId,PostId>,Boolean>())
 
     override suspend fun like(uid: UserId, pid: PostId, like: Boolean)
     {

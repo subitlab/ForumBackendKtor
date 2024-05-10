@@ -7,7 +7,7 @@ import java.util.Collections
 
 class NoticesImpl: Notices
 {
-    private val notices = Collections.synchronizedMap(mutableMapOf<NoticeId, Notice>())
+    private val notices = Collections.synchronizedMap(hashMapOf<NoticeId, Notice>())
 
     override suspend fun createNotice(notice: Notice)
     {

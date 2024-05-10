@@ -9,7 +9,7 @@ import java.util.*
 
 class ProhibitsImpl: Prohibits
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<UserId, Prohibit>())
+    private val map = Collections.synchronizedMap(hashMapOf<UserId, Prohibit>())
 
     private fun clearProhibit()
     {

@@ -7,8 +7,8 @@ import java.util.Collections
 
 class ReportsImpl: Reports
 {
-    private val unHandled = Collections.synchronizedMap(mapOf<ReportId, Report>())
-    private val handled = Collections.synchronizedMap(mapOf<ReportId, Pair<Report, UserId>>())
+    private val unHandled = Collections.synchronizedMap(hashMapOf<ReportId, Report>())
+    private val handled = Collections.synchronizedMap(hashMapOf<ReportId, Pair<Report, UserId>>())
 
     override suspend fun addReport(objectType: ReportObject, id: Long, user: UserId, reason: String)
     {

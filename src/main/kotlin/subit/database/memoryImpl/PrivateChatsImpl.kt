@@ -10,8 +10,8 @@ import java.util.Collections
 
 class PrivateChatsImpl: PrivateChats
 {
-    private val privateChats = Collections.synchronizedMap(mutableMapOf<Long, MutableList<PrivateChat>>())
-    private val unread = Collections.synchronizedMap(mutableMapOf<Long, Long>())
+    private val privateChats = Collections.synchronizedMap(hashMapOf<Long, MutableList<PrivateChat>>())
+    private val unread = Collections.synchronizedMap(hashMapOf<Long, Long>())
     private fun makeList() = Collections.synchronizedList(mutableListOf<PrivateChat>())
     private infix fun UserId.link(other: UserId): Long = (this.toLong() shl 32) or other.toLong()
     override suspend fun addPrivateChat(from: UserId, to: UserId, content: String)

@@ -11,7 +11,7 @@ import kotlin.math.pow
 
 class PostsImpl: Posts, KoinComponent
 {
-    private val map = Collections.synchronizedMap(mutableMapOf<PostId, Pair<PostInfo, Boolean>>())
+    private val map = Collections.synchronizedMap(hashMapOf<PostId, Pair<PostInfo, Boolean>>())
     private val blocks: Blocks by inject()
     private val permissions: Permissions by inject()
     private val likes: Likes by inject()

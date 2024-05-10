@@ -12,7 +12,7 @@ import java.util.Collections
 
 class PermissionsImpl: Permissions, KoinComponent
 {
-    private val permissions = Collections.synchronizedMap(mutableMapOf<Pair<BlockId, UserId>, PermissionLevel>())
+    private val permissions = Collections.synchronizedMap(hashMapOf<Pair<BlockId, UserId>, PermissionLevel>())
 
     private val users: Users by inject()
     private val blocks: Blocks by inject()
