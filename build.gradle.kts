@@ -1,5 +1,6 @@
 // 取消命名不合法警告
 @file:Suppress("PropertyName")
+
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -31,7 +32,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("reflect")) // kotlin 反射库
-
     implementation("io.ktor:ktor-server-core-jvm") // core
     implementation("io.ktor:ktor-server-netty-jvm") // netty
     implementation("io.ktor:ktor-server-auth-jvm") // 登陆验证
@@ -40,9 +40,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
     implementation("io.ktor:ktor-server-swagger")
     implementation("io.github.smiley4:ktor-swagger-ui:2.8.0") // 创建api页面
-
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
-
     //mysql
     implementation("mysql:mysql-connector-java:8.0.33")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
@@ -52,26 +50,21 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version") // 数据库
     implementation("com.h2database:h2:$h2_version") // 数据库
     implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池
-
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
     implementation("io.ktor:ktor-server-call-logging-jvm:2.3.7") // 日志
-
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm") // json on request/response
     implementation("net.mamoe.yamlkt:yamlkt:0.13.0") // yaml for kotlin on read/write file
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
-
     implementation("org.fusesource.jansi:jansi:2.4.1") // 终端颜色码
     implementation("org.jline:jline-terminal-jansi:$jline_version") // 终端打印、命令等
     implementation("org.jline:jline-reader:$jline_version") // 终端打印、命令等
     implementation("org.jline:jline-terminal:$jline_version") // 终端打印、命令等
     implementation("org.jline:jline-style:$jline_version") // 终端打印、命令等
-
     // koin
     implementation(platform("io.insert-koin:koin-bom:$koin_version"))
     implementation("io.insert-koin:koin-core")
     implementation("io.insert-koin:koin-ktor")
     implementation("io.insert-koin:koin-logger-slf4j")
-
     // 密码加密算法
     implementation("at.favre.lib:bcrypt:0.10.2")
 
@@ -83,4 +76,13 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.7")
+}
+
+tasks.withType<ProcessResources> {
+    filesMatching("**/application.yaml") {
+        expand(mapOf("version" to version)) {
+            // 设置不转义反斜杠
+            escapeBackslash = true
+        }
+    }
 }

@@ -1,8 +1,8 @@
 ktor:
   deployment:
-    port: "$PORT:8080"
+    port: 8080
   application:
     modules:
       - subit.ForumBackendKt.init
     id: "SubitForumBackend"
-version: 0.0.0
+version: ${version} # 通过gradle的插件处理, 会自动替换为当前项目的版本号
