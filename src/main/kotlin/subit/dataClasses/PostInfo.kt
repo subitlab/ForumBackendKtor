@@ -47,6 +47,9 @@ data class PostInfo(
     }
 }
 
+/**
+ * 完整帖子信息, 包含由[PostInfo]的信息和点赞数, 点踩数, 收藏数
+ */
 @Serializable
 data class PostFull(
     val id: PostId,

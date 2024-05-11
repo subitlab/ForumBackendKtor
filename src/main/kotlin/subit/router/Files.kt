@@ -202,8 +202,8 @@ private data class Files(val info: FileUtils.SpaceInfo, val list: Slice<String>)
 private suspend fun Context.getFileList()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: 0
-    val count = call.request.queryParameters["count"]?.toIntOrNull() ?: 10
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: 0
+    val count = call.parameters["count"]?.toIntOrNull() ?: 10
     val user = getLoginUser()
     if (user != null && (user.id == id || id == 0 || user.permission >= PermissionLevel.ADMIN))
     {

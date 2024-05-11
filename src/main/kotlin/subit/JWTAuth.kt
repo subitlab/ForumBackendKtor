@@ -95,7 +95,7 @@ object JWTAuth: KoinComponent
     private val verifier = BCrypt.verifyer(BCrypt.Version.VERSION_2B)
 
     /**
-     * 在数据库中保存密码的加密,暂未实现,现在为不加密,明文存储
+     * 在数据库中保存密码的加密
      */
     fun encryptPassword(password: String): String = hasher.hashToString(12, password.toCharArray())
     fun verifyPassword(password: String, hash: String): Boolean = verifier.verify(password.toCharArray(), hash).verified

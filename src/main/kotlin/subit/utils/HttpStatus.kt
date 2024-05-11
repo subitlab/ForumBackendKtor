@@ -5,7 +5,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
-import subit.utils.Error.Companion.toError
 
 /**
  * 定义了一些出现的自定义的HTTP状态码, 更多HTTP状态码请参考[io.ktor.http.HttpStatusCode]
@@ -56,23 +55,20 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
     }
 }
 @Serializable
-data class Error(val message: String)
-{
-    companion object
-    {
-        fun HttpStatus.toError() = Error(this.message)
-    }
-}
-suspend inline fun ApplicationCall.respond(status: HttpStatus) = this.respond(status.code, status.toError())
+@JvmInline
+value class StatusMessage(val message: String)
+val HttpStatus.statusMessage get() = StatusMessage(message)
+
+suspend inline fun ApplicationCall.respond(status: HttpStatus) = this.respond(status.code, status.statusMessage)
 suspend inline fun <reified T: Any> ApplicationCall.respond(status: HttpStatus,t: T) = this.respond(status.code, t)
 fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "错误信息")
 {
     statuses.forEach {
         it.code to {
             description = it.message
-            body<Error> {
+            body<StatusMessage> {
                 description = bodyDescription
-                example("固定值", it.toError())
+                example("固定值", it.statusMessage)
             }
         }
     }

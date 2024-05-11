@@ -308,8 +308,8 @@ private suspend fun Context.getAvatar()
 private suspend fun Context.getStars()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.request.queryParameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser()
     // 若查询自己的收藏
     if (id == 0)
@@ -341,8 +341,8 @@ private suspend fun Context.switchStars()
 
 private suspend fun Context.searchUser()
 {
-    val username = call.request.queryParameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.request.queryParameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.request.queryParameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val username = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
+    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     call.respond(get<Users>().searchUser(username, begin, count).map(UserFull::id))
 }

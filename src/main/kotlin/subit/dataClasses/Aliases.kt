@@ -1,7 +1,10 @@
 @file:Suppress("unused")
 package subit.dataClasses
 
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Table
+
+/// 各种类型别名, 和相关类型转换等方法. 在需要用到这些类型的地方尽量使用别名, 以便于需要修改时全局修改 ///
 
 typealias BlockId = Int
 fun Table.blockId(name: String) = integer(name)
@@ -36,6 +39,7 @@ fun Number.toNoticeId() = toLong()
 
 typealias RawBlockUserId = ULong
 @JvmInline
+@Serializable
 value class BlockUserId(val raw: RawBlockUserId)
 {
     constructor(uid: Int, bid: Int): this((bid.toULong() shl 32) or uid.toULong())

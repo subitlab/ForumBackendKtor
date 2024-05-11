@@ -5,6 +5,8 @@ import java.util.logging.Logger
 
 /**
  * Logger Utils
+ *
+ * Copy from me.nullaqua:BluestarAPI
  * @author nullaqua
  */
 @Suppress("unused")

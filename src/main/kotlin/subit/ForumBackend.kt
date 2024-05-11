@@ -22,7 +22,7 @@ import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import subit.JWTAuth.initJwtAuth
 import subit.config.apiDocsConfig
-import subit.console.command.CommandSet
+import subit.console.command.CommandSet.startCommandThread
 import subit.database.Users
 import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
@@ -75,7 +75,7 @@ fun Application.init()
 {
     version = environment.config.property("version").getString()
 
-    CommandSet.apply { startCommandThread() }
+    startCommandThread()
 
     FileUtils.init() // 初始化文件系统
     installAuthentication()

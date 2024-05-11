@@ -2,6 +2,16 @@ package subit.dataClasses
 
 import kotlinx.serialization.Serializable
 
+/**
+ * 评论信息
+ * @property id 评论ID
+ * @property post 所属帖子ID
+ * @property parent 父评论ID
+ * @property author 作者ID
+ * @property content 内容
+ * @property create 创建时间
+ * @property state 状态
+ */
 @Serializable
 data class Comment(
     val id: CommentId,

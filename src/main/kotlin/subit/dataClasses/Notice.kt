@@ -1,7 +1,16 @@
 package subit.dataClasses
 
+import kotlinx.serialization.Serializable
+
+/**
+ * 通知
+ */
 sealed interface Notice
 {
+    /**
+     * 通知的类型
+     */
+    @Serializable
     enum class Type
     {
         /**
@@ -57,6 +66,7 @@ sealed interface Notice
      * 系统通知
      * @property content 内容
      */
+    @Serializable
     data class SystemNotice(
         override val id: NoticeId,
         override val user: UserId,
@@ -71,6 +81,7 @@ sealed interface Notice
      * @property post 帖子
      * @property count 这个帖子的评论数量
      */
+    @Serializable
     data class PostCommentNotice(
         override val id: NoticeId,
         override val user: UserId,
@@ -85,6 +96,7 @@ sealed interface Notice
     /**
      * 评论回复通知, 即有人回复了用户的评论. 对于同一个评论的多个回复, 累加[count]
      */
+    @Serializable
     data class CommentReplyNotice(
         override val id: NoticeId,
         override val user: UserId,
@@ -101,6 +113,7 @@ sealed interface Notice
      * @property post 帖子
      * @property count 这个帖子的点赞数量
      */
+    @Serializable
     data class LikeNotice(
         override val id: NoticeId,
         override val user: UserId,
@@ -117,6 +130,7 @@ sealed interface Notice
      * @property post 帖子
      * @property count 这个帖子的收藏数量
      */
+    @Serializable
     data class StarNotice(
         override val id: NoticeId,
         override val user: UserId,

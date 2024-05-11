@@ -41,7 +41,6 @@ object FileUtils
         fileFolder.mkdirs()
         indexFolder.mkdirs()
         rawFolder.mkdirs()
-
     }
 
     val fileInfoSerializer = Json()
