@@ -2,6 +2,7 @@ package subit.database.sqlImpl
 
 import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.bitwiseXor
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
@@ -134,25 +135,18 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
 
     override suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId> = query()
     {
-        val from = from
-        val to = to
-        select(from, to, time) // 选择 from, to, time 三列, 避免加载不必要的数据
+        /**
+         * 由于在查询的时候需要包含双向的消息, 但是不清楚[PrivateChatsTable.from]还是[PrivateChatsTable.to]是当前用户,
+         * 所以这里采用了一个小技巧, 将 from 和 to 异或, 因为异或满足交换律, 且from和to总有一个是当前用户,
+         * 所以按照from xor to分组, 可以避免因为from和to交换导致的重复数据, 或数据遗漏
+         */
+        select(from, to) // 选择 from, to 两列, 因为只需要获得用户, 避免获取content, time以造成网络浪费
             .where { (from eq uid) or (to eq uid) } // 发送或接受消息者是要查询的用户
-            .orderBy(time, SortOrder.DESC) // 按照时间降序排序
+            .groupBy( from bitwiseXor to ) // 将 from 和 to 异或, 以保证 from 和 to 的组合是唯一的
+            .orderBy(time.max(), SortOrder.DESC) // 按照时间最大值降序排序
             .withDistinct(true) // 去重
-            .map {
-                /**
-                 * [Iterable.map] 是 [Iterable] 的拓展方法, 会查询所有数据, 由于需要做下述处理, 无法进行分页查询.
-                 * 由于不清楚 from 和 to 哪个是要查询的用户, 且数据库无法进行判断, 所以不得不全部查询进行处理.
-                 * 这将引起查询所有数据, 但是由于已去重, 所以实际返回的数据量是uid发送过消息的人数*2(因为有往来消息).
-                 * 考虑到这个数据量一般不会过大, 且不进行查询的话很难处理, 所以这里暂时不做优化(不会优化).
-                 * 如果数据量过大, 可以考虑增加一个table存储用户的聊天用户列表, 但是这样会增加数据冗余, 且需要维护.
-                 * 或者接手的程序员对此有更好的处理方法, 自行修改.
-                 */
-                if (it[from].value == uid) it[to].value
-                else it[from].value
-            }
-            .asSlice(begin, count)
+            .asSlice(begin, count) // 生成切片
+            .map { it[from].value xor it[to].value xor uid } // 懒得判断from和to哪个是uid, 直接全部异或, 就是另一个用户
     }
 
     override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unreadCount(uid, other)
