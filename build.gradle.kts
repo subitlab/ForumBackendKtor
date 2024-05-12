@@ -39,7 +39,7 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
     implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
     implementation("io.ktor:ktor-server-swagger")
-    implementation("io.github.smiley4:ktor-swagger-ui:2.8.0") // 创建api页面
+    implementation("io.github.smiley4:ktor-swagger-ui:2.9.0") // 创建api页面
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     //mysql
     implementation("mysql:mysql-connector-java:8.0.33")
@@ -51,7 +51,7 @@ dependencies {
     implementation("com.h2database:h2:$h2_version") // 数据库
     implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
-    implementation("io.ktor:ktor-server-call-logging-jvm:2.3.7") // 日志
+    implementation("io.ktor:ktor-server-call-logging-jvm") // 日志
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm") // json on request/response
     implementation("net.mamoe.yamlkt:yamlkt:0.13.0") // yaml for kotlin on read/write file
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
@@ -73,9 +73,9 @@ dependencies {
     testImplementation("io.ktor:ktor-server-tests-jvm")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("io.ktor:ktor-client-content-negotiation")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.7")
+    testImplementation("io.ktor:ktor-server-test-host-jvm")
+    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit"))
 }
 
 tasks.withType<ProcessResources> {
