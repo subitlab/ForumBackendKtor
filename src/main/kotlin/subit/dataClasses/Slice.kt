@@ -5,6 +5,8 @@ import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.selectBatched
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 /**
  * 切片, 若查询的数据量过大, 则以切片返回.
@@ -21,6 +23,7 @@ data class Slice<T>(
     val list: List<T>
 )
 {
+    @OptIn(ExperimentalContracts::class)
     @Suppress("unused")
     companion object
     {
@@ -28,11 +31,21 @@ data class Slice<T>(
          * 生成一个空切片
          */
         fun <T> empty() = Slice<T>(0, 1, emptyList())
-        inline fun <T> Sequence<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T> =
-            asIterable().asSlice(begin, limit, filter)
+        inline fun <T> Sequence<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
+        {
+            contract {
+                callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
+            }
+            return asIterable().asSlice(begin, limit, filter)
+        }
 
-        inline fun <T> Iterable<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T> =
-            fromIterable(this, begin, limit, filter)
+        inline fun <T> Iterable<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
+        {
+            contract {
+                callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
+            }
+            return fromIterable(this, begin, limit, filter)
+        }
 
         /**
          * 对于[Query], 且无需过滤的情况, 可以使用此方法, 可以避免[fromIterable]方法遍历所有数据的情况
@@ -42,6 +55,14 @@ data class Slice<T>(
             val sum: Long = copy().count()
             val list = this.limit(limit, begin-1).toList()
             return Slice(sum, begin, list)
+        }
+
+        inline fun Query.asSlice(begin: Long, limit: Int, filter: (ResultRow)->Boolean): Slice<ResultRow>
+        {
+            contract {
+                callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
+            }
+            return this.fetchBatchedResults().flattenAsIterable().asSlice(begin, limit, filter)
         }
 
         /**
@@ -54,6 +75,9 @@ data class Slice<T>(
          */
         inline fun <T> fromIterable(iterable: Iterable<T>, begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
         {
+            contract {
+                callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
+            }
             val list = ArrayList<T>()
             var i = 0L
             for (item in iterable)

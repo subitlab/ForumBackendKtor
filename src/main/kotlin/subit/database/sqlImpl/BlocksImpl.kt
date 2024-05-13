@@ -108,14 +108,18 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
 
     override suspend fun searchBlock(user: UserId?, key: String, begin: Long, count: Int): Slice<BlockFull> = query()
     {
+        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
         val r = BlocksTable.selectAll().where()
         {
             (name like "%$key%") or (description like "%$key%")
-        }.fetchBatchedResults().flattenAsIterable().asSlice(begin, count)
+        }.asSlice(begin, count)
         {
             val block = it[id].value
+            if (map.containsKey(block)) return@asSlice (map[block] == true)
             val permission = user?.let { permissions.getPermission(user, block) } ?: PermissionLevel.NORMAL
-            permission >= it[reading]
+            val res = permission >= it[reading]
+            map[block] = res
+            res
         }
         return@query r.map(::deserializeBlock)
     }

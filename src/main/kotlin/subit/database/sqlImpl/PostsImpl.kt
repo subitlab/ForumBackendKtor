@@ -106,11 +106,16 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         limit: Int,
     ): Slice<PostInfo> = query()
     {
-        selectAll().where { PostsTable.author eq author }.asSlice(begin, limit) { row ->
+        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
+        selectAll().where { PostsTable.author eq author }.asSlice(begin, limit)
+        { row ->
+            if (row[block].value in map) return@asSlice (map[row[block].value] == true)
             val blockFull = blocks.getBlock(row[block].value) ?: return@asSlice false
             val permission = loginUser?.let { permissions.getPermission(loginUser.id, blockFull.id) }
                              ?: PermissionLevel.NORMAL
-            permission >= blockFull.reading && (row[state] == State.NORMAL || loginUser.hasGlobalAdmin())
+            val res = permission >= blockFull.reading && (row[state] == State.NORMAL || loginUser.hasGlobalAdmin())
+            map[row[block].value] = res
+            res
         }.map(::deserializePost)
     }
 
@@ -193,12 +198,16 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         count: Int
     ): Slice<PostInfo> = query()
     {
+        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
         PostsTable.selectAll().where { ((title like "%$key%") or (content like "%$key%")) and (state eq State.NORMAL) }
             .asSlice(begin, count) {
+                if (it[block].value in map) return@asSlice (map[it[block].value] == true)
                 val blockFull = blocks.getBlock(it[block].value) ?: return@asSlice false
                 val permission = loginUser?.let { permissions.getPermission(loginUser, blockFull.id) }
                                  ?: PermissionLevel.NORMAL
-                permission >= blockFull.reading
+                val res = permission >= blockFull.reading
+                map[it[block].value] = res
+                res
             }.map(::deserializePost)
     }
 

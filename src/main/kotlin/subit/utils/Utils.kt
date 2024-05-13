@@ -15,7 +15,6 @@ import javax.mail.internet.MimeMultipart
 
 /**
  * 检查邮箱格式是否正确
- * 要求邮箱为 i.pkuschool.edu.cn 或 pkuschool.edu.cn 结尾
  */
 fun checkEmail(email: String): Boolean = emailConfig.pattern.matcher(email).matches()
 
