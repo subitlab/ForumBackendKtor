@@ -6,7 +6,6 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Instant
@@ -17,6 +16,7 @@ import subit.dataClasses.Slice
 import subit.dataClasses.UserId
 import subit.dataClasses.toUserIdOrNull
 import subit.database.PrivateChats
+import subit.database.receiveAndCheckBody
 import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.respond
@@ -117,7 +117,7 @@ private data class SendPrivateChat(
 
 private suspend fun Context.sendPrivateChat()
 {
-    val (to, content) = call.receive<SendPrivateChat>()
+    val (to, content) = receiveAndCheckBody<SendPrivateChat>()
     val from = getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
     val privateChats = get<PrivateChats>()
     privateChats.addPrivateChat(from, to, content)

@@ -4,12 +4,12 @@ package subit.router.bannedWords
 
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.database.BannedWords
 import subit.database.checkPermission
+import subit.database.receiveAndCheckBody
 import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.statuses
@@ -81,7 +81,7 @@ private suspend fun Context.getBannedWords()
 private value class NewBannedWord(val word: String)
 private suspend fun Context.newBannedWord()
 {
-    val newBannedWord = call.receive<NewBannedWord>()
+    val newBannedWord = receiveAndCheckBody<NewBannedWord>()
     val bannedWords = get<BannedWords>()
     checkPermission { checkHasGlobalAdmin() }
     bannedWords.addBannedWord(newBannedWord.word)
@@ -100,7 +100,7 @@ private suspend fun Context.deleteBannedWord()
 private suspend fun Context.editBannedWord()
 {
     val word = call.parameters["word"] ?: return call.respond(HttpStatus.BadRequest)
-    val newBannedWord = call.receive<NewBannedWord>()
+    val newBannedWord = receiveAndCheckBody<NewBannedWord>()
     val bannedWords = get<BannedWords>()
     checkPermission { checkHasGlobalAdmin() }
     bannedWords.updateBannedWord(word, newBannedWord.word)

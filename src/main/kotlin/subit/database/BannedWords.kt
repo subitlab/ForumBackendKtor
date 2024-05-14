@@ -40,8 +40,11 @@ suspend fun Context.checkParameters()
     val str = parameterValues.joinToString("/") { it }
     checkBannedWords(str)
 }
-suspend fun Context.checkBody()
+
+// 接受body并检查是否包含违禁词汇
+suspend inline fun <reified T : Any> Context.receiveAndCheckBody(): T
 {
-    val str = call.receiveText()
-    checkBannedWords(str)
+    val body = call.receive<T>()
+    checkBannedWords(body.toString())
+    return body
 }

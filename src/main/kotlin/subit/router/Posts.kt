@@ -4,7 +4,6 @@ package subit.router.posts
 
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
@@ -164,7 +163,7 @@ private data class EditPost(val title: String, val content: String)
 
 private suspend fun Context.editPost()
 {
-    val post = call.receive<EditPost>()
+    val post = receiveAndCheckBody<EditPost>()
     val pid = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val postInfo = get<Posts>().getPost(pid) ?: return call.respond(HttpStatus.NotFound)
@@ -205,7 +204,7 @@ private suspend fun Context.likePost()
 {
     val id = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val post = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
-    val type = call.receive<LikePost>().type
+    val type = receiveAndCheckBody<LikePost>().type
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanRead(post) }
     when (type)
@@ -238,7 +237,7 @@ private data class NewPost(
 
 private suspend fun Context.newPost()
 {
-    val post = call.receive<NewPost>()
+    val post = receiveAndCheckBody<NewPost>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanPost(post.block) }
     if (post.anonymous) checkPermission { checkCanAnonymous(post.block) }
@@ -292,7 +291,7 @@ private suspend fun Context.searchPost()
 
 private suspend fun Context.addView()
 {
-    val pid = call.receive<PostId>()
+    val pid = receiveAndCheckBody<PostId>()
     get<Posts>().addView(pid)
     call.respond(HttpStatus.OK)
 }

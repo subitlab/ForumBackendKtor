@@ -6,7 +6,6 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
@@ -91,7 +90,7 @@ private suspend fun Context.createUser()
     val operations = get<Operations>()
 
     checkPermission { hasGlobalAdmin() }
-    val createUser = call.receive<CreateUser>()
+    val createUser = receiveAndCheckBody<CreateUser>()
     checkUserInfo(createUser.username, createUser.password, createUser.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
     }
@@ -118,7 +117,7 @@ private suspend fun Context.prohibitUser()
     val operations = get<Operations>()
 
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val prohibitUser = call.receive<ProhibitUser>()
+    val prohibitUser = receiveAndCheckBody<ProhibitUser>()
     val user = users.getUser(prohibitUser.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)
@@ -149,7 +148,7 @@ private suspend fun Context.changePermission()
 {
     val users = get<Users>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val changePermission = call.receive<ChangePermission>()
+    val changePermission = receiveAndCheckBody<ChangePermission>()
     val user = users.getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)

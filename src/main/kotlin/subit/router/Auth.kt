@@ -5,7 +5,6 @@ package subit.router.auth
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
@@ -13,10 +12,7 @@ import subit.JWTAuth
 import subit.JWTAuth.getLoginUser
 import subit.config.emailConfig
 import subit.dataClasses.UserId
-import subit.database.EmailCodes
-import subit.database.Users
-import subit.database.Whitelists
-import subit.database.sendEmailCode
+import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -124,7 +120,7 @@ private data class RegisterInfo(val username: String, val password: String, val 
 
 private suspend fun Context.register()
 {
-    val registerInfo: RegisterInfo = call.receive()
+    val registerInfo: RegisterInfo = receiveAndCheckBody()
     // 检查用户名、密码、邮箱是否合法
     checkUserInfo(registerInfo.username, registerInfo.password, registerInfo.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
@@ -155,7 +151,7 @@ private data class LoginInfo(val email: String? = null, val id: UserId? = null, 
 private suspend fun Context.login()
 {
     val users = get<Users>()
-    val loginInfo = call.receive<LoginInfo>()
+    val loginInfo = receiveAndCheckBody<LoginInfo>()
     val checked = if (loginInfo.id != null) JWTAuth.checkLogin(loginInfo.id, loginInfo.password)
     else if (loginInfo.email != null) JWTAuth.checkLogin(loginInfo.email, loginInfo.password)
     else return call.respond(HttpStatus.BadRequest)
@@ -173,7 +169,7 @@ private data class LoginByCodeInfo(val email: String? = null, val id: UserId? = 
 
 private suspend fun Context.loginByCode()
 {
-    val loginInfo = call.receive<LoginByCodeInfo>()
+    val loginInfo = receiveAndCheckBody<LoginByCodeInfo>()
     val email =
         loginInfo.email ?: // 若email不为空，直接使用email
         loginInfo.id?.let {
@@ -194,7 +190,7 @@ private data class ResetPasswordInfo(val email: String, val code: String, val pa
 private suspend fun Context.resetPassword()
 {
     // 接收重置密码的信息
-    val resetPasswordInfo = call.receive<ResetPasswordInfo>()
+    val resetPasswordInfo = receiveAndCheckBody<ResetPasswordInfo>()
     // 验证邮箱验证码
     if (!get<EmailCodes>().verifyEmailCode(
             resetPasswordInfo.email,
@@ -216,7 +212,7 @@ private suspend fun Context.changePassword()
 {
     val users = get<Users>()
 
-    val (oldPassword, newPassword) = call.receive<ChangePasswordInfo>()
+    val (oldPassword, newPassword) = receiveAndCheckBody<ChangePasswordInfo>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     if (!JWTAuth.checkLogin(user.id, oldPassword)) return call.respond(HttpStatus.PasswordError)
     if (!checkPassword(newPassword)) return call.respond(HttpStatus.PasswordFormatError)
@@ -230,7 +226,7 @@ private data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeU
 
 private suspend fun Context.sendEmailCode()
 {
-    val emailInfo = call.receive<EmailInfo>()
+    val emailInfo = receiveAndCheckBody<EmailInfo>()
     if (!checkEmail(emailInfo.email)) return call.respond(HttpStatus.EmailFormatError)
     get<EmailCodes>().sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)

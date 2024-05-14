@@ -226,7 +226,7 @@ private suspend fun Context.changeIntroduction()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val changeIntroduction = call.receive<ChangeIntroduction>()
+    val changeIntroduction = receiveAndCheckBody<ChangeIntroduction>()
     if (id == 0)
     {
         get<Users>().changeIntroduction(loginUser.id, changeIntroduction.introduction)
@@ -334,7 +334,7 @@ private suspend fun Context.switchStars()
 {
     application
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val switchStars = call.receive<SwitchStars>()
+    val switchStars = receiveAndCheckBody<SwitchStars>()
     get<Users>().changeShowStars(loginUser.id, switchStars.showStars)
     call.respond(HttpStatus.OK)
 }

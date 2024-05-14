@@ -6,13 +6,13 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.database.Reports
 import subit.database.checkPermission
+import subit.database.receiveAndCheckBody
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -86,7 +86,7 @@ private suspend fun Context.reportPost()
     val id = call.parameters["id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val type = call.parameters["type"]?.runCatching { ReportObject.valueOf(this) }?.getOrNull()
                ?: return call.respond(HttpStatus.BadRequest)
-    val content = call.receive<ReportContent>().content
+    val content = receiveAndCheckBody<ReportContent>().content
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     get<Reports>().addReport(type, id, loginUser.id, content)
 }

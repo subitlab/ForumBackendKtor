@@ -21,6 +21,7 @@ import subit.dataClasses.toUserIdOrNull
 import subit.database.Operations
 import subit.database.Users
 import subit.database.addOperation
+import subit.database.receiveAndCheckBody
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -220,7 +221,7 @@ private suspend fun Context.getFileList()
 private data class ChangePublic(val id: String, val public: Boolean)
 private suspend fun Context.changePublic()
 {
-    val (id, public) = call.receive<ChangePublic>().let {
+    val (id, public) = receiveAndCheckBody<ChangePublic>().let {
         val id = it.id.toUUIDOrNull() ?: return@let null
         val public = it.public
         id to public
@@ -238,7 +239,7 @@ private data class ChangePermission(val id: UserId, val permission: PermissionLe
 private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val changePermission = call.receive<ChangePermission>()
+    val changePermission = receiveAndCheckBody<ChangePermission>()
     val user = get<Users>().getUser(changePermission.id) ?: return call.respond(HttpStatus.NotFound)
     if (loginUser.permission < PermissionLevel.ADMIN || loginUser.permission <= user.permission)
         return call.respond(HttpStatus.Forbidden)

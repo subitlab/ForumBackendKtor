@@ -1,11 +1,13 @@
 package subit.database
 
+import kotlinx.serialization.Serializable
 import subit.database.EmailCodes.EmailCodeUsage
 import subit.utils.sendEmail
 
 interface EmailCodes
 {
-    enum class EmailCodeUsage(val description: String)
+    @Serializable
+    enum class EmailCodeUsage(@Transient val description: String)
     {
         LOGIN("登录"),
         REGISTER("注册"),

@@ -3,7 +3,6 @@ package subit.router.block
 
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
@@ -118,7 +117,7 @@ private data class NewBlock(
 private suspend fun Context.newBlock()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val newBlock = call.receive<NewBlock>()
+    val newBlock = receiveAndCheckBody<NewBlock>()
     checkPermission { checkHasAdminIn(newBlock.parent) }
     val blocks = get<Blocks>()
     blocks.getBlock(newBlock.parent) ?: return call.respond(HttpStatus.BadRequest)
@@ -150,7 +149,7 @@ private suspend fun Context.editBlockInfo()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val editBlockInfo = call.receive<EditBlockInfo>()
+    val editBlockInfo = receiveAndCheckBody<EditBlockInfo>()
     checkPermission { checkHasAdminIn(id) }
     get<Blocks>().setPermission(
         block = id,
@@ -195,7 +194,7 @@ private data class ChangePermission(
 private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val changePermission = call.receive<ChangePermission>()
+    val changePermission = receiveAndCheckBody<ChangePermission>()
     checkPermission { checkHasAdminIn(changePermission.block) }
     get<Permissions>().setPermission(
         bid = changePermission.block,

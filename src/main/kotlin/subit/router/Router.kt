@@ -12,7 +12,6 @@ import org.koin.ktor.ext.get
 import org.koin.ktor.ext.inject
 import subit.JWTAuth.getLoginUser
 import subit.database.Prohibits
-import subit.database.checkBody
 import subit.database.checkParameters
 import subit.router.admin.admin
 import subit.router.auth.auth
@@ -87,12 +86,8 @@ fun Application.router() = routing()
                 }
             }
 
-            // 检查请求中是否包含敏感词
-            // 因为不确定是否包含请求体, 可能出现异常, 所以使用runCatching
-            runCatching {
-                checkParameters()
-                checkBody()
-            }
+            // 检查参数是否包含违禁词
+            checkParameters()
         }
 
         admin()

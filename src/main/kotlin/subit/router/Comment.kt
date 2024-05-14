@@ -6,15 +6,11 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
-import subit.database.Comments
-import subit.database.Notices
-import subit.database.Posts
-import subit.database.checkPermission
+import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -112,7 +108,7 @@ private value class CommentIdResponse(val id: CommentId)
 private suspend fun Context.commentPost()
 {
     val postId = call.parameters["postId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val content = call.receive<CommentContent>().content
+    val content = receiveAndCheckBody<CommentContent>().content
     val author = get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanComment(postInfo) }
         postInfo.author
@@ -132,7 +128,7 @@ private suspend fun Context.commentPost()
 private suspend fun Context.commentComment()
 {
     val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val content = call.receive<CommentContent>().content
+    val content = receiveAndCheckBody<CommentContent>().content
     val author = get<Comments>().getComment(commentId)?.let { comment ->
         get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanComment(postInfo) }
