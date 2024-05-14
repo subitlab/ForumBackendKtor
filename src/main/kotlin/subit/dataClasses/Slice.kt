@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.selectBatched
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -62,7 +61,12 @@ data class Slice<T>(
             contract {
                 callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
             }
-            return this.fetchBatchedResults().flattenAsIterable().asSlice(begin, limit, filter)
+            // 尝试进行分块查询, 若不支持就只能直接查询了
+            val res: Iterable<ResultRow> = runCatching()
+            {
+                this.fetchBatchedResults().flattenAsIterable()
+            }.getOrDefault(this)
+            return fromIterable(res, begin, limit, filter)
         }
 
         /**
@@ -73,7 +77,12 @@ data class Slice<T>(
          * 传入[filter]而不使用[Iterable.filter]的意义在于, 后者会将所有满足条件的数据加载到内存中,
          * 而这里的[filter]则是在遍历时进行过滤, 对于满足条件但不在 [begin] / [limit] 范围内的数据不会加载到内存中
          */
-        inline fun <T> fromIterable(iterable: Iterable<T>, begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
+        inline fun <T> fromIterable(
+            iterable: Iterable<T>,
+            begin: Long,
+            limit: Int,
+            filter: (T)->Boolean = { true }
+        ): Slice<T>
         {
             contract {
                 callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
@@ -90,7 +99,7 @@ data class Slice<T>(
         }
 
         fun Query.single() = asSlice(1, 1).list[0]
-        fun Query.singleOrNull() = asSlice(1,1).run { if (list.isEmpty()) null else list[0] }
+        fun Query.singleOrNull() = asSlice(1, 1).run { if (list.isEmpty()) null else list[0] }
     }
 
     fun <R> map(transform: (T)->R) = Slice(totalSize, begin, list.map(transform))
