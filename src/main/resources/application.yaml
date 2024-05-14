@@ -5,4 +5,5 @@ ktor:
     modules:
       - subit.ForumBackendKt.init
     id: "SubitForumBackend"
-version: ${version} # 通过gradle的插件处理, 会自动替换为当前项目的版本号
+# 通过gradle的插件处理, 会自动替换为当前项目的版本号
+version: ${version}
