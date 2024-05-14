@@ -64,8 +64,8 @@ suspend inline fun <reified T: Any> ApplicationCall.respond(status: HttpStatus,t
 fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "错误信息")
 {
     statuses.forEach {
-        it.code to {
-            description = it.message
+        it.message to {
+            description = "code: ${it.code.value}, message: ${it.message}"
             body<StatusMessage> {
                 description = bodyDescription
                 example("固定值", it.statusMessage)
@@ -77,8 +77,8 @@ fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: Stri
 inline fun <reified T> OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "返回体")
 {
     statuses.forEach {
-        it.code to {
-            description = it.message
+        it.message to {
+            description = "code: ${it.code.value}, message: ${it.message}"
             body<T> { description = bodyDescription }
         }
     }
