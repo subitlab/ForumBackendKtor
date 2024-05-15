@@ -1,9 +1,12 @@
 package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import subit.JWTAuth
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.Slice
@@ -17,9 +20,9 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
     /**
      * 用户信息表
      */
-    object UserTable: IdTable<Int>("users")
+    object UserTable: IdTable<UserId>("users")
     {
-        override val id = integer("id").autoIncrement().entityId()
+        override val id = userId("id").autoIncrement().entityId()
         val username = varchar("username", 100).index()
         val password = text("password")
         val email = varchar("email", 100).uniqueIndex()

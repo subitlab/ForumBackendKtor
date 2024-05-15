@@ -1,9 +1,10 @@
 package subit.database.memoryImpl
 
 import subit.dataClasses.*
+import subit.dataClasses.BlockId.Companion.toBlockId
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.Blocks
-import java.util.Collections
+import java.util.*
 
 class BlocksImpl: Blocks
 {
@@ -20,7 +21,7 @@ class BlocksImpl: Blocks
         anonymousPermission: PermissionLevel
     ): BlockId
     {
-        val id = map.size+1
+        val id = (map.size+1).toBlockId()
         map[id] = BlockFull(
             id = id,
             name = name,

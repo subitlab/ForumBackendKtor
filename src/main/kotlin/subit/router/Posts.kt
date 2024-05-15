@@ -9,6 +9,9 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
+import subit.dataClasses.BlockId.Companion.toBlockIdOrNull
+import subit.dataClasses.PostId.Companion.toPostIdOrNull
+import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.*
 import subit.router.*
 import subit.utils.HttpStatus
@@ -154,7 +157,7 @@ private suspend fun Context.getPost()
     checkPermission { checkCanRead(postInfo) }
     val postFull = postInfo.toPostFull()
     if (!postFull.anonymous) call.respond(postFull) // 若不是匿名帖则直接返回
-    else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(postFull.copy(author = 0))
+    else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(postFull.copy(author = UserId(0)))
     else call.respond(postFull) // 若是匿名帖且用户权限足够则返回
 }
 
@@ -231,7 +234,7 @@ private data class NewPost(
     val title: String,
     val content: String,
     val anonymous: Boolean,
-    val block: Int,
+    val block: BlockId,
     val top: Boolean
 )
 

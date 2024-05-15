@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import subit.dataClasses.*
+import subit.dataClasses.PostId.Companion.toPostId
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.*
 import java.util.*
@@ -65,7 +66,7 @@ class PostsImpl: Posts, KoinComponent
         val list = map.values.filter { it.first.author == author }
             .filter {
                 val blockFull = blocks.getBlock(it.first.block) ?: return@filter false
-                val permission = loginUser?.let { permissions.getPermission(loginUser.id, blockFull.id) }
+                val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser.id) }
                                  ?: PermissionLevel.NORMAL
                 permission >= blockFull.reading && (it.first.state == State.NORMAL || loginUser.hasGlobalAdmin())
             }
@@ -105,7 +106,7 @@ class PostsImpl: Posts, KoinComponent
         .filter { it.first.title.contains(key) || it.first.content.contains(key) }
         .filter {
             val blockFull = blocks.getBlock(it.first.block) ?: return@filter false
-            val permission = loginUser?.let { permissions.getPermission(loginUser, blockFull.id) }
+            val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser) }
                              ?: PermissionLevel.NORMAL
             permission >= blockFull.reading
         }

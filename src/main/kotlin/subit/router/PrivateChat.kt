@@ -14,7 +14,7 @@ import subit.JWTAuth.getLoginUser
 import subit.dataClasses.PrivateChat
 import subit.dataClasses.Slice
 import subit.dataClasses.UserId
-import subit.dataClasses.toUserIdOrNull
+import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.PrivateChats
 import subit.database.receiveAndCheckBody
 import subit.router.*

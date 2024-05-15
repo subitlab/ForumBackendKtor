@@ -23,6 +23,7 @@ import org.koin.logger.slf4jLogger
 import subit.JWTAuth.initJwtAuth
 import subit.config.apiDocsConfig
 import subit.console.command.CommandSet.startCommandThread
+import subit.dataClasses.UserId
 import subit.database.Users
 import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
@@ -108,11 +109,11 @@ private fun Application.installAuthentication() = install(Authentication)
                 }, password=${it.payload.getClaim("password").asString()}"
             )
             if (!JWTAuth.checkLoginByEncryptedPassword(
-                    it.payload.getClaim("id").asInt(),
+                    it.payload.getClaim("id").asInt().let(::UserId),
                     it.payload.getClaim("password").asString()
                 )
             ) null
-            else users.getUser(it.payload.getClaim("id").asInt())
+            else users.getUser(it.payload.getClaim("id").asInt().let(::UserId))
         }
     }
 

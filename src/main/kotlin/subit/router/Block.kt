@@ -8,6 +8,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
+import subit.dataClasses.BlockId.Companion.toBlockIdOrNull
 import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
@@ -178,7 +179,7 @@ private suspend fun Context.deleteBlock()
     val block = blocks.getBlock(id) ?: return call.respond(HttpStatus.NotFound)
     blocks.setState(id, State.DELETED)
     get<Operations>().addOperation(loginUser.id, id)
-    if (loginUser.id != block.id) get<Notices>().createNotice(Notice.makeSystemNotice(
+    if (loginUser.id != block.creator) get<Notices>().createNotice(Notice.makeSystemNotice(
         user = block.creator,
         content = "您的板块 ${block.name} 已被删除"
     ))
@@ -187,7 +188,7 @@ private suspend fun Context.deleteBlock()
 
 @Serializable
 private data class ChangePermission(
-    val user: Int,
+    val user: UserId,
     val block: BlockId,
     val permission: PermissionLevel
 )

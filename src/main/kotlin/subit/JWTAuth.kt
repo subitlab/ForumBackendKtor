@@ -69,7 +69,7 @@ object JWTAuth: KoinComponent
      */
     private fun makeTokenByEncryptedPassword(id: UserId, encryptedPassword: String): Token = JWT.create()
         .withSubject("Authentication")
-        .withClaim("id", id)
+        .withClaim("id", id.value)
         .withClaim("password", encryptedPassword)
         .withExpiresAt(getExpiration())
         .sign(algorithm)

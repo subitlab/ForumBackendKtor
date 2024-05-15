@@ -1,6 +1,8 @@
 package subit.dataClasses
 
 import kotlinx.serialization.Serializable
+import subit.dataClasses.CommentId.Companion.toCommentId
+import subit.dataClasses.PostId.Companion.toPostId
 
 /**
  * 通知
@@ -41,13 +43,21 @@ sealed interface Notice
 
     companion object
     {
-        fun makeSystemNotice(id: Long = 0, user: UserId, content: String): Notice = SystemNotice(id, user, content)
-        fun makeObjectMessage(id: Long = 0, user: UserId, type: Type, obj: Long, count: Long = 0): ObjectNotice = when (type)
+        fun makeSystemNotice(id: NoticeId = NoticeId(0), user: UserId, content: String): Notice =
+            SystemNotice(id, user, content)
+
+        fun makeObjectMessage(
+            id: NoticeId = NoticeId(0),
+            user: UserId,
+            type: Type,
+            obj: Id<*>,
+            count: Long = 0
+        ): ObjectNotice = when (type)
         {
-            Type.POST_COMMENT -> PostCommentNotice(id, user, obj, count)
-            Type.COMMENT_REPLY -> CommentReplyNotice(id, user, obj, count)
-            Type.LIKE -> LikeNotice(id, user, obj, count)
-            Type.STAR -> StarNotice(id, user, obj, count)
+            Type.POST_COMMENT -> PostCommentNotice(id, user, obj.value.toPostId(), count)
+            Type.COMMENT_REPLY -> CommentReplyNotice(id, user, obj.value.toCommentId(), count)
+            Type.LIKE -> LikeNotice(id, user, obj.value.toPostId(), count)
+            Type.STAR -> StarNotice(id, user, obj.value.toPostId(), count)
             else -> throw IllegalArgumentException("Invalid type: $type")
         }
     }
@@ -58,7 +68,7 @@ sealed interface Notice
 
     interface ObjectNotice: Notice
     {
-        val obj: Long
+        val obj: Id<*>
         val count: Long
     }
 
@@ -90,7 +100,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.POST_COMMENT
-        override val obj: Long get() = post
+        override val obj: Id<*> get() = post
     }
 
     /**
@@ -105,7 +115,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.COMMENT_REPLY
-        override val obj: Long get() = comment
+        override val obj: Id<*> get() = comment
     }
 
     /**
@@ -122,7 +132,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.LIKE
-        override val obj: Long get() = post
+        override val obj: Id<*> get() = post
     }
 
     /**
@@ -139,6 +149,6 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.STAR
-        override val obj: Long get() = post
+        override val obj: Id<*> get() = post
     }
 }

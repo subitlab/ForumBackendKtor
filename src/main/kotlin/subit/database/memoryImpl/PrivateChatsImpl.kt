@@ -5,19 +5,21 @@ import subit.dataClasses.PrivateChat
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserId
+import subit.dataClasses.UserId.Companion.toUserId
 import subit.database.PrivateChats
-import java.util.Collections
+import java.util.*
 
 class PrivateChatsImpl: PrivateChats
 {
     private val privateChats = Collections.synchronizedMap(hashMapOf<Long, MutableList<PrivateChat>>())
     private val unread = Collections.synchronizedMap(hashMapOf<Long, Long>())
     private fun makeList() = Collections.synchronizedList(mutableListOf<PrivateChat>())
-    private infix fun UserId.link(other: UserId): Long = (this.toLong() shl 32) or other.toLong()
+    private infix fun UserId.link(other: UserId): Long = (this.value.toLong() shl 32) or other.value.toLong()
     override suspend fun addPrivateChat(from: UserId, to: UserId, content: String)
     {
         val list = privateChats.getOrPut(from link to) { makeList() }
         list.add(PrivateChat(from, to, System.currentTimeMillis(), content))
+        unread[from link to] = (unread[from link to] ?: 0) + 1
     }
 
     private fun getPrivateChats(
@@ -63,20 +65,24 @@ class PrivateChatsImpl: PrivateChats
 
     override suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId>
     {
-        val list = privateChats.keys.filter { it ushr 32 == uid.toLong() || it and 0xffffffff == uid.toLong() }
-            .map { it.toInt() }
+        val list = privateChats.keys.asSequence()
+            .filter { it ushr 32 == uid.value.toLong() || it and 0xffffffff == uid.value.toLong() }
+            .groupBy { (it ushr 32) xor (it and 0xffffffff) xor uid.value.toLong() }
+            .map { it.key to it.value.max() }
+            .sortedByDescending { it.second }
+            .map { it.first.toUserId() }.toList()
         return list.asSlice(begin, count)
     }
 
-    override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unread[uid link other] ?: 0
-    override suspend fun getUnreadCount(uid: UserId): Long = unread.values.filter { it ushr 32 == uid.toLong() }.sum()
+    override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unread[other link uid] ?: 0
+    override suspend fun getUnreadCount(uid: UserId): Long = unread.values.filter { it.toInt() == uid.value }.sum()
     override suspend fun setRead(uid: UserId, other: UserId)
     {
-        unread.remove(uid link other)
+        unread[other link uid] = 0
     }
 
     override suspend fun setReadAll(uid: UserId)
     {
-        unread.keys.removeIf { it ushr 32 == uid.toLong() }
+        unread.keys.removeIf { it.toInt() == uid.value }
     }
 }

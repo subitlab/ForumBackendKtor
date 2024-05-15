@@ -17,7 +17,7 @@ import subit.dataClasses.PermissionLevel
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.UserId
-import subit.dataClasses.toUserIdOrNull
+import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.Operations
 import subit.database.Users
 import subit.database.addOperation
@@ -206,7 +206,7 @@ private suspend fun Context.getFileList()
     val begin = call.parameters["begin"]?.toLongOrNull() ?: 0
     val count = call.parameters["count"]?.toIntOrNull() ?: 10
     val user = getLoginUser()
-    if (user != null && (user.id == id || id == 0 || user.permission >= PermissionLevel.ADMIN))
+    if (user != null && (user.id == id || id == UserId(0) || user.permission >= PermissionLevel.ADMIN))
     {
         val files = user.id.getUserFiles().map { it.first.toString() }
         val info = user.getSpaceInfo()

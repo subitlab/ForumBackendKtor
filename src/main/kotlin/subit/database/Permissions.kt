@@ -17,7 +17,7 @@ interface Permissions
      * 获得最终生效的权限信息, 会从这个板块开始一直向上查找所有父板块的权限, 合并为最终生效权限,
      * 具体生效规则见[PermissionLevel.getEffectivePermission]
      */
-    suspend fun getPermission(bid0: BlockId, user: UserId): PermissionLevel
+    suspend fun getPermission(block: BlockId, user: UserId): PermissionLevel
 }
 
 inline fun <reified T> Context.checkPermission(user: UserFull? = getLoginUser(), body: CheckPermissionContext.()->T): T =

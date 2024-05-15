@@ -146,7 +146,8 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
             .orderBy(time.max(), SortOrder.DESC) // 按照时间最大值降序排序
             .withDistinct(true) // 去重
             .asSlice(begin, count) // 生成切片
-            .map { it[from].value xor it[to].value xor uid } // 懒得判断from和to哪个是uid, 直接全部异或, 就是另一个用户
+            .map { it[from].value.value xor it[to].value.value xor uid.value } // 懒得判断from和to哪个是uid, 直接全部异或, 就是另一个用户
+            .map(::UserId)
     }
 
     override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unreadCount(uid, other)

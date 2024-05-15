@@ -116,7 +116,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         {
             val block = it[id].value
             if (map.containsKey(block)) return@asSlice (map[block] == true)
-            val permission = user?.let { permissions.getPermission(user, block) } ?: PermissionLevel.NORMAL
+            val permission = user?.let { permissions.getPermission(block, user) } ?: PermissionLevel.NORMAL
             val res = permission >= it[reading]
             map[block] = res
             res

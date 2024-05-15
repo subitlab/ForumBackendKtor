@@ -11,7 +11,7 @@ import subit.database.Comments
 
 class CommentsImpl: DaoSqlImpl<CommentsImpl.CommentsTable>(CommentsTable), Comments, KoinComponent
 {
-    object CommentsTable: IdTable<Long>("comments")
+    object CommentsTable: IdTable<CommentId>("comments")
     {
         override val id = commentId("id").autoIncrement().entityId()
         val post = reference("post", PostsImpl.PostsTable).index()

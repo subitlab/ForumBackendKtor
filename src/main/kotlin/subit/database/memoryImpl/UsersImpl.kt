@@ -1,10 +1,14 @@
 package subit.database.memoryImpl
 
 import subit.JWTAuth
-import subit.dataClasses.*
+import subit.dataClasses.PermissionLevel
+import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.UserFull
+import subit.dataClasses.UserId
+import subit.dataClasses.UserId.Companion.toUserId
 import subit.database.Users
-import java.util.Collections
+import java.util.*
 
 class UsersImpl: Users
 {

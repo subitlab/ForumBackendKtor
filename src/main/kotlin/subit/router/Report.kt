@@ -10,7 +10,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.*
+import subit.dataClasses.Report
+import subit.dataClasses.ReportId
+import subit.dataClasses.ReportId.Companion.toReportIdOrNull
+import subit.dataClasses.ReportObject
+import subit.dataClasses.Slice
 import subit.database.Reports
 import subit.database.checkPermission
 import subit.database.receiveAndCheckBody
@@ -40,7 +44,7 @@ fun Route.report()
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound)
             }
-        }) { reportPost() }
+        }) { newReport() }
 
         get("/list", {
             description = "获取举报列表"
@@ -82,7 +86,7 @@ fun Route.report()
 @Serializable
 private data class ReportContent(val content: String)
 
-private suspend fun Context.reportPost()
+private suspend fun Context.newReport()
 {
     val id = call.parameters["id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val type = call.parameters["type"]?.runCatching { ReportObject.valueOf(this) }?.getOrNull()
@@ -110,7 +114,7 @@ private suspend fun Context.getReports()
 private suspend fun Context.getReport()
 {
     checkPermission { checkHasGlobalAdmin() }
-    val id = call.parameters["id"]?.toReportId() ?: return call.respond(HttpStatus.BadRequest)
+    val id = call.parameters["id"]?.toReportIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val report = get<Reports>().getReport(id) ?: return call.respond(HttpStatus.NotFound)
     call.respond(report)
 }
@@ -119,7 +123,7 @@ private suspend fun Context.handleReport()
 {
     checkPermission { checkHasGlobalAdmin() }
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    val id = call.parameters["id"]?.toReportId() ?: return call.respond(HttpStatus.BadRequest)
+    val id = call.parameters["id"]?.toReportIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     get<Reports>().handleReport(id, loginUser.id)
     call.respond(HttpStatus.OK)
 }

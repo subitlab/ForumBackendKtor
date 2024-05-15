@@ -5,9 +5,7 @@ import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.core.component.KoinComponent
@@ -21,6 +19,7 @@ import subit.console.AnsiStyle.Companion.RESET
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.GREEN
 import subit.console.SimpleAnsiColor.Companion.RED
+import subit.dataClasses.*
 import subit.database.*
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup.shutdown
@@ -154,3 +153,54 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
         }
     }
 }
+
+/// 定义数据库一些类型在数据库中的类型 ///
+
+/**
+ * 包装的列类型, 用于将数据库中的列类型转换为其他类型
+ * @param T 原始类型
+ * @param R 转换后的类型
+ * @property base 原始列类型
+ * @property warp 转换函数
+ * @property unwrap 反转换函数
+ */
+class WarpColumnType<T, R>(
+    private val base: ColumnType<T>,
+    private val warp: (T)->R,
+    private val unwrap: (R & Any)->T & Any
+): ColumnType<R>()
+{
+    override fun sqlType() = base.sqlType()
+    override fun valueFromDB(value: Any) = base.valueFromDB(value)?.let(warp)
+    override fun notNullValueToDB(value: R & Any): Any = base.notNullValueToDB(unwrap(value))
+    override fun nonNullValueToString(value: R & Any): String = base.nonNullValueToString(unwrap(value))
+    override fun valueToString(value: R?): String = value?.let(unwrap).let(base::valueToString)
+}
+
+// BlockId
+val BlockIdColumn = WarpColumnType(IntegerColumnType(), ::BlockId, BlockId::value)
+fun Table.blockId(name: String) = registerColumn(name, BlockIdColumn)
+
+// UserId
+val UserIdColumn = WarpColumnType(IntegerColumnType(), ::UserId, UserId::value)
+fun Table.userId(name: String) = registerColumn(name, UserIdColumn)
+
+// PostId
+val PostIdColumn = WarpColumnType(LongColumnType(), ::PostId, PostId::value)
+fun Table.postId(name: String) = registerColumn(name, PostIdColumn)
+
+// CommentId
+val CommentIdColumn = WarpColumnType(LongColumnType(), ::CommentId, CommentId::value)
+fun Table.commentId(name: String) = registerColumn(name, CommentIdColumn)
+
+// ReportId
+val ReportIdColumn = WarpColumnType(LongColumnType(), ::ReportId, ReportId::value)
+fun Table.reportId(name: String) = registerColumn(name, ReportIdColumn)
+
+// NoticeId
+val NoticeIdColumn = WarpColumnType(LongColumnType(), ::NoticeId, NoticeId::value)
+fun Table.noticeId(name: String) = registerColumn(name, NoticeIdColumn)
+
+// BlockUserId
+val BlockUserIdColumn = WarpColumnType(LongColumnType(), BlockUserId::byRawValue, BlockUserId::value)
+fun Table.blockUserId(name: String) = registerColumn(name, BlockUserIdColumn)

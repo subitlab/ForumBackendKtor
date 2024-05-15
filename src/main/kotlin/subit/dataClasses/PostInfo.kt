@@ -29,7 +29,7 @@ data class PostInfo(
     val create: Long,
     val lastModified: Long,
     val view: Long,
-    val block: Int,
+    val block: BlockId,
     val state: State,
 )
 {
@@ -60,7 +60,7 @@ data class PostFull(
     val create: Long,
     val lastModified: Long,
     val view: Long,
-    val block: Int,
+    val block: BlockId,
     val state: State,
     val like: Long,
     val dislike: Long,

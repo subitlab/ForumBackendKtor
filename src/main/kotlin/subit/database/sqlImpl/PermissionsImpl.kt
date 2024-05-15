@@ -6,8 +6,11 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import subit.dataClasses.*
+import subit.dataClasses.BlockId
+import subit.dataClasses.BlockUserId
+import subit.dataClasses.PermissionLevel
 import subit.dataClasses.Slice.Companion.singleOrNull
+import subit.dataClasses.UserId
 import subit.database.Blocks
 import subit.database.Permissions
 import subit.database.Users
@@ -22,7 +25,7 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
     private val blocks: Blocks by inject()
     private val users: Users by inject()
 
-    object PermissionTable: IdTable<ULong>("permissions")
+    object PermissionTable: IdTable<BlockUserId>("permissions")
     {
         override val id = blockUserId("id").entityId()
         val permission = enumeration("permission", PermissionLevel::class).default(PermissionLevel.NORMAL)
@@ -35,13 +38,13 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
     override suspend fun setPermission(bid: BlockId, uid: UserId, permission: PermissionLevel): Unit = query()
     {
         val id = BlockUserId(uid = uid, bid = bid)
-        if (selectAll().where { PermissionTable.id eq id.raw }.count() > 0) update({ PermissionTable.id eq id.raw })
+        if (selectAll().where { PermissionTable.id eq id }.count() > 0) update({ PermissionTable.id eq id })
         {
             it[PermissionTable.permission] = permission
         }
         else insert()
         {
-            it[PermissionTable.id] = id.raw
+            it[PermissionTable.id] = id
             it[PermissionTable.permission] = permission
         }
     }
@@ -51,7 +54,7 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
      */
     private suspend fun getRawPermission(bid: BlockId, user: UserId): PermissionLevel = query()
     {
-        val id = BlockUserId(uid = user, bid = bid).raw
+        val id = BlockUserId(uid = user, bid = bid)
         select(permission).where { PermissionTable.id eq id }.singleOrNull()?.getOrNull(permission) // 这里若找不到这个用户在这个数据库中的权限记录, 说明这个用户在这个数据库里没有被更改过权限, 则去查找这个数据库的默认权限
         ?: PermissionLevel.NORMAL // 没有就返回默认值即全是NORMAL
     }
@@ -59,9 +62,9 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
     /**
      * 获得最终生效的权限信息, 会从这个板块开始一直向上查找所有父板块的权限, 合并为最终生效权限, 具体生效规则见[PermissionLevel.getEffectivePermission]
      */
-    override suspend fun getPermission(bid0: BlockId, user: UserId): PermissionLevel = query()
+    override suspend fun getPermission(block: BlockId, user: UserId): PermissionLevel = query()
     {
-        var bid = bid0
+        var bid = block
         var permission = getRawPermission(bid, user)
         val userFull = users.getUser(user) ?: return@query PermissionLevel.NORMAL
         while (true)

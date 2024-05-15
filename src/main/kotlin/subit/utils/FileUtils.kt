@@ -106,7 +106,7 @@ object FileUtils
     suspend fun saveFile(input: InputStream, fileName: String, user: UserId, public: Boolean): UUID
     {
         val id = getRandomId()
-        val userFile = File(rawFolder, user.toString(16))
+        val userFile = File(rawFolder, user.value.toString(16))
         userFile.mkdirs()
         val rawFile = File(userFile, "${id}.file")
         val indexFile = File(indexFolder, "${id}.index")
@@ -131,7 +131,7 @@ object FileUtils
 
     suspend fun UserId.getUserFiles(): Sequence<Pair<UUID, FileInfo>> = withContext(Dispatchers.IO)
     {
-        val userFolder = File(rawFolder, this@getUserFiles.toString(16))
+        val userFolder = File(rawFolder, this@getUserFiles.value.toString(16))
         if (!userFolder.exists()) return@withContext emptySequence()
         userFolder.walk()
             .filter { it.isFile }
@@ -141,7 +141,7 @@ object FileUtils
 
     fun getFile(id: UUID, info: FileInfo): File?
     {
-        val userFolder = File(rawFolder, info.user.toString(16))
+        val userFolder = File(rawFolder, info.user.value.toString(16))
         val rawFile = File(userFolder, "${id}.file")
         return if (rawFile.exists()) rawFile else null
     }
@@ -156,7 +156,7 @@ object FileUtils
      */
     suspend fun UserFull.getSpaceInfo(): SpaceInfo = withContext(Dispatchers.IO)
     {
-        val userFolder = File(rawFolder, this@getSpaceInfo.id.toString(16))
+        val userFolder = File(rawFolder, this@getSpaceInfo.id.value.toString(16))
         val max = if (this@getSpaceInfo.filePermission >= PermissionLevel.ADMIN) filesConfig.adminMaxFileSize
         else filesConfig.userMaxFileSize
         val (used, count) = userFolder.walk().filter { it.isFile }.fold(0L to 0)
@@ -205,7 +205,7 @@ object AvatarUtils
 
     fun setAvatar(user: UserId, avatar: BufferedImage)
     {
-        val userAvatarFolder = File(avatarFolder, user.toString(16).padStart(16, '0'))
+        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
         userAvatarFolder.mkdirs()
         // 文件夹中已有的头像数量
         val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
@@ -222,7 +222,7 @@ object AvatarUtils
 
     fun setDefaultAvatar(user: UserId): BufferedImage
     {
-        val userAvatarFolder = File(avatarFolder, user.toString(16).padStart(16, '0'))
+        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
         userAvatarFolder.mkdirs()
         // 文件夹中已有的头像数量
         val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
@@ -239,7 +239,7 @@ object AvatarUtils
 
     fun getAvatar(user: UserId): BufferedImage
     {
-        val userAvatarFolder = File(avatarFolder, user.toString(16).padStart(16, '0'))
+        val userAvatarFolder = File(avatarFolder, user.value.toString(16).padStart(16, '0'))
         val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
         val avatarFile = File(userAvatarFolder, "${avatarCount-1}.png")
         return if (avatarFile.exists()) ImageIO.read(avatarFile) else setDefaultAvatar(user)

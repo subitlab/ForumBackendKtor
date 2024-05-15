@@ -1,6 +1,7 @@
 package subit.database.memoryImpl
 
 import subit.dataClasses.*
+import subit.dataClasses.CommentId.Companion.toCommentId
 import subit.database.Comments
 import java.util.*
 

@@ -111,7 +111,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         { row ->
             if (row[block].value in map) return@asSlice (map[row[block].value] == true)
             val blockFull = blocks.getBlock(row[block].value) ?: return@asSlice false
-            val permission = loginUser?.let { permissions.getPermission(loginUser.id, blockFull.id) }
+            val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser.id) }
                              ?: PermissionLevel.NORMAL
             val res = permission >= blockFull.reading && (row[state] == State.NORMAL || loginUser.hasGlobalAdmin())
             map[row[block].value] = res
@@ -203,7 +203,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
             .asSlice(begin, count) {
                 if (it[block].value in map) return@asSlice (map[it[block].value] == true)
                 val blockFull = blocks.getBlock(it[block].value) ?: return@asSlice false
-                val permission = loginUser?.let { permissions.getPermission(loginUser, blockFull.id) }
+                val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser) }
                                  ?: PermissionLevel.NORMAL
                 val res = permission >= blockFull.reading
                 map[it[block].value] = res
@@ -230,7 +230,6 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
          *
          * 计算发帖到现在的时间需要使用函数TIMESTAMPDIFF(MINUTE, create, NOW())
          */
-
         // 定义一个MINUTE, 因为不是函数(不能在后面加括号"MINUTE()", 会报错)只能自己定义一个 Expression
         // 类型这里写的是Nothing, 这里无论填什么类型都不影响SQL请求, 只是方便在代码中处理
         val minute = object: Expression<Nothing>()

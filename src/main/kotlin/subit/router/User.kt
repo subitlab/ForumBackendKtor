@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
+import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.*
 import subit.logger.ForumLogger
 import subit.router.Context
@@ -204,7 +205,7 @@ private suspend fun Context.getUserInfo()
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
     ForumLogger.config("user=${loginUser?.id} get user info id=$id")
-    if (id == 0)
+    if (id == UserId(0))
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
         call.respond(loginUser)
@@ -227,7 +228,7 @@ private suspend fun Context.changeIntroduction()
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val changeIntroduction = receiveAndCheckBody<ChangeIntroduction>()
-    if (id == 0)
+    if (id == UserId(0))
     {
         get<Users>().changeIntroduction(loginUser.id, changeIntroduction.introduction)
         call.respond(HttpStatus.OK)
@@ -260,7 +261,7 @@ private suspend fun Context.changeAvatar()
                         ImageIO.read(call.receiveStream())
                     }
                 }.getOrNull() ?: return call.respond(HttpStatus.UnsupportedMediaType)
-    if (id == 0 && loginUser.permission >= PermissionLevel.NORMAL)
+    if (id == UserId(0) && loginUser.permission >= PermissionLevel.NORMAL)
     {
         AvatarUtils.setAvatar(loginUser.id, image)
     }
@@ -276,7 +277,7 @@ private suspend fun Context.deleteAvatar()
 {
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    if (id == 0)
+    if (id == UserId(0))
     {
         AvatarUtils.setDefaultAvatar(loginUser.id)
         call.respond(HttpStatus.OK)
@@ -293,7 +294,7 @@ private suspend fun Context.deleteAvatar()
 private suspend fun Context.getAvatar()
 {
     val id = (call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)).let {
-        if (it == 0) getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
+        if (it == UserId(0)) getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
         else it
     }
     val avatar = AvatarUtils.getAvatar(id)
@@ -312,7 +313,7 @@ private suspend fun Context.getStars()
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser()
     // 若查询自己的收藏
-    if (id == 0)
+    if (id == UserId(0))
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
         val stars = get<Stars>().getStars(user = loginUser.id, begin = begin, limit = count).map { it.post }

@@ -1,9 +1,10 @@
 package subit.database.memoryImpl
 
 import subit.dataClasses.*
+import subit.dataClasses.ReportId.Companion.toReportId
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.Reports
-import java.util.Collections
+import java.util.*
 
 class ReportsImpl: Reports
 {
@@ -21,8 +22,8 @@ class ReportsImpl: Reports
             reason = reason
         )
     }
-    override suspend fun getReport(id: Long): Report? = unHandled[id]
-    override suspend fun handleReport(id: Long, user: UserId)
+    override suspend fun getReport(id: ReportId): Report? = unHandled[id]
+    override suspend fun handleReport(id: ReportId, user: UserId)
     {
         val report = unHandled.remove(id) ?: return
         handled[id] = report to user

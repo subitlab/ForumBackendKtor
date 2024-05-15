@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.koin.core.component.KoinComponent
 import subit.dataClasses.*
 import subit.dataClasses.Notice.*
-import subit.dataClasses.Notice.Type.*
+import subit.dataClasses.Notice.Type.SYSTEM
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.singleOrNull
@@ -31,7 +31,7 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
         // 如果是系统通知
         if (row[type] == SYSTEM) Notice.makeSystemNotice(id, row[user].value, row[content])
         // 否则一定是对象消息
-        else Notice.makeObjectMessage(id, row[user].value, row[type], obj!!, row[content].toLong())
+        else Notice.makeObjectMessage(id, row[user].value, row[type], Id.unknown(obj!!), row[content].toLong())
     }
 
     override suspend fun createNotice(notice: Notice): Unit = query()
@@ -47,7 +47,7 @@ class NoticesImpl: DaoSqlImpl<NoticesImpl.NoticesTable>(NoticesTable), Notices, 
         else if (notice is ObjectNotice)
         {
             val result = select(id, content).where {
-                (user eq notice.user) and (type eq notice.type) and (table.obj eq notice.obj)
+                (user eq notice.user) and (type eq notice.type) and (table.obj eq notice.obj.value.toLong())
             }.singleOrNull()
 
             if (result == null) insert {

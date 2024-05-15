@@ -8,7 +8,7 @@ import subit.dataClasses.UserId
 import subit.database.Blocks
 import subit.database.Permissions
 import subit.database.Users
-import java.util.Collections
+import java.util.*
 
 class PermissionsImpl: Permissions, KoinComponent
 {
@@ -22,9 +22,9 @@ class PermissionsImpl: Permissions, KoinComponent
         permissions[bid to uid] = permission
     }
     private fun getRawPermission(bid: BlockId, user: UserId) = permissions[bid to user] ?: PermissionLevel.NORMAL
-    override suspend fun getPermission(bid0: BlockId, user: UserId): PermissionLevel
+    override suspend fun getPermission(block: BlockId, user: UserId): PermissionLevel
     {
-        var bid = bid0
+        var bid = block
         var permission = getRawPermission(bid, user)
         val userFull = users.getUser(user) ?: return PermissionLevel.NORMAL
         while (true)

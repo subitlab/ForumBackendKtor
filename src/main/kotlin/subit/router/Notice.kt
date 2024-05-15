@@ -10,8 +10,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.*
+import subit.dataClasses.Notice
 import subit.dataClasses.Notice.*
+import subit.dataClasses.NoticeId
+import subit.dataClasses.NoticeId.Companion.toNoticeIdOrNull
+import subit.dataClasses.Slice
+import subit.dataClasses.UserId
 import subit.database.Notices
 import subit.router.*
 import subit.utils.HttpStatus
@@ -116,20 +120,20 @@ private data class NoticeResponse(
 
 private suspend fun Context.getNotice()
 {
-    val id = call.parameters["id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val id = call.parameters["id"]?.toNoticeIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val notices = get<Notices>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val notice = notices.getNotice(id)?.takeIf { it.user == user.id } ?: return call.respond(HttpStatus.NotFound)
     /*
      * 注意由于[Notice.type]不在构造函数中等问题, 无法序列化, 故手动转为[NoticeResponse]
      */
-    val (obj, count) = (notice as? ObjectNotice).let { it?.obj to it?.count }
+    val (obj, count) = (notice as? ObjectNotice).let { it?.obj?.value to it?.count }
     val content = (notice as? SystemNotice)?.content
     val response = NoticeResponse(
         id = notice.id,
         user = notice.user,
         type = notice.type,
-        obj = obj,
+        obj = obj?.toLong(),
         count = count,
         content = content
     )
@@ -138,7 +142,7 @@ private suspend fun Context.getNotice()
 
 private suspend fun Context.deleteNotice()
 {
-    val id = call.parameters["id"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val id = call.parameters["id"]?.toNoticeIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val notices = get<Notices>()
     val user = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     notices.getNotice(id)?.takeIf { it.user == user.id }?.let { notices.deleteNotice(id) }

@@ -5,19 +5,16 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
-import subit.dataClasses.Report
-import subit.dataClasses.ReportObject
-import subit.dataClasses.Slice
+import subit.dataClasses.*
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.singleOrNull
-import subit.dataClasses.UserId
 import subit.database.Reports
 
 class ReportsImpl: DaoSqlImpl<ReportsImpl.ReportTable>(ReportTable), Reports
 {
-    object ReportTable: IdTable<Long>("reports")
+    object ReportTable: IdTable<ReportId>("reports")
     {
-        override val id = long("id").autoIncrement().entityId()
+        override val id = reportId("id").autoIncrement().entityId()
         val reportBy = reference("user", UsersImpl.UserTable)
         val objectType = enumerationByName("object_type", 16, ReportObject::class).index()
         val objectId = long("object_id").index()
@@ -44,12 +41,12 @@ class ReportsImpl: DaoSqlImpl<ReportsImpl.ReportTable>(ReportTable), Reports
         }
     }
 
-    override suspend fun getReport(id: Long): Report? = query()
+    override suspend fun getReport(id: ReportId): Report? = query()
     {
         ReportTable.selectAll().where { ReportTable.id eq id }.singleOrNull()?.let(::deserialize)
     }
 
-    override suspend fun handleReport(id: Long, user: UserId): Unit = query()
+    override suspend fun handleReport(id: ReportId, user: UserId): Unit = query()
     {
         ReportTable.update({ ReportTable.id eq id }) { it[handledBy] = user }
     }

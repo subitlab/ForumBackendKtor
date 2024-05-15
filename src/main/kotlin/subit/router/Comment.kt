@@ -11,6 +11,8 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
+import subit.dataClasses.CommentId.Companion.toCommentIdOrNull
+import subit.dataClasses.PostId.Companion.toPostIdOrNull
 import subit.database.*
 import subit.router.Context
 import subit.router.authenticated
@@ -128,7 +130,7 @@ private suspend fun Context.commentPost()
 
 private suspend fun Context.commentComment()
 {
-    val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val commentId = call.parameters["commentId"]?.toCommentIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val content = receiveAndCheckBody<CommentContent>().content
     val author = get<Comments>().getComment(commentId)?.let { comment ->
         get<Posts>().getPost(comment.post)?.let { postInfo ->
@@ -150,7 +152,7 @@ private suspend fun Context.commentComment()
 
 private suspend fun Context.deleteComment()
 {
-    val commentId = call.parameters["commentId"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val commentId = call.parameters["commentId"]?.toCommentIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     get<Comments>().getComment(commentId)?.let { comment ->
         get<Posts>().getPost(comment.post)?.let { postInfo ->
             checkPermission { checkCanDelete(postInfo) }
