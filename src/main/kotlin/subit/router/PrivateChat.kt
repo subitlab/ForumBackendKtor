@@ -148,9 +148,8 @@ private suspend fun Context.getPrivateChats()
     else call.respond(HttpStatus.BadRequest)
 }
 
-@JvmInline
 @Serializable
-private value class UnreadCount(val count: Long)
+private data class UnreadCount(val count: Long)
 
 private suspend fun Context.getUnreadCount(withObj: Boolean)
 {

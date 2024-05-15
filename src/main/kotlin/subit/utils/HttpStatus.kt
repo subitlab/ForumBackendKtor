@@ -55,8 +55,7 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
     }
 }
 @Serializable
-@JvmInline
-value class StatusMessage(val message: String)
+data class StatusMessage(val message: String)
 val HttpStatus.statusMessage get() = StatusMessage(message)
 
 suspend inline fun ApplicationCall.respond(status: HttpStatus) = this.respond(status.code, status.statusMessage)

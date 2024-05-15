@@ -8,6 +8,7 @@ import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.database.*
@@ -100,10 +101,10 @@ fun Route.comment()
     }
 }
 
-@JvmInline
-private value class CommentContent(val content: String)
-@JvmInline
-private value class CommentIdResponse(val id: CommentId)
+@Serializable
+private data class CommentContent(val content: String)
+@Serializable
+private data class CommentIdResponse(val id: CommentId)
 
 private suspend fun Context.commentPost()
 {

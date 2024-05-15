@@ -76,9 +76,8 @@ private suspend fun Context.getBannedWords()
     call.respond(bannedWords.getBannedWords(begin, count))
 }
 
-@JvmInline
 @Serializable
-private value class NewBannedWord(val word: String)
+private data class NewBannedWord(val word: String)
 private suspend fun Context.newBannedWord()
 {
     val newBannedWord = receiveAndCheckBody<NewBannedWord>()

@@ -8,6 +8,7 @@ import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.database.Reports
@@ -78,8 +79,8 @@ fun Route.report()
     }
 }
 
-@JvmInline
-private value class ReportContent(val content: String)
+@Serializable
+private data class ReportContent(val content: String)
 
 private suspend fun Context.reportPost()
 {
