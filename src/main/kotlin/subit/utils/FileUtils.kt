@@ -111,7 +111,7 @@ object FileUtils
         val rawFile = File(userFile, "${id}.file")
         val indexFile = File(indexFolder, "${id}.index")
         withContext(Dispatchers.IO) { rawFile.createNewFile() }
-        rawFile.outputStream().use { input.copyTo(it) }
+        rawFile.outputStream().use(input::copyTo)
         val md5 = getFileMd5(rawFile)
         val fileInfo = FileInfo(fileName, user, public, rawFile.length(), md5)
         fileInfoSerializer.encodeToString(FileInfo.serializer(), fileInfo).let(indexFile::writeText)
@@ -136,7 +136,7 @@ object FileUtils
         userFolder.walk()
             .filter { it.isFile }
             .mapNotNull { it.nameWithoutExtension.toUUIDOrNull() }
-            .mapNotNull { id -> getFileInfo(id)?.let { id to it } }
+            .mapNotNull { id -> getFileInfo(id)?.let(id::to) }
     }
 
     fun getFile(id: UUID, info: FileInfo): File?
@@ -160,7 +160,7 @@ object FileUtils
         val userFolder = File(rawFolder, this@getSpaceInfo.id.value.toString(16))
         val max = if (this@getSpaceInfo.filePermission >= PermissionLevel.ADMIN) filesConfig.adminMaxFileSize
         else filesConfig.userMaxFileSize
-        val (used, count) = userFolder.walk().filter { it.isFile }.fold(0L to 0)
+        val (used, count) = userFolder.walk().filter(File::isFile).fold(0L to 0)
         { (size, count), file ->
             size+file.length() to count+1
         }
@@ -179,7 +179,7 @@ object FileUtils
     private fun deleteFile(id: UUID, info: FileInfo) = deleteFile(id, info.user)
     private fun deleteFile(id: UUID, user: UserId)
     {
-        File(rawFolder, "${user}.${id}.file").delete()
+        File(rawFolder, "$user.$id.file").delete()
     }
 
     fun changeInfo(id: UUID, info: FileInfo)
