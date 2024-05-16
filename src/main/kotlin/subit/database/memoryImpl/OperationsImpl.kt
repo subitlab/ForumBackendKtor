@@ -1,12 +1,14 @@
 package subit.database.memoryImpl
 
+import kotlinx.serialization.Serializable
 import subit.dataClasses.UserId
 import subit.database.Operations
-import java.util.Collections
+import java.util.*
 import kotlin.reflect.KType
 
 class OperationsImpl: Operations
 {
+    @Serializable
     data class Operation<T>(val admin: UserId, val operation: T, val type: KType)
     private val operations = Collections.synchronizedList(mutableListOf<Operation<*>>())
 
@@ -16,8 +18,5 @@ class OperationsImpl: Operations
     }
 
     @Suppress("unused")
-    fun getOperations(admin: UserId? = null): List<*>
-    {
-        return operations.filter { admin == null || it.admin == admin }
-    }
+    fun getOperations(admin: UserId? = null): List<*> = operations.filter { admin == null || it.admin == admin }
 }

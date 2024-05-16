@@ -6,6 +6,7 @@ import net.mamoe.yamlkt.Yaml
 import net.mamoe.yamlkt.YamlElement
 import net.mamoe.yamlkt.YamlMap
 import subit.logger.ForumLogger
+import subit.workDir
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.*
@@ -95,6 +96,8 @@ class ConfigLoader<T: Any> private constructor(
             ConfigLoader(default, filename, type, listeners.toHashSet()).also(::addLoader)
 
         /// 配置文件加载 ///
+
+        const val CONFIG_DIR = "configs"
 
         /**
          * 从配置文件中获取配置, 需要T是可序列化的.在读取失败时抛出错误
@@ -191,7 +194,7 @@ class ConfigLoader<T: Any> private constructor(
          * @param filename 配置文件名
          * @return 配置文件
          */
-        fun getConfigFile(filename: String): File = File("configs/$filename")
+        fun getConfigFile(filename: String): File = File(File(workDir, CONFIG_DIR), filename)
 
         /**
          * 获取配置文件, 如果不存在则创建

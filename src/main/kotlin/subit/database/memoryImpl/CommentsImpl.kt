@@ -39,13 +39,8 @@ class CommentsImpl: Comments
         return map.values.filter { it.post == post0 && it.parent == parent }
     }
 
-    fun getLastComment(post: PostId): Date
-    {
-        return map.values.filter { it.post == post }.maxOfOrNull { it.create }?.let { Date(it) } ?: Date(0)
-    }
+    fun getLastComment(post: PostId): Date =
+        map.values.filter { it.post == post }.maxOfOrNull(Comment::create)?.let(::Date) ?: Date(0)
 
-    fun getCommentCount(post: PostId): Int
-    {
-        return map.values.count { it.post == post }
-    }
+    fun getCommentCount(post: PostId): Int = map.values.count { it.post == post }
 }

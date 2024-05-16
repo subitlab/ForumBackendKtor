@@ -35,11 +35,11 @@ import java.io.File
 
 lateinit var version: String
     private set
+lateinit var workDir: File
+    private set
 
 fun main(args: Array<String>)
 {
-    ForumLogger // 初始化日志
-    subit.config.ConfigLoader.init() // 初始化配置文件加载器
     val argsMap = args.mapNotNull {
         it.indexOf("=").let { idx ->
             when (idx)
@@ -49,8 +49,11 @@ fun main(args: Array<String>)
             }
         }
     }.toMap()
+    workDir = File(argsMap["-workDir"] ?: ".")
+    ForumLogger // 初始化日志
+    subit.config.ConfigLoader.init() // 初始化配置文件加载器
     val args1 = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
-    val configFile = File("config.yaml")
+    val configFile = File(workDir, "config.yaml")
     if (!configFile.exists())
     {
         configFile.createNewFile()
@@ -60,7 +63,7 @@ fun main(args: Array<String>)
         ForumLogger.severe("config.yaml not found, the default config has been created, please modify it and restart the program")
         return
     }
-    val customConfig = ConfigLoader.load("config.yaml")
+    val customConfig = ConfigLoader.load(configFile.path)
     val environment = commandLineEnvironment(args = args1)
     {
         this.config = this.config.withFallback(customConfig)

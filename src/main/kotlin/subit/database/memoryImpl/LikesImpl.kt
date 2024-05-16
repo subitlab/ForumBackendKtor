@@ -3,7 +3,7 @@ package subit.database.memoryImpl
 import subit.dataClasses.PostId
 import subit.dataClasses.UserId
 import subit.database.Likes
-import java.util.Collections
+import java.util.*
 
 class LikesImpl: Likes
 {
@@ -17,10 +17,7 @@ class LikesImpl: Likes
     {
         map.remove(uid to pid)
     }
-    override suspend fun getLike(uid: UserId, pid: PostId): Boolean?
-    {
-        return map[uid to pid]
-    }
+    override suspend fun getLike(uid: UserId, pid: PostId): Boolean? = map[uid to pid]
     override suspend fun getLikes(post: PostId): Pair<Long, Long>
     {
         val likes = map.entries.filter { it.key.second == post }

@@ -22,7 +22,7 @@ class ReportsImpl: Reports
             reason = reason
         )
     }
-    override suspend fun getReport(id: ReportId): Report? = unHandled[id]
+    override suspend fun getReport(id: ReportId): Report? = unHandled[id] ?: handled[id]?.first
     override suspend fun handleReport(id: ReportId, user: UserId)
     {
         val report = unHandled.remove(id) ?: return

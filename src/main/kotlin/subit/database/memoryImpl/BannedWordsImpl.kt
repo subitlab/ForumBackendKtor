@@ -3,7 +3,7 @@ package subit.database.memoryImpl
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.BannedWords
-import java.util.Collections
+import java.util.*
 
 class BannedWordsImpl: BannedWords
 {
@@ -20,12 +20,6 @@ class BannedWordsImpl: BannedWords
     {
         if (set.remove(oldWord)) set.add(newWord)
     }
-    override suspend fun getBannedWords(begin: Long, count: Int): Slice<String>
-    {
-        return set.toList().asSlice(begin, count)
-    }
-    override suspend fun check(str: String): Boolean
-    {
-        return set.any { str.contains(it) }
-    }
+    override suspend fun getBannedWords(begin: Long, count: Int): Slice<String> = set.toList().asSlice(begin, count)
+    override suspend fun check(str: String): Boolean = set.any(str::contains)
 }

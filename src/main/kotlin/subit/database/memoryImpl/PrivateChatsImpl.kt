@@ -33,7 +33,7 @@ class PrivateChatsImpl: PrivateChats
     {
         val list1 = privateChats[user1 link user2] ?: emptyList()
         val list2 = privateChats[user2 link user1] ?: emptyList()
-        val list = (list1+list2).let { list ->
+        return (list1+list2).let { list ->
             if (before != null) list.filter { it.time <= before }
             else if (after != null) list.filter { it.time >= after }
             else list
@@ -42,7 +42,6 @@ class PrivateChatsImpl: PrivateChats
             else if (after != null) list.sortedBy { it.time }
             else list
         }.asSlice(begin, count)
-        return list
     }
 
     override suspend fun getPrivateChatsBefore(

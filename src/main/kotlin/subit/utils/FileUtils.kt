@@ -8,6 +8,7 @@ import subit.config.filesConfig
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
+import subit.workDir
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileInputStream
@@ -30,11 +31,10 @@ import javax.imageio.ImageIO
  */
 object FileUtils
 {
-    val dataFolder = File("data")
+    val dataFolder = File(workDir, "data")
     private val fileFolder = File(dataFolder, "files")
     private val indexFolder = File(fileFolder, "index")
     private val rawFolder = File(fileFolder, "raw")
-
     fun init()
     {
         dataFolder.mkdirs()
@@ -149,8 +149,9 @@ object FileUtils
     @Serializable
     data class SpaceInfo(val max: Long, val used: Long, val fileCount: Int)
     {
-        fun canUpload(size: Long) = max - used >= size
+        fun canUpload(size: Long) = max-used >= size
     }
+
     /**
      * 获取使用空间与剩余空间
      */
@@ -161,7 +162,7 @@ object FileUtils
         else filesConfig.userMaxFileSize
         val (used, count) = userFolder.walk().filter { it.isFile }.fold(0L to 0)
         { (size, count), file ->
-            size + file.length() to count + 1
+            size+file.length() to count+1
         }
         SpaceInfo(max, used, count)
     }

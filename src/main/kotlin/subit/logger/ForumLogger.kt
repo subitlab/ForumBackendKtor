@@ -10,6 +10,7 @@ import subit.console.SimpleAnsiColor
 import subit.console.SimpleAnsiColor.Companion.PURPLE
 import subit.logger.ForumLogger.nativeOut
 import subit.logger.ForumLogger.safe
+import subit.workDir
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -193,7 +194,7 @@ object ToFileHandler: Handler()
     /**
      * log文件的目录
      */
-    private val logDir = File("logs")
+    private val logDir = File(workDir, "logs")
 
     /**
      * log文件

@@ -3,6 +3,7 @@ package subit.database.memoryImpl
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import subit.dataClasses.BlockId
+import subit.dataClasses.BlockUserId
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.UserId
 import subit.database.Blocks
@@ -12,16 +13,17 @@ import java.util.*
 
 class PermissionsImpl: Permissions, KoinComponent
 {
-    private val permissions = Collections.synchronizedMap(hashMapOf<Pair<BlockId, UserId>, PermissionLevel>())
-
+    private val permissions = Collections.synchronizedMap(hashMapOf<BlockUserId, PermissionLevel>())
     private val users: Users by inject()
     private val blocks: Blocks by inject()
-
     override suspend fun setPermission(bid: BlockId, uid: UserId, permission: PermissionLevel)
     {
-        permissions[bid to uid] = permission
+        permissions[BlockUserId(uid, bid)] = permission
     }
-    private fun getRawPermission(bid: BlockId, user: UserId) = permissions[bid to user] ?: PermissionLevel.NORMAL
+
+    private fun getRawPermission(bid: BlockId, user: UserId) =
+        permissions[BlockUserId(user, bid)] ?: PermissionLevel.NORMAL
+
     override suspend fun getPermission(block: BlockId, user: UserId): PermissionLevel
     {
         var bid = block
@@ -32,6 +34,6 @@ class PermissionsImpl: Permissions, KoinComponent
             bid = blocks.getBlock(bid)?.parent ?: break
             permission = PermissionLevel.getEffectivePermission(permission, getRawPermission(bid, user))
         }
-        return maxOf(permission,userFull.permission)
+        return maxOf(permission, userFull.permission)
     }
 }

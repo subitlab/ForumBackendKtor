@@ -56,10 +56,7 @@ class PostsImpl: Posts, KoinComponent
         map[pid] = post.first.copy(state = state) to post.second
     }
 
-    override suspend fun getPost(pid: PostId): PostInfo?
-    {
-        return map[pid]?.first
-    }
+    override suspend fun getPost(pid: PostId): PostInfo? = map[pid]?.first
 
     override suspend fun getUserPosts(loginUser: UserFull?, author: UserId, begin: Long, limit: Int): Slice<PostInfo>
     {
@@ -131,7 +128,7 @@ class PostsImpl: Posts, KoinComponent
 
     override suspend fun getRecommendPosts(count: Int): Slice<PostId> = map.values
         .filter { it.first.state == State.NORMAL }
-        .sortedBy { -getHotScore(it.first.id) }
+        .sortedByDescending { getHotScore(it.first.id) }
         .asSlice(1, count)
         .map { it.first.id }
 }

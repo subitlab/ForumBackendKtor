@@ -11,27 +11,23 @@ import java.util.*
 class StarsImpl: Stars
 {
     private val set = Collections.synchronizedSet(hashSetOf<Star>())
-
     override suspend fun addStar(uid: UserId, pid: PostId)
     {
         set.add(Star(uid, pid, System.currentTimeMillis()))
     }
+
     override suspend fun removeStar(uid: UserId, pid: PostId)
     {
         set.removeIf { it.user == uid && it.post == pid }
     }
-    override suspend fun getStar(uid: UserId, pid: PostId): Boolean
-    {
-        return set.count { it.user == uid && it.post == pid } > 0
-    }
-    override suspend fun getStarsCount(pid: PostId): Long
-    {
-        return set.count { it.post == pid }.toLong()
-    }
-    override suspend fun getStars(user: UserId?, post: PostId?, begin: Long, limit: Int): Slice<Star>
-    {
-        val list = set.filter { (user == null || it.user == user) && (post == null || it.post == post) }
-            .sortedBy { -it.time }
-        return list.asSlice(begin, limit)
-    }
+
+    override suspend fun getStar(uid: UserId, pid: PostId): Boolean =
+        set.count { it.user == uid && it.post == pid } > 0
+
+    override suspend fun getStarsCount(pid: PostId): Long =
+        set.count { it.post == pid }.toLong()
+
+    override suspend fun getStars(user: UserId?, post: PostId?, begin: Long, limit: Int): Slice<Star> =
+        set.filter { (user == null || it.user == user) && (post == null || it.post == post) }
+            .sortedByDescending(Star::time).asSlice(begin, limit)
 }
