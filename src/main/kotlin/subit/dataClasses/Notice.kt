@@ -50,15 +50,15 @@ sealed interface Notice
             id: NoticeId = NoticeId(0),
             user: UserId,
             type: Type,
-            obj: Id<*>,
+            obj: Id<*, *>,
             count: Long = 0
         ): ObjectNotice = when (type)
         {
-            Type.POST_COMMENT -> PostCommentNotice(id, user, obj.value.toPostId(), count)
+            Type.POST_COMMENT  -> PostCommentNotice(id, user, obj.value.toPostId(), count)
             Type.COMMENT_REPLY -> CommentReplyNotice(id, user, obj.value.toCommentId(), count)
-            Type.LIKE -> LikeNotice(id, user, obj.value.toPostId(), count)
-            Type.STAR -> StarNotice(id, user, obj.value.toPostId(), count)
-            else -> throw IllegalArgumentException("Invalid type: $type")
+            Type.LIKE          -> LikeNotice(id, user, obj.value.toPostId(), count)
+            Type.STAR          -> StarNotice(id, user, obj.value.toPostId(), count)
+            else               -> throw IllegalArgumentException("Invalid type: $type")
         }
     }
 
@@ -68,7 +68,7 @@ sealed interface Notice
 
     interface ObjectNotice: Notice
     {
-        val obj: Id<*>
+        val obj: Id<*, *>
         val count: Long
     }
 
@@ -100,7 +100,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.POST_COMMENT
-        override val obj: Id<*> get() = post
+        override val obj: Id<*, *> get() = post
     }
 
     /**
@@ -115,7 +115,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.COMMENT_REPLY
-        override val obj: Id<*> get() = comment
+        override val obj: Id<*, *> get() = comment
     }
 
     /**
@@ -132,7 +132,7 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.LIKE
-        override val obj: Id<*> get() = post
+        override val obj: Id<*, *> get() = post
     }
 
     /**
@@ -149,6 +149,6 @@ sealed interface Notice
     ): ObjectNotice
     {
         override val type: Type get() = Type.STAR
-        override val obj: Id<*> get() = post
+        override val obj: Id<*, *> get() = post
     }
 }

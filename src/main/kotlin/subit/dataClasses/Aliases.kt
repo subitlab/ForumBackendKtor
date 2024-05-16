@@ -6,15 +6,17 @@ import kotlinx.serialization.Serializable
 
 /// 各种类型别名, 和相关类型转换等方法. 在需要用到这些类型的地方尽量使用别名, 以便于需要修改时全局修改 ///
 
-interface Id<T: Number>
+interface Id<ID, T>: Comparable<ID> where T: Number, T: Comparable<T>, ID: Id<ID, T>
 {
     val value: T
+    override fun compareTo(other: ID): Int = value.compareTo(other.value)
+
     companion object
     {
         /**
          * 未知的ID
          */
-        fun <T: Number> unknown(id: T): Id<T> = object : Id<T>
+        fun <T> unknown(id: T): Id<*, T> where T: Number, T: Comparable<T> = object: Id<Nothing, T>
         {
             override val value: T = id
             override fun toString(): String = id.toString()
@@ -24,10 +26,10 @@ interface Id<T: Number>
 
 @JvmInline
 @Serializable
-value class BlockId(override val value: Int): Comparable<BlockId>, Id<Int>
+value class BlockId(override val value: Int): Id<BlockId, Int>
 {
-    override fun compareTo(other: BlockId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toBlockId() = BlockId(toInt())
@@ -38,10 +40,10 @@ value class BlockId(override val value: Int): Comparable<BlockId>, Id<Int>
 
 @JvmInline
 @Serializable
-value class UserId(override val value: Int): Comparable<UserId>, Id<Int>
+value class UserId(override val value: Int): Id<UserId, Int>
 {
-    override fun compareTo(other: UserId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toUserId() = UserId(toInt())
@@ -52,10 +54,10 @@ value class UserId(override val value: Int): Comparable<UserId>, Id<Int>
 
 @JvmInline
 @Serializable
-value class PostId(override val value: Long): Comparable<PostId>, Id<Long>
+value class PostId(override val value: Long): Id<PostId, Long>
 {
-    override fun compareTo(other: PostId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toPostId() = PostId(toLong())
@@ -66,10 +68,10 @@ value class PostId(override val value: Long): Comparable<PostId>, Id<Long>
 
 @JvmInline
 @Serializable
-value class CommentId(override val value: Long): Comparable<CommentId>, Id<Long>
+value class CommentId(override val value: Long): Id<CommentId, Long>
 {
-    override fun compareTo(other: CommentId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toCommentId() = CommentId(toLong())
@@ -80,10 +82,10 @@ value class CommentId(override val value: Long): Comparable<CommentId>, Id<Long>
 
 @JvmInline
 @Serializable
-value class ReportId(override val value: Long): Comparable<ReportId>, Id<Long>
+value class ReportId(override val value: Long): Id<ReportId, Long>
 {
-    override fun compareTo(other: ReportId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toReportId() = ReportId(toLong())
@@ -94,10 +96,10 @@ value class ReportId(override val value: Long): Comparable<ReportId>, Id<Long>
 
 @JvmInline
 @Serializable
-value class NoticeId(override val value: Long): Comparable<NoticeId>, Id<Long>
+value class NoticeId(override val value: Long): Id<NoticeId, Long>
 {
-    override fun compareTo(other: NoticeId): Int = value.compareTo(other.value)
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toNoticeId() = NoticeId(toLong())
@@ -108,11 +110,12 @@ value class NoticeId(override val value: Long): Comparable<NoticeId>, Id<Long>
 
 @JvmInline
 @Serializable
-value class BlockUserId private constructor(override val value: Long): Comparable<BlockUserId>, Id<Long>
+value class BlockUserId private constructor(override val value: Long): Id<BlockUserId, Long>
 {
     constructor(uid: UserId, bid: BlockId): this((bid.value.toLong() shl 32) or uid.value.toLong())
-    override fun compareTo(other: BlockUserId): Int = value.compareTo(other.value)
+
     override fun toString(): String = value.toString()
+
     companion object
     {
         fun String.toBlockUserId() = BlockUserId(toLong())
@@ -122,5 +125,5 @@ value class BlockUserId private constructor(override val value: Long): Comparabl
     }
 
     val user get() = UserId(value.toInt())
-    val block get() = BlockId((value shr 32).toInt())
+    val block get() = BlockId((value ushr 32).toInt())
 }

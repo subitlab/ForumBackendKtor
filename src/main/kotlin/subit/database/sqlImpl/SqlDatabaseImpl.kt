@@ -164,16 +164,16 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
  * @property warp 转换函数
  * @property unwrap 反转换函数
  */
-class WarpColumnType<T, R>(
+class WarpColumnType<T: Any, R: Any>(
     private val base: ColumnType<T>,
     private val warp: (T)->R,
-    private val unwrap: (R & Any)->T & Any
+    private val unwrap: (R)->T
 ): ColumnType<R>()
 {
     override fun sqlType() = base.sqlType()
     override fun valueFromDB(value: Any) = base.valueFromDB(value)?.let(warp)
-    override fun notNullValueToDB(value: R & Any): Any = base.notNullValueToDB(unwrap(value))
-    override fun nonNullValueToString(value: R & Any): String = base.nonNullValueToString(unwrap(value))
+    override fun notNullValueToDB(value: R): Any = base.notNullValueToDB(unwrap(value))
+    override fun nonNullValueToString(value: R): String = base.nonNullValueToString(unwrap(value))
     override fun valueToString(value: R?): String = value?.let(unwrap).let(base::valueToString)
 }
 
