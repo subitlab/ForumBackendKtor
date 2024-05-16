@@ -1,7 +1,8 @@
 package subit.utils
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
 import subit.config.emailConfig
 import subit.database.EmailCodes
 import java.util.*
@@ -44,10 +45,11 @@ fun checkUserInfo(username: String, password: String, email: String): HttpStatus
 
 fun String?.toUUIDOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()
 
-suspend fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = withContext(Dispatchers.IO)
+private val sendEmailScope = CoroutineScope(Dispatchers.IO)
+
+fun sendEmail(email: String, code: String, usage: EmailCodes.EmailCodeUsage) = sendEmailScope.async()
 {
     val props = Properties()
-    props.setProperty("mail.debug", "true")
     props.setProperty("mail.smtp.auth", "true")
     props.setProperty("mail.host", emailConfig.host)
     props.setProperty("mail.port", emailConfig.port.toString())

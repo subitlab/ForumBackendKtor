@@ -50,6 +50,7 @@ fun main(args: Array<String>)
         }
     }.toMap()
     workDir = File(argsMap["-workDir"] ?: ".")
+    workDir.mkdirs()
     ForumLogger // 初始化日志
     subit.config.ConfigLoader.init() // 初始化配置文件加载器
     val args1 = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
