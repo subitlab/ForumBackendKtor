@@ -45,7 +45,11 @@ fun Route.auth()
         post("/login", {
             description = "登陆, 若成功返回token"
             request {
-                body<LoginInfo> { required = true; description = "登陆信息" }
+                body<LoginInfo>()
+                {
+                    required = true
+                    description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)
@@ -59,7 +63,11 @@ fun Route.auth()
         post("/loginByCode", {
             description = "通过邮箱验证码登陆, 若成功返回token"
             request {
-                body<LoginByCodeInfo> { required = true; description = "登陆信息" }
+                body<LoginByCodeInfo>()
+                {
+                    required = true
+                    description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                }
             }
             this.response {
                 statuses<JWTAuth.Token>(HttpStatus.OK)

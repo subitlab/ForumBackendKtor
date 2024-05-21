@@ -24,7 +24,7 @@ fun Route.block()
         tags = listOf("板块")
     })
     {
-        post("new", {
+        post("/new", {
             description = "创建板块"
             request {
                 authenticated(true)

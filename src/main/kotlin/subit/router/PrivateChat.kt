@@ -26,12 +26,14 @@ fun Route.privateChat()
 {
     route("/privateChat", {
         tags = listOf("私信")
+        request {
+            authenticated(true)
+        }
     })
     {
         post("/send", {
             description = "发送私信"
             request {
-                authenticated(true)
                 body<SendPrivateChat> { required = true; description = "私信内容" }
             }
             response {
@@ -42,7 +44,6 @@ fun Route.privateChat()
         get("/listUser", {
             description = "获取私信列表"
             request {
-                authenticated(true)
                 paged()
             }
             response {
@@ -54,7 +55,6 @@ fun Route.privateChat()
         get("/listChat/{userId}", {
             description = "获取与某人的私信列表"
             request {
-                authenticated(true)
                 pathParameter<UserId>("userId") { required = true; description = "对方的id" }
                 queryParameter<Long>("after")
                 {
@@ -86,9 +86,6 @@ fun Route.privateChat()
 
         get("/unread/all", {
             description = "获取所有未读私信数量"
-            request {
-                authenticated(true)
-            }
             response {
                 statuses<UnreadCount>(HttpStatus.OK)
                 statuses(HttpStatus.Unauthorized)
@@ -98,7 +95,6 @@ fun Route.privateChat()
         get("/unread/{userId}", {
             description = "获取与某人的未读私信数量"
             request {
-                authenticated(true)
                 pathParameter<UserId>("userId") { required = true; description = "对方的id" }
             }
             response {

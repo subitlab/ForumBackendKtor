@@ -26,6 +26,9 @@ fun Route.notice()
 {
     route("/notice", {
         tags = listOf("通知")
+        request {
+            authenticated(true)
+        }
     })
     {
         get("/list", {
@@ -36,7 +39,6 @@ fun Route.notice()
                 详细请参阅 获取举报列表接口(/report/list) 和 获取所有未读私信数量接口(/privateChat/unread/all)
                 """.trimIndent()
             request {
-                authenticated(true)
                 paged()
                 queryParameter<Type>("type")
                 {
@@ -61,7 +63,6 @@ fun Route.notice()
                 - content: 内容, 当类型为系统通知时, 为通知内容, 其他情况下为null
                 """.trimIndent()
             request {
-                authenticated(true)
                 pathParameter<NoticeId>("id") { required = true; description = "通知ID" }
             }
             response {
@@ -75,7 +76,6 @@ fun Route.notice()
         delete("/{id}", {
             description = "删除通知(设为已读)"
             request {
-                authenticated(true)
                 pathParameter<NoticeId>("id") { required = true; description = "通知ID" }
             }
             response {
@@ -88,9 +88,6 @@ fun Route.notice()
 
         delete("/all", {
             description = "删除所有通知(设为已读)"
-            request {
-                authenticated(true)
-            }
             response {
                 statuses(HttpStatus.OK)
                 statuses(HttpStatus.Unauthorized)
