@@ -178,6 +178,6 @@ private suspend fun Context.getIsBlock()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val privateChats = get<PrivateChats>()
-    val isBlock = privateChats.getIsBlock(userId, loginUser.id,)
+    val isBlock = privateChats.getIsBlock(userId, loginUser.id)
     call.respond(IsBlock(isBlock))
 }
