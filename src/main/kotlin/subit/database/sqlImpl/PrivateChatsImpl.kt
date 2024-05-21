@@ -9,6 +9,7 @@ import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import subit.dataClasses.PrivateChat
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.dataClasses.UserId
 import subit.database.PrivateChats
 
@@ -166,5 +167,35 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
     override suspend fun setReadAll(uid: UserId): Unit = query()
     {
         deleteWhere { (from eq uid) and (time eq Instant.DISTANT_PAST) }
+    }
+
+    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean) = query()
+    {
+        //此处表示from拉黑了to
+        val nowIsBlock = select(content).where {
+            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
+        }.singleOrNull()?.get(content)?.toBoolean()
+        if (isBlock != nowIsBlock)
+        {
+            if (nowIsBlock == null) insert {
+                it[PrivateChatsTable.from] = from
+                it[PrivateChatsTable.to] = to
+                it[time] = Instant.DISTANT_FUTURE
+                it[content] = isBlock.toString()
+            }
+            else update({
+                (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
+            })
+            {
+                it[content] = isBlock.toString()
+            }
+        }
+    }
+
+    override suspend fun getIsBlock(from: UserId, to: UserId): Boolean = query()
+    {
+        select(content).where {
+            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
+        }.singleOrNull()?.get(content)?.toBoolean() ?: false
     }
 }

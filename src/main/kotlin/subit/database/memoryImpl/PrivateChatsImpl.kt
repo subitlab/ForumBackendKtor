@@ -13,6 +13,7 @@ class PrivateChatsImpl: PrivateChats
 {
     private val privateChats = Collections.synchronizedMap(hashMapOf<Long, MutableList<PrivateChat>>())
     private val unread = Collections.synchronizedMap(hashMapOf<Long, Long>())
+    private val block = Collections.synchronizedMap(hashMapOf<Long, Boolean>())
     private fun makeList() = Collections.synchronizedList(mutableListOf<PrivateChat>())
     private infix fun UserId.link(other: UserId): Long = (this.value.toLong() shl 32) or other.value.toLong()
     override suspend fun addPrivateChat(from: UserId, to: UserId, content: String)
@@ -84,4 +85,9 @@ class PrivateChatsImpl: PrivateChats
     {
         unread.keys.removeIf { it.toInt() == uid.value }
     }
+
+    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean) {
+        block[from link to] = isBlock
+    }
+    override suspend fun getIsBlock(from: UserId, to: UserId): Boolean = block[from link to] ?: false
 }

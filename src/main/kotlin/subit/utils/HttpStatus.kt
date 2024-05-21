@@ -52,6 +52,8 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val Prohibit = HttpStatus(HttpStatusCode.Unauthorized, "账户被封禁")
         // 包含违禁词汇
         val ContainsBannedWords = HttpStatus(HttpStatusCode.NotAcceptable, "包含违禁词汇")
+        // 已拉黑
+        val UserInBlackList = HttpStatus(HttpStatusCode.NotAcceptable, "对方已将拉黑")
     }
 }
 @Serializable

@@ -36,4 +36,7 @@ interface PrivateChats
     suspend fun getUnreadCount(uid: UserId): Long
     suspend fun setRead(uid: UserId, other: UserId)
     suspend fun setReadAll(uid: UserId)
+
+    suspend fun getIsBlock(from: UserId, to: UserId): Boolean
+    suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean)
 }

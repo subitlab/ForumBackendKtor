@@ -106,6 +106,18 @@ fun Route.privateChat()
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getUnreadCount(true) }
+
+        get("/isBlock/{userId}", {
+            description = "获取是否被某人拉黑"
+            request {
+                authenticated(true)
+                pathParameter<UserId>("userId") { required = true; description = "对方的id,注意是对方是否拉黑当前登录者" }
+            }
+            response {
+                statuses<UnreadCount>(HttpStatus.OK)
+                statuses(HttpStatus.Unauthorized)
+            }
+        }) { getIsBlock() }
     }
 }
 
@@ -120,6 +132,7 @@ private suspend fun Context.sendPrivateChat()
     val (to, content) = receiveAndCheckBody<SendPrivateChat>()
     val from = getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
     val privateChats = get<PrivateChats>()
+    if(privateChats.getIsBlock(to, from)) return call.respond(HttpStatus.UserInBlackList)
     privateChats.addPrivateChat(from, to, content)
     call.respond(HttpStatus.OK)
 }
@@ -160,4 +173,15 @@ private suspend fun Context.getUnreadCount(withObj: Boolean)
     val privateChats = get<PrivateChats>()
     val count = privateChats.getUnreadCount(loginUser.id, userId)
     call.respond(UnreadCount(count))
+}
+@Serializable
+private data class IsBlock(val count: Boolean)
+
+private suspend fun Context.getIsBlock()
+{
+    val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val privateChats = get<PrivateChats>()
+    val isBlock = privateChats.getIsBlock(userId, loginUser.id,)
+    call.respond(IsBlock(isBlock))
 }
