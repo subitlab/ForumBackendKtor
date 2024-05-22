@@ -11,12 +11,7 @@ object Shell: Command
 
     override fun execute(args: List<String>): Boolean
     {
-        val pb=ProcessBuilder()
-        pb.command(args)
-        val process=pb.start()
-        process.inputStream.transferTo(CommandSet.out)
-        process.errorStream.transferTo(CommandSet.err)
-        process.waitFor()
+        ProcessBuilder().command(args).inheritIO().start().waitFor()
         return true
     }
 }

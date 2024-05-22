@@ -1,12 +1,12 @@
 package subit.logger
 
-import org.jline.utils.StyleResolver
 import subit.Loader
 import subit.config.ConfigLoader
 import subit.config.loggerConfig
 import subit.console.AnsiStyle.Companion.RESET
 import subit.console.Console
 import subit.console.SimpleAnsiColor
+import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.PURPLE
 import subit.logger.ForumLogger.nativeOut
 import subit.logger.ForumLogger.safe
@@ -90,7 +90,7 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
         System.setOut(out)
         System.setErr(err)
         ForumLogger.logger.setUseParentHandlers(false)
-        ForumLogger.logger.handlers.forEach { ForumLogger.logger.removeHandler(it) }
+        ForumLogger.logger.handlers.forEach(ForumLogger.logger::removeHandler)
         ForumLogger.logger.addHandler(ToConsoleHandler)
         ForumLogger.logger.addHandler(ToFileHandler)
         Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
@@ -139,7 +139,7 @@ object ToConsoleHandler: Handler()
          * 当该日志打印时会调用[Console.println], 再次引起日志打印, 造成无限递归.
          * 因此在这里特别处理
          */
-        if (record.loggerName == StyleResolver::class.java.name)
+        if (record.loggerName.startsWith("org.jline"))
         {
             /**
              * 如果等级不足INFO就不打印了
@@ -149,7 +149,13 @@ object ToConsoleHandler: Handler()
                 /**
                  * 如果等级大于等于INFO, 也不能直接调用[Console.println], 所以使用[nativeOut]直接打印到终端
                  */
-                val head = String.format(
+                val head = if (loggerConfig.showLoggerName) String.format(
+                    "[%s][%s][%s]",
+                    ForumLogger.loggerDateFormat.format(record.millis),
+                    record.loggerName,
+                    record.level.name
+                )
+                else String.format(
                     "[%s][%s]",
                     ForumLogger.loggerDateFormat.format(record.millis),
                     record.level.name
@@ -163,7 +169,17 @@ object ToConsoleHandler: Handler()
         else if (level.intValue() >= Level.WARNING.intValue()) SimpleAnsiColor.YELLOW.bright()
         else if (level.intValue() >= Level.CONFIG.intValue()) SimpleAnsiColor.BLUE.bright()
         else SimpleAnsiColor.GREEN.bright()
-        val head = String.format(
+        val head = if (loggerConfig.showLoggerName) String.format(
+            "%s[%s]%s[%s]%s[%s]%s",
+            PURPLE.bright(),
+            ForumLogger.loggerDateFormat.format(record.millis),
+            CYAN.bright(),
+            record.loggerName,
+            ansiStyle,
+            level.name,
+            RESET,
+        )
+        else String.format(
             "%s[%s]%s[%s]%s",
             PURPLE.bright(),
             ForumLogger.loggerDateFormat.format(record.millis),
@@ -273,12 +289,17 @@ object ToFileHandler: Handler()
             str.split("\n").forEach { messages.add(it) }
         }
         val messagesWithOutColor = messages.map { colorMatcher.replace(it, "") }
-        val head = String.format(
+        val head = if (loggerConfig.showLoggerName) String.format(
+            "[%s][%s][%s]",
+            ForumLogger.loggerDateFormat.format(record.millis),
+            record.level.name,
+            record.loggerName
+        )
+        else String.format(
             "[%s][%s]",
             ForumLogger.loggerDateFormat.format(record.millis),
             record.level.name
         )
-
         append(messagesWithOutColor.map { "$head $it" })
     }
 

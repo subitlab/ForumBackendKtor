@@ -56,10 +56,7 @@ dependencies {
     implementation("net.mamoe.yamlkt:yamlkt:0.13.0") // yaml for kotlin on read/write file
     implementation("io.ktor:ktor-server-config-yaml-jvm") // yaml on read application.yaml
     implementation("org.fusesource.jansi:jansi:2.4.1") // 终端颜色码
-    implementation("org.jline:jline-terminal-jansi:$jline_version") // 终端打印、命令等
-    implementation("org.jline:jline-reader:$jline_version") // 终端打印、命令等
-    implementation("org.jline:jline-terminal:$jline_version") // 终端打印、命令等
-    implementation("org.jline:jline-style:$jline_version") // 终端打印、命令等
+    implementation("org.jline:jline:$jline_version") // 终端打印、命令等
     // koin
     implementation(platform("io.insert-koin:koin-bom:$koin_version"))
     implementation("io.insert-koin:koin-core")

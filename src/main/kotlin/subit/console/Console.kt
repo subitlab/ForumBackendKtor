@@ -2,10 +2,13 @@ package subit.console
 
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
+import org.jline.reader.impl.LineReaderImpl
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
-import org.jline.utils.InfoCmp
+import org.jline.widget.AutopairWidgets
+import org.jline.widget.AutosuggestionWidgets
 import subit.console.command.CommandSet
+import subit.logger.ForumLogger
 import subit.utils.FileUtils
 import java.io.File
 
@@ -37,6 +40,16 @@ object Console
         .variable(LineReader.HISTORY_FILE, historyFile)
         .build()
 
+    init
+    {
+        // 自动配对(小括号/中括号/大括号/引号等)
+        val autopairWidgets = AutopairWidgets(lineReader, true)
+        autopairWidgets.enable()
+        // 根据历史记录建议
+        val autosuggestionWidgets = AutosuggestionWidgets(lineReader)
+        autosuggestionWidgets.enable()
+    }
+
     /**
      * 命令历史文件
      */
@@ -46,10 +59,15 @@ object Console
     /**
      * 在终端上打印一行, 会自动换行并下移命令提升符和已经输入的命令
      */
-    fun println(o: Any) = lineReader.printAbove("$o")
+    fun println(o: Any) = if (lineReader.isReading) lineReader.printAbove("\r$o") else terminal.writer().println(o)
 
     /**
      * 清空终端
      */
-    fun clear() = terminal.puts(InfoCmp.Capability.clear_screen)
+    fun clear()
+    {
+        ForumLogger.nativeOut.print("\u001bc")
+        lineReader as LineReaderImpl
+        if (lineReader.isReading) lineReader.redrawLine()
+    }
 }

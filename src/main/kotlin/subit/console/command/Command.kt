@@ -4,6 +4,7 @@ import io.ktor.server.application.*
 import org.jline.reader.*
 import org.jline.reader.impl.DefaultParser
 import subit.console.AnsiStyle
+import subit.console.AnsiStyle.Companion.RESET
 import subit.console.AnsiStyle.Companion.ansi
 import subit.console.Console
 import subit.console.SimpleAnsiColor
@@ -89,12 +90,14 @@ object CommandSet: TreeCommand(
      * 上一次命令是否成功
      */
     private var success = true
+    private fun parsePrompt(prompt: String): String =
+        "${if (success) SimpleAnsiColor.CYAN.bright() else SimpleAnsiColor.RED.bright()}$prompt${RESET}"
 
     /**
      * 命令提示符, 上一次成功为青色, 失败为红色
      */
-    private val prompt: String
-        get() = "${if (success) SimpleAnsiColor.CYAN.bright() else SimpleAnsiColor.RED.bright()}FORUM > ${AnsiStyle.RESET}"
+    private val prompt: String = parsePrompt("FORUM > ")
+    private val rightPrompt: String = parsePrompt("<| POWERED BY SUBIT |>")
 
     fun Application.startCommandThread()
     {
@@ -103,13 +106,14 @@ object CommandSet: TreeCommand(
             var line: String? = null
             while (true) try
             {
-                line = Console.lineReader.readLine(prompt)
-                val words = DefaultParser().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
-                if (words.isEmpty()||(words.size==1&&words.first().isEmpty())) continue
+                @Suppress("CAST_NEVER_SUCCEEDS")
+                line = Console.lineReader.readLine(prompt, rightPrompt, null as? MaskingCallback, null)
+                val words = DefaultParser ().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
+                if (words.isEmpty() || (words.size == 1 && words.first().isEmpty())) continue
                 val command = CommandSet.getCommand(words[0])
-                if (command==null||command.log) ForumLogger.info("Console is used command: $line")
+                if (command == null || command.log) ForumLogger.info("Console is used command: $line")
                 success = false
-                if (command==null)
+                if (command == null)
                 {
                     err.println("Unknown command: ${words[0]}, use \"help\" to get help")
                 }

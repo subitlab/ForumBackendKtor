@@ -18,6 +18,8 @@ data class LoggerConfig(
     @Comment("日志等级 (OFF, SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL)")
     @SerialName("level")
     val levelName: String,
+    @Comment("是否在日志中显示日志名称")
+    val showLoggerName: Boolean,
 )
 {
     @Transient
@@ -30,6 +32,6 @@ data class LoggerConfig(
 
 var loggerConfig: LoggerConfig by config(
     "logger.yml",
-    LoggerConfig(listOf(), true, "INFO"),
+    LoggerConfig(listOf(), true, "INFO", false),
     { _, new -> ForumLogger.logger.setLevel(new.level) }
 )

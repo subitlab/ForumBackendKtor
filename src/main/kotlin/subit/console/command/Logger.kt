@@ -7,7 +7,7 @@ import subit.logger.ForumLogger
 /**
  * Logger control.
  */
-object Logger : TreeCommand(Level, Filter)
+object Logger : TreeCommand(Level, Filter, ShowLoggerName)
 {
     override val description = "Logger control."
 
@@ -173,6 +173,25 @@ object Logger : TreeCommand(Level, Filter)
                 }
                 return listOf()
             }
+        }
+    }
+
+    object ShowLoggerName : Command
+    {
+        override val description = "Set/get show logger name."
+        override val args = "[true/false]"
+
+        override fun execute(args: List<String>): Boolean
+        {
+            if (args.size != 1) return false
+            val show = args[0].toBooleanStrictOrNull() ?: return false
+            loggerConfig = loggerConfig.copy(showLoggerName = show)
+            return true
+        }
+        override fun tabComplete(args: List<String>): List<Candidate>
+        {
+            return if (args.size == 1) listOf(Candidate("true"), Candidate("false"))
+            else emptyList()
         }
     }
 }
