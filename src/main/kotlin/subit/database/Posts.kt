@@ -26,7 +26,7 @@ interface Posts
         top: Boolean = false
     ): PostId
 
-    suspend fun editPost(pid: PostId, title: String, content: String)
+    suspend fun editPost(pid: PostId, title: String? = null, content: String? = null, top: Boolean? = null)
     suspend fun setPostState(pid: PostId, state: State)
     suspend fun getPost(pid: PostId): PostInfo?
 

@@ -76,13 +76,15 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         }.value
     }
 
-    override suspend fun editPost(pid: PostId, title: String, content: String): Unit = query()
+    override suspend fun editPost(pid: PostId, title: String?, content: String?, top: Boolean?): Unit = query()
     {
         update({ id eq pid })
         {
-            it[PostsTable.title] = title
-            it[PostsTable.content] = content
-            it[lastModified] = CurrentTimestamp
+            postInfo ->
+            title?.let { postInfo[PostsTable.title] = title }
+            content?.let { postInfo[PostsTable.content] = content }
+            top?.let { postInfo[PostsTable.top] = top }
+            postInfo[lastModified] = CurrentTimestamp
         }
     }
 

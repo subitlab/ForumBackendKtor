@@ -49,7 +49,7 @@ fun Route.posts()
         }) { deletePost() }
 
         put("/{id}", {
-            description = "编辑帖子"
+            description = "编辑帖子(block及以上管理员可修改)"
             request {
                 authenticated(true)
                 body<EditPost> { required = true; description = "编辑帖子, 成功返回帖子ID" }
@@ -122,6 +122,19 @@ fun Route.posts()
             }
         }) { getBlockTopPosts() }
 
+        get("/{id}/setTop/{top}", {
+            description = "设置帖子是否置顶"
+            request {
+                authenticated(true)
+                pathParameter<Long>("id") { required = true; description = "帖子的id" }
+                pathParameter<Boolean>("top") { required = true; description = "是否置顶" }
+            }
+            response {
+                statuses<Long>(HttpStatus.OK)
+                statuses(HttpStatus.BadRequest)
+            }
+        }) { setBlockTopPosts() }
+
         get("/search", {
             description = "搜索帖子"
             request {
@@ -170,7 +183,7 @@ private suspend fun Context.editPost()
     val pid = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val postInfo = get<Posts>().getPost(pid) ?: return call.respond(HttpStatus.NotFound)
-    if (postInfo.author != loginUser.id) return call.respond(HttpStatus.Forbidden)
+    if (postInfo.author != loginUser.id) checkPermission { checkHasAdminIn(postInfo.block) }
     get<Posts>().editPost(pid, post.title, post.content)
     call.respond(HttpStatus.OK)
 }
@@ -282,6 +295,16 @@ private suspend fun Context.getBlockTopPosts()
     checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockTopPosts(block, begin, count)
     call.respond(posts)
+}
+
+private suspend fun Context.setBlockTopPosts()
+{
+    val pid = call.parameters["id"]?.toPostIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val top = call.parameters["top"]?.toBooleanStrictOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val postInfo = get<Posts>().getPost(pid) ?: return call.respond(HttpStatus.NotFound)
+    checkPermission { checkHasAdminIn(postInfo.block) }
+    get<Posts>().editPost(pid, top = top)
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.searchPost()

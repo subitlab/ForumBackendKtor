@@ -43,11 +43,11 @@ class PostsImpl: Posts, KoinComponent
         return id
     }
 
-    override suspend fun editPost(pid: PostId, title: String, content: String)
+    override suspend fun editPost(pid: PostId, title: String?, content: String?, top: Boolean?)
     {
         val post = map[pid] ?: return
         map[pid] =
-            post.first.copy(title = title, content = content, lastModified = System.currentTimeMillis()) to post.second
+            (post.first.copy(title = title ?: post.first.title, content = content ?: post.first.content, lastModified = System.currentTimeMillis())) to (top ?: post.second)
     }
 
     override suspend fun setPostState(pid: PostId, state: State)

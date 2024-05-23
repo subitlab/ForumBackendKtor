@@ -60,7 +60,7 @@ fun Route.admin()
         }) { prohibitUser() }
 
         get("/prohibitList", {
-            description = "获取禁言列表, 需要当前用户的user权限大于ADMIN"
+            description = "获取封禁列表, 需要当前用户的user权限大于ADMIN"
             request {
                 paged()
             }
