@@ -8,13 +8,14 @@ import subit.console.AnsiStyle.Companion.RESET
 import subit.console.SimpleAnsiColor.Companion.CYAN
 import subit.console.SimpleAnsiColor.Companion.PURPLE
 import subit.logger.ForumLogger
-import kotlin.collections.mutableMapOf
 import kotlin.collections.set
 import kotlin.system.exitProcess
 
 @Suppress("unused")
 object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
 {
+    val logger = ForumLogger.getLogger()
+
     fun shutdown(code: Int, cause: String = "unknown"): Nothing
     {
         val application = getKoin().get<Application>()
@@ -22,7 +23,7 @@ object ForumThreadGroup: ThreadGroup("ForumThreadGroup"), KoinComponent
     }
     fun Application.shutdown(code: Int, cause: String = "unknown"): Nothing
     {
-        ForumLogger.warning("${PURPLE}Server is shutting down: ${CYAN}$cause${RESET}")
+        logger.warning("${PURPLE}Server is shutting down: ${CYAN}$cause${RESET}")
         val environment = this.environment
         environment.monitor.raise(ApplicationStopPreparing, environment)
         if (environment is ApplicationEngineEnvironment) environment.stop()

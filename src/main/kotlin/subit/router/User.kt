@@ -30,6 +30,8 @@ import subit.utils.statuses
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
+val logger = ForumLogger.getLogger()
+
 fun Route.user()
 {
     route("/user", {
@@ -205,7 +207,7 @@ private suspend fun Context.getUserInfo()
 
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
-    ForumLogger.config("user=${loginUser?.id} get user info id=$id")
+    logger.config("user=${loginUser?.id} get user info id=$id")
     if (id == UserId(0))
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)

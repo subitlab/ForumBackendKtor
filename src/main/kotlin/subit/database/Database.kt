@@ -17,30 +17,31 @@ val databaseImpls: List<IDatabase> = listOf(
 
 fun Application.loadDatabaseImpl()
 {
+    val logger = ForumLogger.getLogger()
     val impls = databaseImpls.associateBy { it.name }
-    ForumLogger.config("Available database implementations: ${impls.keys.joinToString(", ")}")
+    logger.config("Available database implementations: ${impls.keys.joinToString(", ")}")
 
     val databaseImpl = environment.config.propertyOrNull("database.impl")?.getString()?.lowercase()
 
     if (databaseImpl == null)
     {
         val implNames = impls.keys.joinToString(", ")
-        ForumLogger.severe("${RED}Database implementation not found")
-        ForumLogger.severe("${RED}Please add properties in application.conf: ${CYAN}database.impl ${GREEN}(options: $implNames)${RESET}")
+        logger.severe("${RED}Database implementation not found")
+        logger.severe("${RED}Please add properties in application.conf: ${CYAN}database.impl ${GREEN}(options: $implNames)${RESET}")
         shutdown(1, "Database implementation not found")
     }
 
     val impl = impls[databaseImpl]
     if (impl != null)
     {
-        ForumLogger.info("Using database implementation: $databaseImpl")
+        logger.info("Using database implementation: $databaseImpl")
         impl.apply {
             init()
         }
         return
     }
-    ForumLogger.severe("${RED}Database implementation not found: $GREEN$databaseImpl")
-    ForumLogger.severe("${RED}Available implementations: $GREEN${impls.keys.joinToString(", ")}")
+    logger.severe("${RED}Database implementation not found: $GREEN$databaseImpl")
+    logger.severe("${RED}Available implementations: $GREEN${impls.keys.joinToString(", ")}")
     shutdown(1, "Database implementation not found")
 }
 

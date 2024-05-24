@@ -37,13 +37,13 @@ class ConfigLoader<T: Any> private constructor(
     private fun setValue(value: T)
     {
         listeners.forEach {
-            ForumLogger.severe("Error in config listener")
+            logger.severe("Error in config listener")
             {
                 it(config, value)
             }
         }
         config = value
-        ForumLogger.config("Config $filename changed to $value")
+        logger.config("Config $filename changed to $value")
         saveConfig(filename, value, type)
     }
 
@@ -53,8 +53,8 @@ class ConfigLoader<T: Any> private constructor(
     @Suppress("UNCHECKED_CAST")
     fun reload()
     {
-        ForumLogger.config("Reloading config $filename")
-        ForumLogger.severe("Could not reload config $filename")
+        logger.config("Reloading config $filename")
+        logger.severe("Could not reload config $filename")
         {
             setValue(getConfigOrCreate(filename, default as Any, type) as T)
         }
@@ -63,6 +63,7 @@ class ConfigLoader<T: Any> private constructor(
     @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object
     {
+        private val logger = ForumLogger.getLogger()
         fun init() // 初始化所有配置
         {
             apiDocsConfig

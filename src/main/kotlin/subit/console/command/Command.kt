@@ -86,6 +86,7 @@ object CommandSet: TreeCommand(
     Whitelist
 )
 {
+    private val logger = ForumLogger.getLogger()
     /**
      * 上一次命令是否成功
      */
@@ -111,7 +112,7 @@ object CommandSet: TreeCommand(
                 val words = DefaultParser ().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
                 if (words.isEmpty() || (words.size == 1 && words.first().isEmpty())) continue
                 val command = CommandSet.getCommand(words[0])
-                if (command == null || command.log) ForumLogger.info("Console is used command: $line")
+                if (command == null || command.log) logger.info("Console is used command: $line")
                 success = false
                 if (command == null)
                 {
@@ -125,36 +126,36 @@ object CommandSet: TreeCommand(
             }
             catch (e: UserInterruptException)
             {
-                ForumLogger.warning("Console is interrupted")
+                logger.warning("Console is interrupted")
                 return@newThread
             }
             catch (e: EndOfFileException)
             {
-                ForumLogger.warning("Console is closed")
+                logger.warning("Console is closed")
                 shutdown(0)
             }
             catch (e: Exception)
             {
-                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+                logger.severe("An error occurred while processing the command${line ?: ""}", e)
             }
             catch (e: Error)
             {
-                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+                logger.severe("An error occurred while processing the command${line ?: ""}", e)
             }
             catch (e: RuntimeException)
             {
-                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+                logger.severe("An error occurred while processing the command${line ?: ""}", e)
             }
             catch (e: Throwable)
             {
-                ForumLogger.severe("An error occurred while processing the command${line ?: ""}", e)
+                logger.severe("An error occurred while processing the command${line ?: ""}", e)
             }
             finally
             {
                 line = null
             }
         }.start()
-        ForumLogger.config("Console is initialized")
+        logger.config("Console is initialized")
     }
 
     /**
@@ -164,7 +165,7 @@ object CommandSet: TreeCommand(
     {
         override fun complete(reader: LineReader, line: ParsedLine, candidates: MutableList<Candidate>?)
         {
-            ForumLogger.severe("An error occurred while tab completing")
+            logger.severe("An error occurred while tab completing")
             {
                 candidates?.addAll(CommandSet.tabComplete(line.words().subList(0, line.wordIndex()+1)))
             }
@@ -181,7 +182,7 @@ object CommandSet: TreeCommand(
         {
             if (b == '\n'.code)
             {
-                Console.println("${SimpleAnsiColor.PURPLE.bright()}[COMMAND]$style$level${AnsiStyle.RESET} $arrayOutputStream")
+                Console.println("${SimpleAnsiColor.PURPLE.bright()}[COMMAND]$style$level$RESET $arrayOutputStream")
                 arrayOutputStream.reset()
             }
             else

@@ -61,7 +61,8 @@ fun main(args: Array<String>)
         val defaultConfig =
             Loader.getResource("default_config.yaml")?.readAllBytes() ?: error("default_config.yaml not found")
         configFile.writeBytes(defaultConfig)
-        ForumLogger.severe("config.yaml not found, the default config has been created, please modify it and restart the program")
+        ForumLogger.getLogger("ForumBackend.main")
+            .severe("config.yaml not found, the default config has been created, please modify it and restart the program")
         return
     }
     val customConfig = ConfigLoader.load(configFile.path)
@@ -106,7 +107,7 @@ private fun Application.installAuthentication() = install(Authentication)
         validate() // 设置验证函数
         {
             val users: Users by inject()
-            ForumLogger.config(
+            ForumLogger.getLogger("ForumBackend.installAuthentication").config(
                 "用户token: id=${
                     it.payload.getClaim("id")
                         .asInt()
@@ -156,7 +157,8 @@ private fun Application.installStatusPages() = install(StatusPages)
     exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
     exception<Throwable>
     { call, throwable ->
-        ForumLogger.warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
+        ForumLogger.getLogger("ForumBackend.installStatusPages")
+            .warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
         call.respond(HttpStatus.InternalServerError)
     }
     status(HttpStatusCode.NotFound)

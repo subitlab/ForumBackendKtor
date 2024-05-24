@@ -1,5 +1,8 @@
 package subit.logger
 
+import me.nullaqua.api.reflect.CallerSensitive
+import me.nullaqua.kotlin.reflect.getCallerClass
+import me.nullaqua.kotlin.reflect.getCallerClasses
 import subit.Loader
 import subit.config.ConfigLoader
 import subit.config.loggerConfig
@@ -20,12 +23,33 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.jvm.optionals.getOrDefault
+import kotlin.reflect.KClass
+import kotlin.reflect.jvm.jvmName
 
 /**
  * logger系统
  */
-object ForumLogger: LoggerUtils(Logger.getLogger(""))
+@Suppress("MemberVisibilityCanBePrivate")
+object ForumLogger
 {
+    val globalLogger = LoggerUtils(Logger.getLogger(""))
+    fun getLogger(name: String): LoggerUtils = LoggerUtils(Logger.getLogger(name))
+    fun getLogger(clazz: KClass<*>): LoggerUtils
+    {
+        val c: KClass<*> = when
+        {
+            clazz.isCompanion -> clazz.java.enclosingClass.kotlin
+            else              -> clazz
+        }
+        val name = c.qualifiedName ?: c.jvmName
+        return getLogger(name)
+    }
+
+    fun getLogger(clazz: Class<*>): LoggerUtils = getLogger(clazz.kotlin)
+
+    @CallerSensitive
+    fun getLogger(): LoggerUtils = getCallerClass()?.let(::getLogger) ?: globalLogger
     internal val nativeOut: PrintStream = System.out
     internal val nativeErr: PrintStream = System.err
 
@@ -89,17 +113,19 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
     {
         System.setOut(out)
         System.setErr(err)
-        ForumLogger.logger.setUseParentHandlers(false)
-        ForumLogger.logger.handlers.forEach(ForumLogger.logger::removeHandler)
-        ForumLogger.logger.addHandler(ToConsoleHandler)
-        ForumLogger.logger.addHandler(ToFileHandler)
-        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: warning("logo not found")
+        globalLogger.logger.setUseParentHandlers(false)
+        globalLogger.logger.handlers.forEach(globalLogger.logger::removeHandler)
+        globalLogger.logger.addHandler(ToConsoleHandler)
+        globalLogger.logger.addHandler(ToFileHandler)
+        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: getLogger().warning("logo not found")
         ConfigLoader.reload("logger.yml")
     }
 
     private class LoggerOutputStream(private val level: Level): OutputStream()
     {
         val arrayOutputStream = ByteArrayOutputStream()
+
+        @CallerSensitive
         override fun write(b: Int) = safe()
         {
             if (b == '\n'.code)
@@ -110,7 +136,11 @@ object ForumLogger: LoggerUtils(Logger.getLogger(""))
                     str = arrayOutputStream.toString()
                     arrayOutputStream.reset()
                 }
-                ForumLogger.logger.log(level, str)
+                getCallerClasses().stream()
+                    .filter { !(it.packageName.startsWith("java.io")||it.packageName.startsWith("kotlin.io")) }
+                    .findFirst()
+                    .map(::getLogger)
+                    .getOrDefault(getLogger()).logger.log(level, str)
             }
             else synchronized(arrayOutputStream) { arrayOutputStream.write(b) }
         }

@@ -33,5 +33,5 @@ data class LoggerConfig(
 var loggerConfig: LoggerConfig by config(
     "logger.yml",
     LoggerConfig(listOf(), true, "INFO", false),
-    { _, new -> ForumLogger.logger.setLevel(new.level) }
+    { _, new -> ForumLogger.globalLogger.logger.setLevel(new.level) }
 )

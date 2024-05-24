@@ -5,6 +5,8 @@ import subit.database.EmailCodes.EmailCodeUsage
 import subit.logger.ForumLogger
 import subit.utils.sendEmail
 
+private val logger = ForumLogger.getLogger()
+
 interface EmailCodes
 {
     @Serializable
@@ -27,8 +29,8 @@ suspend fun EmailCodes.sendEmailCode(email: String, usage: EmailCodeUsage)
 {
     val code = (1..6).map { ('0'..'9').random() }.joinToString("")
     sendEmail(email, code, usage).invokeOnCompletion {
-        if (it != null) ForumLogger.severe("发送邮件失败: email: $email, usage: $usage", it)
-        else ForumLogger.info("发送邮件成功: $email, $code, $usage")
+        if (it != null) logger.severe("发送邮件失败: email: $email, usage: $usage", it)
+        else logger.info("发送邮件成功: $email, $code, $usage")
     }
     addEmailCode(email, code, usage)
 }

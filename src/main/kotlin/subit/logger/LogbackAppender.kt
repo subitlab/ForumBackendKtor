@@ -36,7 +36,7 @@ class LogbackAppender: AppenderBase<ILoggingEvent>()
                     .toArray { size: Int -> arrayOfNulls(size) })
             record.thrown = throwable
         }
-        ForumLogger.logger.log(record)
+        ForumLogger.globalLogger.logger.log(record)
     }.onFailure { AnsiConsole.sysOut().println("Failure in LogbackAppender, message: ${it.stackTraceToString()}"); }.run { }
 
     private fun fromInt(id: Int): Level

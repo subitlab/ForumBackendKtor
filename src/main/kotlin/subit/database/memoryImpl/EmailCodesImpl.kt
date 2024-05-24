@@ -4,8 +4,7 @@ import subit.config.emailConfig
 import subit.database.EmailCodes
 import subit.logger.ForumLogger
 import subit.utils.ForumThreadGroup
-import java.util.Collections
-import java.util.Date
+import java.util.*
 
 class EmailCodesImpl: EmailCodes
 {
@@ -15,6 +14,7 @@ class EmailCodesImpl: EmailCodes
 
     init
     {
+        val logger = ForumLogger.getLogger()
         // 启动定期清理过期验证码任务
         ForumThreadGroup.startTask(
             ForumThreadGroup.Task(
@@ -22,8 +22,8 @@ class EmailCodesImpl: EmailCodes
                 interval = 1000/*ms*/*60/*s*/*5,/*m*/
             )
             {
-                ForumLogger.config("Clearing expired email codes")
-                ForumLogger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
+                logger.config("Clearing expired email codes")
+                logger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
             }
         )
     }

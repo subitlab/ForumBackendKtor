@@ -53,6 +53,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
      * 数据库
      */
     private lateinit var config: ApplicationConfig
+    private val logger = ForumLogger.getLogger()
 
     /**
      * 创建Hikari数据源,即数据库连接池
@@ -84,7 +85,7 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
         config = environment.config
         val lazyInit = config.propertyOrNull("database.sql.lazyInit")?.getString()?.toBoolean() ?: true
 
-        ForumLogger.info("Init database. impl: sql, LazyInit: $lazyInit")
+        logger.info("Init database. impl: sql, LazyInit: $lazyInit")
         val url = config.propertyOrNull("database.sql.url")?.getString()
         val driver = config.propertyOrNull("database.sql.driver")?.getString()
         val user = config.propertyOrNull("database.sql.user")?.getString()
@@ -92,18 +93,18 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
         if (url == null || driver == null)
         {
-            ForumLogger.severe("${RED}Database configuration not found.")
-            ForumLogger.severe("${RED}Please add properties in application.conf:")
-            ForumLogger.severe("${CYAN}database.sql.url${RESET}")
-            ForumLogger.severe("${CYAN}database.sql.driver${RESET}")
-            ForumLogger.severe("${CYAN}database.sql.user${GREEN} (optional)${RESET}")
-            ForumLogger.severe("${CYAN}database.sql.password${GREEN} (optional)${RESET}")
-            ForumLogger.severe("${CYAN}database.sql.lazyInit${GREEN} (optional, default = true)${RESET}")
+            logger.severe("${RED}Database configuration not found.")
+            logger.severe("${RED}Please add properties in application.conf:")
+            logger.severe("${CYAN}database.sql.url${RESET}")
+            logger.severe("${CYAN}database.sql.driver${RESET}")
+            logger.severe("${CYAN}database.sql.user${GREEN} (optional)${RESET}")
+            logger.severe("${CYAN}database.sql.password${GREEN} (optional)${RESET}")
+            logger.severe("${CYAN}database.sql.lazyInit${GREEN} (optional, default = true)${RESET}")
 
             shutdown(1, "Database configuration not found.")
         }
 
-        ForumLogger.info("Load database configuration. url: $url, driver: $driver, user: $user")
+        logger.info("Load database configuration. url: $url, driver: $driver, user: $user")
         val module = module(!lazyInit)
         {
             named("database")
@@ -132,8 +133,8 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
         if (!lazyInit)
         {
-            ForumLogger.info("${CYAN}Using database implementation: ${RED}sql${CYAN}, and ${RED}lazyInit${CYAN} is ${GREEN}false.")
-            ForumLogger.info("${CYAN}It may take a while to initialize the database. Please wait patiently.")
+            logger.info("${CYAN}Using database implementation: ${RED}sql${CYAN}, and ${RED}lazyInit${CYAN} is ${GREEN}false.")
+            logger.info("${CYAN}It may take a while to initialize the database. Please wait patiently.")
 
             (get<BannedWords>() as DaoSqlImpl<*>).table
             (get<Blocks>() as DaoSqlImpl<*>).table

@@ -23,7 +23,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
         {
             if (args.isEmpty()) // 没参数就打印当前日志等级
             {
-                CommandSet.out.println("logger level: ${ForumLogger.logger.level.name}")
+                CommandSet.out.println("logger level: ${ForumLogger.globalLogger.logger.level.name}")
             }
             else try
             {

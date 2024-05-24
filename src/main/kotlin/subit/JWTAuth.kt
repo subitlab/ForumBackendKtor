@@ -23,6 +23,7 @@ import java.util.*
  */
 object JWTAuth: KoinComponent
 {
+    private val logger = ForumLogger.getLogger()
     @Serializable
     data class Token(val token: String)
 
@@ -46,7 +47,7 @@ object JWTAuth: KoinComponent
         val key = environment.config.propertyOrNull("jwt.secret")?.getString()
         if (key == null)
         {
-            ForumLogger.info("${CYAN}jwt.secret${RED} not found in config file, use random secret key")
+            logger.info("${CYAN}jwt.secret${RED} not found in config file, use random secret key")
             SECRET_KEY = UUID.randomUUID().toString()
         }
         else
