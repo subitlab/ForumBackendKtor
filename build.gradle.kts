@@ -65,7 +65,7 @@ dependencies {
     // 密码加密算法
     implementation("at.favre.lib:bcrypt:0.10.2")
 
-    implementation("me.nullaqua:BluestarAPI-kotlin-reflect:4.0.2")
+    implementation("me.nullaqua:BluestarAPI-kotlin-reflect:4.1.0")
 
 
     testImplementation("io.ktor:ktor-server-tests-jvm")

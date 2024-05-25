@@ -183,6 +183,11 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
 
         override fun execute(args: List<String>): Boolean
         {
+            if (args.isEmpty())
+            {
+                CommandSet.out.println("show logger name: ${loggerConfig.showLoggerName}")
+                return true
+            }
             if (args.size != 1) return false
             val show = args[0].toBooleanStrictOrNull() ?: return false
             loggerConfig = loggerConfig.copy(showLoggerName = show)

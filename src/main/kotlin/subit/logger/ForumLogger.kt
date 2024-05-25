@@ -47,7 +47,8 @@ object ForumLogger
     }
 
     fun getLogger(clazz: Class<*>): LoggerUtils = getLogger(clazz.kotlin)
-
+    @JvmName("getLoggerInline")
+    inline fun <reified T> getLogger(): LoggerUtils = getLogger(T::class)
     @CallerSensitive
     fun getLogger(): LoggerUtils = getCallerClass()?.let(::getLogger) ?: globalLogger
     internal val nativeOut: PrintStream = System.out
@@ -117,8 +118,8 @@ object ForumLogger
         globalLogger.logger.handlers.forEach(globalLogger.logger::removeHandler)
         globalLogger.logger.addHandler(ToConsoleHandler)
         globalLogger.logger.addHandler(ToFileHandler)
-        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: getLogger().warning("logo not found")
         ConfigLoader.reload("logger.yml")
+        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: getLogger().warning("logo not found")
     }
 
     private class LoggerOutputStream(private val level: Level): OutputStream()
@@ -137,7 +138,11 @@ object ForumLogger
                     arrayOutputStream.reset()
                 }
                 getCallerClasses().stream()
-                    .filter { !(it.packageName.startsWith("java.io")||it.packageName.startsWith("kotlin.io")) }
+                    .filter {
+                        !(it.packageName.startsWith("java") ||
+                          (it.packageName.startsWith("kotlin"))) ||
+                        (it.packageName.startsWith("jdk"))
+                    }
                     .findFirst()
                     .map(::getLogger)
                     .getOrDefault(getLogger()).logger.log(level, str)
