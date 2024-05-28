@@ -70,6 +70,7 @@ class ConfigLoader<T: Any> private constructor(
             emailConfig
             filesConfig
             loggerConfig
+            systemConfig
         }
 
         /**
