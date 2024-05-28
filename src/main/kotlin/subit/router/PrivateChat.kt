@@ -118,27 +118,17 @@ fun Route.privateChat()
             }
         }) { getIsBlock() }
 
-        post("/block/{userId}", {
-            description = "拉黑某人"
+        post("/block/{userId}/{isBlock}", {
+            description = "修改对某人的拉黑状态"
             request {
                 pathParameter<UserId>("userId") { required = true; description = "对方的id" }
+                pathParameter<Boolean>("isBlock") { required = true; description = "是否拉黑" }
             }
             response {
                 statuses(HttpStatus.OK)
                 statuses(HttpStatus.Unauthorized)
             }
-        }) { setBlock(true) }
-
-        post("/unblock/{userId}", {
-            description = "解除拉黑某人"
-            request {
-                pathParameter<UserId>("userId") { required = true; description = "对方的id" }
-            }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { setBlock(false) }
+        }) { setBlock() }
     }
 }
 
@@ -208,10 +198,11 @@ private suspend fun Context.getIsBlock()
     call.respond(IsBlock(isBlock))
 }
 
-private suspend fun Context.setBlock(isBlock: Boolean)
+private suspend fun Context.setBlock()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val isBlock = call.parameters["isBlock"]?.toBooleanStrictOrNull() ?: return call.respond(HttpStatus.BadRequest)
     get<PrivateChats>().setIsBlock(userId, loginUser.id, isBlock)
     call.respond(HttpStatus.OK)
 }
