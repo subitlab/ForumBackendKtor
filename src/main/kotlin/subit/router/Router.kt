@@ -26,6 +26,7 @@ import subit.router.privateChat.privateChat
 import subit.router.report.report
 import subit.router.user.user
 import subit.utils.HttpStatus
+import subit.config.systemConfig
 
 typealias Context = PipelineContext<*, ApplicationCall>
 
@@ -77,6 +78,13 @@ fun Application.router() = routing()
 
         intercept(ApplicationCallPipeline.Call)
         {
+            //检测是否在维护中
+            if (systemConfig.systemMaintaining)
+            {
+                call.respond(HttpStatus.Maintaining)
+                finish()
+            }
+
             // 检查用户是否被封禁
             getLoginUser()?.id?.apply {
                 if (prohibits.isProhibited(this))
