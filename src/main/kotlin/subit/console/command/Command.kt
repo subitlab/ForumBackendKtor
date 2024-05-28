@@ -83,7 +83,8 @@ object CommandSet: TreeCommand(
     Logger,
     Shell,
     Color,
-    Whitelist
+    Whitelist,
+    Maintain
 )
 {
     private val logger = ForumLogger.getLogger()
