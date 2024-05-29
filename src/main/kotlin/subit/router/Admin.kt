@@ -36,7 +36,12 @@ fun Route.admin()
         post("/createUser", {
             description = "创建用户, 需要超级管理员权限, 使用此接口创建用户无需邮箱验证码, 但需要邮箱为学校邮箱"
             request {
-                body<CreateUser> { required = true; description = "新用户信息" }
+                body<CreateUser>
+                {
+                    required = true
+                    description = "新用户信息"
+                    example("example", CreateUser("username", "password", "email"))
+                }
             }
             response {
                 statuses(
@@ -52,7 +57,15 @@ fun Route.admin()
         post("/prohibitUser", {
             description = "封禁用户, 需要当前用户的权限大于ADMIN且大于对方的权限"
             request {
-                body<ProhibitUser> { required = true; description = "封禁信息, 其中time是封禁结束的时间戳" }
+                body<ProhibitUser>
+                {
+                    required = true
+                    description = "封禁信息, 其中time是封禁结束的时间戳"
+                    example(
+                        "example",
+                        ProhibitUser(UserId(1), true, System.currentTimeMillis()+1000*60*60*24, "reason")
+                    )
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -65,14 +78,19 @@ fun Route.admin()
                 paged()
             }
             response {
-                statuses<Slice<Prohibit>>(HttpStatus.OK)
+                statuses<Slice<Prohibit>>(HttpStatus.OK, example = sliceOf(Prohibit.example))
             }
         }) { prohibitList() }
 
         post("/changePermission", {
             description = "修改用户权限, 需要当前用户的权限大于ADMIN且大于对方的权限"
             request {
-                body<ChangePermission> { required = true; description = "修改信息" }
+                body<ChangePermission>
+                {
+                    required = true
+                    description = "修改信息"
+                    example("example", ChangePermission(UserId(1), PermissionLevel.ADMIN))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -110,12 +128,12 @@ private suspend fun Context.createUser()
 
 @Serializable
 private data class ProhibitUser(val id: UserId, val prohibit: Boolean, val time: Long, val reason: String)
+
 private suspend fun Context.prohibitUser()
 {
     val users = get<Users>()
     val prohibits = get<Prohibits>()
     val operations = get<Operations>()
-
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val prohibitUser = receiveAndCheckBody<ProhibitUser>()
     val user = users.getUser(prohibitUser.id) ?: return call.respond(HttpStatus.NotFound)
@@ -144,6 +162,7 @@ private suspend fun Context.prohibitList()
 
 @Serializable
 private data class ChangePermission(val id: UserId, val permission: PermissionLevel)
+
 private suspend fun Context.changePermission()
 {
     val users = get<Users>()
@@ -154,9 +173,11 @@ private suspend fun Context.changePermission()
         return call.respond(HttpStatus.Forbidden)
     users.changePermission(changePermission.id, changePermission.permission)
     get<Operations>().addOperation(loginUser.id, changePermission)
-    if (loginUser.id != changePermission.id) get<Notices>().createNotice(Notice.makeSystemNotice(
-        user = changePermission.id,
-        content = "您的全局权限已被修改"
-    ))
+    if (loginUser.id != changePermission.id) get<Notices>().createNotice(
+        Notice.makeSystemNotice(
+            user = changePermission.id,
+            content = "您的全局权限已被修改"
+        )
+    )
     call.respond(HttpStatus.OK)
 }

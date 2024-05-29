@@ -24,9 +24,10 @@ interface Id<ID, T>: Comparable<ID> where T: Number, T: Comparable<T>, ID: Id<ID
     }
 }
 
+typealias RawBlockId = Int
 @JvmInline
 @Serializable
-value class BlockId(override val value: Int): Id<BlockId, Int>
+value class BlockId(override val value: RawBlockId): Id<BlockId, RawBlockId>
 {
     override fun toString(): String = value.toString()
 
@@ -38,9 +39,10 @@ value class BlockId(override val value: Int): Id<BlockId, Int>
     }
 }
 
+typealias RawUserId = Int
 @JvmInline
 @Serializable
-value class UserId(override val value: Int): Id<UserId, Int>
+value class UserId(override val value: RawUserId): Id<UserId, RawUserId>
 {
     override fun toString(): String = value.toString()
 
@@ -52,9 +54,10 @@ value class UserId(override val value: Int): Id<UserId, Int>
     }
 }
 
+typealias RawPostId = Long
 @JvmInline
 @Serializable
-value class PostId(override val value: Long): Id<PostId, Long>
+value class PostId(override val value: RawPostId): Id<PostId, RawPostId>
 {
     override fun toString(): String = value.toString()
 
@@ -66,9 +69,10 @@ value class PostId(override val value: Long): Id<PostId, Long>
     }
 }
 
+typealias RawCommentId = Long
 @JvmInline
 @Serializable
-value class CommentId(override val value: Long): Id<CommentId, Long>
+value class CommentId(override val value: RawCommentId): Id<CommentId, RawCommentId>
 {
     override fun toString(): String = value.toString()
 
@@ -80,9 +84,10 @@ value class CommentId(override val value: Long): Id<CommentId, Long>
     }
 }
 
+typealias RawReportId = Long
 @JvmInline
 @Serializable
-value class ReportId(override val value: Long): Id<ReportId, Long>
+value class ReportId(override val value: RawReportId): Id<ReportId, RawReportId>
 {
     override fun toString(): String = value.toString()
 
@@ -94,9 +99,10 @@ value class ReportId(override val value: Long): Id<ReportId, Long>
     }
 }
 
+typealias RawNoticeId = Long
 @JvmInline
 @Serializable
-value class NoticeId(override val value: Long): Id<NoticeId, Long>
+value class NoticeId(override val value: RawNoticeId): Id<NoticeId, RawNoticeId>
 {
     override fun toString(): String = value.toString()
 
@@ -108,9 +114,10 @@ value class NoticeId(override val value: Long): Id<NoticeId, Long>
     }
 }
 
+typealias RawBlockUserId = Long
 @JvmInline
 @Serializable
-value class BlockUserId private constructor(override val value: Long): Id<BlockUserId, Long>
+value class BlockUserId private constructor(override val value: RawBlockUserId): Id<BlockUserId, RawBlockUserId>
 {
     constructor(uid: UserId, bid: BlockId): this((bid.value.toLong() shl 32) or uid.value.toLong())
 
@@ -121,7 +128,7 @@ value class BlockUserId private constructor(override val value: Long): Id<BlockU
         fun String.toBlockUserId() = BlockUserId(toLong())
         fun String.toBlockUserIdOrNull() = toLongOrNull()?.let(::BlockUserId)
         fun Number.toBlockUserId() = BlockUserId(toLong())
-        fun byRawValue(value: Long) = BlockUserId(value)
+        fun byRawValue(value: RawBlockUserId) = BlockUserId(value)
     }
 
     val user get() = UserId(value.toInt())

@@ -10,11 +10,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.Report
-import subit.dataClasses.ReportId
+import subit.dataClasses.*
 import subit.dataClasses.ReportId.Companion.toReportIdOrNull
-import subit.dataClasses.ReportObject
-import subit.dataClasses.Slice
 import subit.database.Reports
 import subit.database.checkPermission
 import subit.database.receiveAndCheckBody
@@ -37,9 +34,23 @@ fun Route.report()
         post("/{type}/{id}", {
             description = "举报一个帖子/用户/板块/评论"
             request {
-                pathParameter<ReportObject>("type") { required = true; description = "举报对象" }
-                pathParameter<Long>("id") { required = true; description = "帖子id" }
-                body<ReportContent> { required = true; description = "举报内容" }
+                pathParameter<ReportObject>("type")
+                {
+                    required = true
+                    description = "举报对象"
+                    example = ReportObject.POST
+                }
+                pathParameter<RawPostId>("id")
+                {
+                    required = true
+                    description = "帖子id"
+                }
+                body<ReportContent>
+                {
+                    required = true
+                    description = "举报内容"
+                    example("example", ReportContent("举报内容"))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound)
@@ -49,23 +60,31 @@ fun Route.report()
         get("/list", {
             description = "获取举报列表"
             request {
-                queryParameter<String>("filter") {
-                    required = true; description = "all表示全部, true是已受理, false未受理"
+                queryParameter<String>("filter")
+                {
+                    required = true
+                    description = "all表示全部, true是已受理, false未受理"
+                    example = "all"
                 }
                 paged()
             }
             response {
-                statuses<Slice<ReportId>>(HttpStatus.OK, HttpStatus.Forbidden)
+                statuses<Slice<ReportId>>(HttpStatus.OK, example = sliceOf(ReportId(0)))
+                statuses(HttpStatus.Forbidden)
             }
         }) { getReports() }
 
         get("/{id}", {
             description = "获取一个举报"
             request {
-                pathParameter<ReportId>("id") { required = true; description = "举报id" }
+                pathParameter<ReportId>("id")
+                {
+                    required = true
+                    description = "举报id"
+                }
             }
             response {
-                statuses<Report>(HttpStatus.OK)
+                statuses<Report>(HttpStatus.OK, example = Report.example)
                 statuses(HttpStatus.NotFound, HttpStatus.Forbidden)
             }
         }) { getReport() }
@@ -73,7 +92,11 @@ fun Route.report()
         post("/handled/{id}", {
             description = "处理一个举报"
             request {
-                pathParameter<ReportId>("id") { required = true; description = "举报id" }
+                pathParameter<ReportId>("id")
+                {
+                    required = true
+                    description = "举报id"
+                }
             }
             response {
                 statuses(HttpStatus.OK)

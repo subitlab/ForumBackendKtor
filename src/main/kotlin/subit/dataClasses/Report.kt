@@ -18,6 +18,18 @@ data class Report(
     val user: UserId,
     val reason: String
 )
+{
+    companion object
+    {
+        val example = Report(
+            ReportId(1),
+            ReportObject.POST,
+            1,
+            UserId(1),
+            "举报原因"
+        )
+    }
+}
 
 /**
  * 举报对象类型

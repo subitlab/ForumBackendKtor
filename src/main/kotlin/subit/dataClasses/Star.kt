@@ -14,3 +14,13 @@ data class Star(
     val post: PostId?,
     val time: Long
 )
+{
+    companion object
+    {
+        val example = Star(
+            UserId(1),
+            PostId(1),
+            System.currentTimeMillis()
+        )
+    }
+}

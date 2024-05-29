@@ -76,13 +76,22 @@ fun OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: Stri
         }
     }
 }
+inline fun <reified T: Any> OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "返回体", example: T)
+{
+    return statuses<T>(*statuses, bodyDescription = bodyDescription, examples = listOf(example))
+}
 @JvmName("statusesWithBody")
-inline fun <reified T> OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "返回体")
+inline fun <reified T: Any> OpenApiResponses.statuses(vararg statuses: HttpStatus, bodyDescription: String = "返回体", examples: List<T> = emptyList())
 {
     statuses.forEach {
         it.message to {
             description = "code: ${it.code.value}, message: ${it.message}"
-            body<T> { description = bodyDescription }
+            body<T>
+            {
+                description = bodyDescription
+                if (examples.size == 1) example("example", examples.first())
+                else examples.forEachIndexed { index, t -> example("example$index", t) }
+            }
         }
     }
 }

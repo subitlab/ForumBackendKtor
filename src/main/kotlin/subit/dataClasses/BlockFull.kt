@@ -26,3 +26,20 @@ data class BlockFull(
     val anonymous: PermissionLevel,
     val state: State
 )
+{
+    companion object
+    {
+        val example = BlockFull(
+            BlockId(1),
+            "板块名称",
+            "板块描述",
+            null,
+            UserId(1),
+            PermissionLevel.ADMIN,
+            PermissionLevel.ADMIN,
+            PermissionLevel.ADMIN,
+            PermissionLevel.ADMIN,
+            State.NORMAL
+        )
+    }
+}

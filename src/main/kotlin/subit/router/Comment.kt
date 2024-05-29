@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.comment
 
 import io.github.smiley4.ktorswaggerui.dsl.delete
@@ -31,11 +32,19 @@ fun Route.comment()
             description = "评论一个帖子"
             request {
                 authenticated(true)
-                pathParameter<PostId>("postId"){ required = true; description = "帖子id" }
-                body<CommentContent> { description = "评论内容"}
+                pathParameter<RawPostId>("postId")
+                {
+                    required = true
+                    description = "帖子id"
+                }
+                body<CommentContent>
+                {
+                    description = "评论内容"
+                    example("example", CommentContent("评论内容"))
+                }
             }
             response {
-                statuses<CommentIdResponse>(HttpStatus.OK)
+                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
                 statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
             }
         }) { commentPost() }
@@ -44,11 +53,19 @@ fun Route.comment()
             description = "评论一个评论"
             request {
                 authenticated(true)
-                pathParameter<CommentId>("commentId"){ required = true; description = "评论id" }
-                body<CommentContent> { description = "评论内容"}
+                pathParameter<RawCommentId>("commentId")
+                {
+                    required = true
+                    description = "评论id"
+                }
+                body<CommentContent>
+                {
+                    description = "评论内容"
+                    example("example", CommentContent("评论内容"))
+                }
             }
             response {
-                statuses<CommentIdResponse>(HttpStatus.OK)
+                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
                 statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
             }
         }) { commentComment() }
@@ -57,7 +74,11 @@ fun Route.comment()
             description = "删除一个评论, 需要板块管理员权限"
             request {
                 authenticated(true)
-                pathParameter<CommentId>("commentId"){ required = true; description = "评论id" }
+                pathParameter<RawCommentId>("commentId")
+                {
+                    required = true
+                    description = "评论id"
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -69,10 +90,14 @@ fun Route.comment()
             description = "获取一个帖子的评论列表"
             request {
                 authenticated(false)
-                pathParameter<PostId>("postId"){ required = true; description = "帖子id" }
+                pathParameter<RawPostId>("postId")
+                {
+                    required = true
+                    description = "帖子id"
+                }
             }
             response {
-                statuses<List<CommentId>>(HttpStatus.OK)
+                statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
                 statuses(HttpStatus.NotFound)
             }
         }) { getPostComments() }
@@ -81,10 +106,14 @@ fun Route.comment()
             description = "获取一个评论的评论列表"
             request {
                 authenticated(false)
-                pathParameter<CommentId>("commentId"){ required = true; description = "评论id" }
+                pathParameter<RawCommentId>("commentId")
+                {
+                    required = true
+                    description = "评论id"
+                }
             }
             response {
-                statuses<List<CommentId>>(HttpStatus.OK)
+                statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
                 statuses(HttpStatus.NotFound)
             }
         }) { getCommentComments() }
@@ -93,10 +122,14 @@ fun Route.comment()
             description = "获取一个评论的信息"
             request {
                 authenticated(false)
-                pathParameter<CommentId>("commentId"){ description = "评论id" }
+                pathParameter<RawCommentId>("commentId")
+                {
+                    required = true
+                    description = "评论id"
+                }
             }
             response {
-                statuses<Comment>(HttpStatus.OK)
+                statuses<Comment>(HttpStatus.OK, example = Comment.example)
                 statuses(HttpStatus.NotFound)
             }
         }) { getComment() }
@@ -105,6 +138,7 @@ fun Route.comment()
 
 @Serializable
 private data class CommentContent(val content: String)
+
 @Serializable
 private data class CommentIdResponse(val id: CommentId)
 
@@ -121,11 +155,13 @@ private suspend fun Context.commentPost()
     get<Comments>().createComment(post = postId, parent = null, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
 
-    if (loginUser.id != author) get<Notices>().createNotice(Notice.makeObjectMessage(
-        type = Notice.Type.POST_COMMENT,
-        user = author,
-        obj = postId,
-    ))
+    if (loginUser.id != author) get<Notices>().createNotice(
+        Notice.makeObjectMessage(
+            type = Notice.Type.POST_COMMENT,
+            user = author,
+            obj = postId,
+        )
+    )
 }
 
 private suspend fun Context.commentComment()
@@ -143,11 +179,13 @@ private suspend fun Context.commentComment()
     get<Comments>().createComment(post = null, parent = commentId, author = loginUser.id, content = content)
     ?: return call.respond(HttpStatus.NotFound)
 
-    if (loginUser.id != author) get<Notices>().createNotice(Notice.makeObjectMessage(
-        type = Notice.Type.COMMENT_REPLY,
-        user = author,
-        obj = commentId,
-    ))
+    if (loginUser.id != author) get<Notices>().createNotice(
+        Notice.makeObjectMessage(
+            type = Notice.Type.COMMENT_REPLY,
+            user = author,
+            obj = commentId,
+        )
+    )
 }
 
 private suspend fun Context.deleteComment()
@@ -167,7 +205,8 @@ private suspend fun Context.getPostComments()
     get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanRead(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
-    get<Comments>().getComments(post = postId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Comments>().getComments(post = postId)?.map(Comment::id)?.let { call.respond(it) }
+    ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.getCommentComments()
@@ -178,7 +217,9 @@ private suspend fun Context.getCommentComments()
             checkPermission { checkCanRead(postInfo) }
         }
     } ?: return call.respond(HttpStatus.NotFound)
-    get<Comments>().getComments(parent = commentId)?.map(Comment::id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Comments>().getComments(parent = commentId)
+        ?.map(Comment::id)
+        ?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.getComment()

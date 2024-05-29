@@ -27,6 +27,19 @@ data class UserFull(
 ): Principal
 {
     fun toBasicUserInfo() = BasicUserInfo(id, username, registrationTime, introduction, showStars)
+    companion object
+    {
+        val example = UserFull(
+            UserId(1),
+            "username",
+            "email",
+            System.currentTimeMillis(),
+            "introduction",
+            true,
+            PermissionLevel.NORMAL,
+            PermissionLevel.NORMAL
+        )
+    }
 }
 fun UserFull?.hasGlobalAdmin() = this != null && (this.permission >= PermissionLevel.ADMIN)
 
@@ -41,3 +54,9 @@ data class BasicUserInfo(
     val introduction: String?,
     val showStars: Boolean
 )
+{
+    companion object
+    {
+        val example = UserFull.example.toBasicUserInfo()
+    }
+}

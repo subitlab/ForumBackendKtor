@@ -19,10 +19,7 @@ import subit.dataClasses.*
 import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.*
 import subit.logger.ForumLogger
-import subit.router.Context
-import subit.router.authenticated
-import subit.router.get
-import subit.router.paged
+import subit.router.*
 import subit.utils.AvatarUtils
 import subit.utils.HttpStatus
 import subit.utils.respond
@@ -31,7 +28,6 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 val logger = ForumLogger.getLogger()
-
 fun Route.user()
 {
     route("/user", {
@@ -46,16 +42,26 @@ fun Route.user()
                 """.trimIndent()
             request {
                 authenticated(false)
-                pathParameter<Long>("id") { required = true; description = "用户ID" }
+                pathParameter<RawUserId>("id")
+                {
+                    required = true
+                    description = "用户ID"
+                }
             }
             response {
                 "200: 获取完整用户信息成功" to {
                     description = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回"
                     body<UserFull>()
+                    {
+                        example("example", UserFull.example)
+                    }
                 }
                 "200: 获取基础用户的信息成功" to {
                     description = "当id不为0即获取其他用户的信息且user权限低于ADMIN时返回"
                     body<BasicUserInfo>()
+                    {
+                        example("example", BasicUserInfo.example)
+                    }
                 }
                 statuses(HttpStatus.NotFound, HttpStatus.Unauthorized)
             }
@@ -65,14 +71,19 @@ fun Route.user()
             description = "修改个人简介, 修改自己的需要user权限在NORMAL以上, 修改他人需要在ADMIN以上"
             request {
                 authenticated(true)
-                pathParameter<Long>("id")
+                pathParameter<RawUserId>("id")
                 {
                     required = true
                     description = """
                         要修改的用户ID, 0为当前登陆用户
                     """.trimIndent()
                 }
-                body<ChangeIntroduction> { required = true; description = "个人简介" }
+                body<ChangeIntroduction>
+                {
+                    required = true
+                    description = "个人简介"
+                    example("example", ChangeIntroduction("个人简介"))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -84,12 +95,10 @@ fun Route.user()
             description = "修改头像, 修改他人头像要求user权限在ADMIN以上"
             request {
                 authenticated(true)
-                pathParameter<Long>("id")
+                pathParameter<RawUserId>("id")
                 {
                     required = true
-                    description = """
-                        要修改的用户ID, 0为当前登陆用户
-                    """.trimIndent()
+                    description = "要修改的用户ID, 0为当前登陆用户"
                 }
                 body()
                 {
@@ -114,12 +123,10 @@ fun Route.user()
             description = "获取头像"
             request {
                 authenticated(false)
-                pathParameter<Long>("id")
+                pathParameter<RawUserId>("id")
                 {
                     required = true
-                    description = """
-                        要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆
-                    """.trimIndent()
+                    description = "要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆"
                 }
             }
             response {
@@ -139,12 +146,10 @@ fun Route.user()
             description = "删除头像, 即恢复默认头像, 删除他人头像要求user权限在ADMIN以上"
             request {
                 authenticated(true)
-                pathParameter<Long>("id")
+                pathParameter<RawUserId>("id")
                 {
                     required = true
-                    description = """
-                        要删除的用户ID, 0为当前登陆用户
-                    """.trimIndent()
+                    description = "要删除的用户ID, 0为当前登陆用户"
                 }
             }
             response {
@@ -161,19 +166,20 @@ fun Route.user()
             description = "获取用户收藏的帖子"
             request {
                 authenticated(false)
-                pathParameter<Long>("id")
+                pathParameter<RawUserId>("id")
                 {
                     required = true
                     description = """
-                        要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆。
-                        若目标用户
+                        要获取的用户ID, 0为当前登陆用户
+                        
+                        若目标用户ID不是0, 且当前登陆用户不是管理员, 则目标用户需要展示收藏, 否则返回Forbidden
                     """.trimIndent()
                 }
                 paged()
             }
             response {
-                statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized)
-                statuses<Slice<Long>>(HttpStatus.OK)
+                statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.Forbidden)
+                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
             }
         }) { getStars() }
 
@@ -181,7 +187,12 @@ fun Route.user()
             description = "切换是否公开收藏"
             request {
                 authenticated(true)
-                body<SwitchStars> { required = true; description = "是否公开收藏" }
+                body<SwitchStars>
+                {
+                    required = true
+                    description = "是否公开收藏"
+                    example("example", SwitchStars(true))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -192,11 +203,16 @@ fun Route.user()
         get("/search", {
             description = "搜索用户 会返回所有用户名包含key的用户"
             request {
-                queryParameter<String>("key") { required = true;description = "关键字" }
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "关键字"
+                    example = "关键字"
+                }
                 paged()
             }
             response {
-                statuses<Slice<UserId>>(HttpStatus.OK)
+                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
             }
         }) { searchUser() }
     }
@@ -204,7 +220,6 @@ fun Route.user()
 
 private suspend fun Context.getUserInfo()
 {
-
     val id = call.parameters["id"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser()
     logger.config("user=${loginUser?.id} get user info id=$id")
@@ -346,7 +361,6 @@ private suspend fun Context.switchStars()
 private suspend fun Context.searchUser()
 {
     val username = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val (begin, count) = call.getPage()
     call.respond(get<Users>().searchUser(username, begin, count).map(UserFull::id))
 }

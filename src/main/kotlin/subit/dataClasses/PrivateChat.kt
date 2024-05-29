@@ -16,3 +16,14 @@ data class PrivateChat(
     val time: Long,
     val content: String,
 )
+{
+    companion object
+    {
+        val example = PrivateChat(
+            UserId(1),
+            UserId(2),
+            System.currentTimeMillis(),
+            "私信内容"
+        )
+    }
+}

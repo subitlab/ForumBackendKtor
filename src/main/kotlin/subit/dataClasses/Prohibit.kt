@@ -16,3 +16,14 @@ data class Prohibit(
     val reason: String,
     val operator: UserId,
 )
+{
+    companion object
+    {
+        val example = Prohibit(
+            UserId(1),
+            System.currentTimeMillis(),
+            "封禁原因",
+            UserId(2)
+        )
+    }
+}

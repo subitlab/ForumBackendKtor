@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import subit.dataClasses.PostId
 import subit.dataClasses.Slice
+import subit.dataClasses.sliceOf
 import subit.database.Posts
 import subit.router.Context
 import subit.router.get
@@ -23,10 +24,15 @@ fun Route.home()
         get("/recommend", {
             description = "获取首页推荐帖子"
             request {
-                queryParameter<Int>("count") { required = false; description = "获取数量, 不填为10" }
+                queryParameter<Int>("count")
+                {
+                    required = false
+                    description = "获取数量, 不填为10"
+                    example = 10
+                }
             }
             response {
-                statuses<Slice<PostId>>(HttpStatus.OK)
+                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
                 statuses(HttpStatus.NotFound)
             }
         }) { getHotPosts() }

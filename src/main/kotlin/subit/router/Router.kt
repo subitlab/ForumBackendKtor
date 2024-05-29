@@ -11,6 +11,7 @@ import org.koin.core.qualifier.Qualifier
 import org.koin.ktor.ext.get
 import org.koin.ktor.ext.inject
 import subit.JWTAuth.getLoginUser
+import subit.config.systemConfig
 import subit.database.Prohibits
 import subit.database.checkParameters
 import subit.router.admin.admin
@@ -26,7 +27,6 @@ import subit.router.privateChat.privateChat
 import subit.router.report.report
 import subit.router.user.user
 import subit.utils.HttpStatus
-import subit.config.systemConfig
 
 typealias Context = PipelineContext<*, ApplicationCall>
 
@@ -54,11 +54,13 @@ fun OpenApiRequest.paged()
     {
         this.required = true
         this.description = "起始位置"
+        this.example = 0L
     }
     queryParameter<Int>("count")
     {
         this.required = true
         this.description = "获取数量"
+        this.example = 10
     }
 }
 

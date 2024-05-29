@@ -27,10 +27,15 @@ fun Route.auth()
         post("/register", {
             description = "注册, 若成功返回token"
             request {
-                body<RegisterInfo> { required = true; description = "注册信息" }
+                body<RegisterInfo>
+                {
+                    required = true
+                    description = "注册信息"
+                    example("example", RegisterInfo("username", "password", "email", "code"))
+                }
             }
             this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
                 statuses(
                     HttpStatus.WrongEmailCode,
                     HttpStatus.EmailExist,
@@ -49,10 +54,11 @@ fun Route.auth()
                 {
                     required = true
                     description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                    example("example", LoginInfo(email = "email", password = "password", id = UserId(0)))
                 }
             }
             this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
                 statuses(
                     HttpStatus.PasswordError,
                     HttpStatus.AccountNotExist,
@@ -67,10 +73,11 @@ fun Route.auth()
                 {
                     required = true
                     description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                    example("example", LoginByCodeInfo(email = "email@abc.com", code = "123456"))
                 }
             }
             this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
                 statuses(
                     HttpStatus.AccountNotExist,
                     HttpStatus.WrongEmailCode,
@@ -81,7 +88,12 @@ fun Route.auth()
         post("/resetPassword", {
             description = "重置密码(忘记密码)"
             request {
-                body<ResetPasswordInfo> { required = true; description = "重置密码信息" }
+                body<ResetPasswordInfo>
+                {
+                    required = true
+                    description = "重置密码信息"
+                    example("example", ResetPasswordInfo("email@abc.com", "code", "newPassword"))
+                }
             }
             this.response {
                 statuses(HttpStatus.OK)
@@ -95,7 +107,12 @@ fun Route.auth()
         post("/sendEmailCode", {
             description = "发送邮箱验证码"
             request {
-                body<EmailInfo> { required = true; description = "邮箱信息" }
+                body<EmailInfo>
+                {
+                    required = true
+                    description = "邮箱信息"
+                    example("example", EmailInfo("email@abc.com", EmailCodes.EmailCodeUsage.REGISTER))
+                }
             }
             this.response {
                 statuses(HttpStatus.OK)
@@ -109,10 +126,15 @@ fun Route.auth()
             description = "修改密码"
             request {
                 authenticated(true)
-                body<ChangePasswordInfo> { required = true; description = "修改密码信息" }
+                body<ChangePasswordInfo>
+                {
+                    required = true
+                    description = "修改密码信息"
+                    example("example", ChangePasswordInfo("oldPassword", "newPassword"))
+                }
             }
             this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK)
+                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
                 statuses(
                     HttpStatus.Unauthorized,
                     HttpStatus.PasswordError,

@@ -11,9 +11,7 @@ import io.ktor.server.routing.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.PrivateChat
-import subit.dataClasses.Slice
-import subit.dataClasses.UserId
+import subit.dataClasses.*
 import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.PrivateChats
 import subit.database.receiveAndCheckBody
@@ -34,7 +32,12 @@ fun Route.privateChat()
         post("/send", {
             description = "发送私信"
             request {
-                body<SendPrivateChat> { required = true; description = "私信内容" }
+                body<SendPrivateChat>
+                {
+                    required = true
+                    description = "私信内容"
+                    example("example", SendPrivateChat(UserId(0), "私信内容"))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Unauthorized)
@@ -47,7 +50,7 @@ fun Route.privateChat()
                 paged()
             }
             response {
-                statuses<Slice<UserId>>(HttpStatus.OK)
+                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getPrivateChatUsers() }
@@ -55,7 +58,11 @@ fun Route.privateChat()
         get("/listChat/{userId}", {
             description = "获取与某人的私信列表"
             request {
-                pathParameter<UserId>("userId") { required = true; description = "对方的id" }
+                pathParameter<RawUserId>("userId")
+                {
+                    required = true
+                    description = "对方的id"
+                }
                 queryParameter<Long>("after")
                 {
                     required = false
@@ -65,8 +72,9 @@ fun Route.privateChat()
                         与before互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间正向排序,
                         即若begin为1, count为3, 将放回晚于after的最早的3条消息, 且这3条消息的时间依次递增
                         """.trimIndent()
+                    example = System.currentTimeMillis()
                 }
-                queryParameter<Int>("before")
+                queryParameter<Long>("before")
                 {
                     required = false
                     description = """
@@ -75,11 +83,12 @@ fun Route.privateChat()
                         与after互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间逆向排序,
                         即若begin为1, count为3, 将放回早于before的最晚的3条消息, 且这3条消息的时间依次递减
                         """.trimIndent()
+                    example = System.currentTimeMillis()
                 }
                 paged()
             }
             response {
-                statuses<Slice<PrivateChat>>(HttpStatus.OK)
+                statuses<Slice<PrivateChat>>(HttpStatus.OK, example = sliceOf(PrivateChat.example))
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getPrivateChats() }
@@ -87,7 +96,7 @@ fun Route.privateChat()
         get("/unread/all", {
             description = "获取所有未读私信数量"
             response {
-                statuses<UnreadCount>(HttpStatus.OK)
+                statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getUnreadCount(false) }
@@ -95,10 +104,14 @@ fun Route.privateChat()
         get("/unread/{userId}", {
             description = "获取与某人的未读私信数量"
             request {
-                pathParameter<UserId>("userId") { required = true; description = "对方的id" }
+                pathParameter<RawUserId>("userId")
+                {
+                    required = true
+                    description = "对方的id"
+                }
             }
             response {
-                statuses<UnreadCount>(HttpStatus.OK)
+                statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getUnreadCount(true) }
@@ -107,22 +120,32 @@ fun Route.privateChat()
             description = "获取是否被某人拉黑"
             request {
                 authenticated(true)
-                pathParameter<UserId>("userId") {
+                pathParameter<RawUserId>("userId")
+                {
                     required = true
                     description = "对方的id,注意是对方是否拉黑当前登录者"
                 }
             }
             response {
-                statuses<UnreadCount>(HttpStatus.OK)
+                statuses<IsBlock>(HttpStatus.OK, example = IsBlock(false))
                 statuses(HttpStatus.Unauthorized)
             }
         }) { getIsBlock() }
 
-        post("/block/{userId}/{isBlock}", {
+        post("/block/{userId}", {
             description = "修改对某人的拉黑状态"
             request {
-                pathParameter<UserId>("userId") { required = true; description = "对方的id" }
-                pathParameter<Boolean>("isBlock") { required = true; description = "是否拉黑" }
+                pathParameter<RawUserId>("userId")
+                {
+                    required = true
+                    description = "对方的id"
+                }
+                body<IsBlock>()
+                {
+                    required = true
+                    description = "是否拉黑"
+                    example("example", IsBlock(false))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -202,7 +225,7 @@ private suspend fun Context.setBlock()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val isBlock = call.parameters["isBlock"]?.toBooleanStrictOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val isBlock = receiveAndCheckBody<IsBlock>().isBlock
     get<PrivateChats>().setIsBlock(userId, loginUser.id, isBlock)
     call.respond(HttpStatus.OK)
 }

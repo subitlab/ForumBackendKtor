@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
+import subit.dataClasses.Slice.Companion.asSlice
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -29,7 +30,7 @@ data class Slice<T>(
         /**
          * 生成一个空切片
          */
-        fun <T> empty() = Slice<T>(0, 1, emptyList())
+        fun <T> empty() = Slice<T>(0, 0, emptyList())
         inline fun <T> Sequence<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
         {
             contract {
@@ -52,7 +53,7 @@ data class Slice<T>(
         fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow>
         {
             val sum: Long = copy().count()
-            val list = this.limit(limit, begin-1).toList()
+            val list = this.limit(limit, begin).toList()
             return Slice(sum, begin, list)
         }
 
@@ -98,12 +99,14 @@ data class Slice<T>(
             return Slice(i, begin, list)
         }
 
-        fun Query.single() = asSlice(1, 1).list[0]
-        fun Query.singleOrNull() = asSlice(1, 1).run { if (list.isEmpty()) null else list[0] }
+        fun Query.single() = asSlice(0, 1).list[0]
+        fun Query.singleOrNull() = asSlice(0, 1).run { if (list.isEmpty()) null else list[0] }
     }
 
     fun <R> map(transform: (T)->R) = Slice(totalSize, begin, list.map(transform))
 }
+
+fun <T> sliceOf(vararg items: T) = items.toList().asSlice(begin = 0, limit = items.size)
 
 /**
  * [Table.selectBatched]等方法会返回一个 Iterable<Iterable<T>> 类型的数据, 此方法将其扁平化为 Iterable<T>

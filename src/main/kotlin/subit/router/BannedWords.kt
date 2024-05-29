@@ -27,7 +27,7 @@ fun Route.bannedWords()
                 paged()
             }
             response {
-                statuses<List<String>>(HttpStatus.OK)
+                statuses<List<String>>(HttpStatus.OK, example = listOf("违禁词汇1", "违禁词汇2", "违禁词汇3"))
                 statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
             }
         }) { getBannedWords() }
@@ -36,7 +36,12 @@ fun Route.bannedWords()
             description = "添加违禁词汇, 需要全局管理员"
             request {
                 authenticated(true)
-                body<NewBannedWord> { required = true; description = "新违禁词汇" }
+                body<NewBannedWord>
+                {
+                    required = true
+                    description = "新违禁词汇"
+                    example("example", NewBannedWord("违禁词汇"))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -47,7 +52,12 @@ fun Route.bannedWords()
             description = "删除违禁词汇, 需要全局管理员"
             request {
                 authenticated(true)
-                pathParameter<String>("word") { required = true; description = "违禁词汇" }
+                pathParameter<String>("word")
+                {
+                    required = true
+                    description = "违禁词汇"
+                    example = "违禁词汇"
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -58,8 +68,18 @@ fun Route.bannedWords()
             description = "修改违禁词汇, 需要全局管理员"
             request {
                 authenticated(true)
-                pathParameter<String>("word") { required = true; description = "违禁词汇" }
-                body<NewBannedWord> { required = true; description = "新违禁词汇" }
+                pathParameter<String>("word")
+                {
+                    required = true
+                    description = "违禁词汇"
+                    example = "违禁词汇"
+                }
+                body<NewBannedWord>
+                {
+                    required = true
+                    description = "新违禁词汇"
+                    example("example", NewBannedWord("违禁词汇"))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)

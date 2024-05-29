@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.files
 
 import io.github.smiley4.ktorswaggerui.dsl.delete
@@ -13,10 +14,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
-import subit.dataClasses.PermissionLevel
-import subit.dataClasses.Slice
+import subit.dataClasses.*
 import subit.dataClasses.Slice.Companion.asSlice
-import subit.dataClasses.UserId
 import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.Operations
 import subit.database.Users
@@ -25,12 +24,14 @@ import subit.database.receiveAndCheckBody
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
+import subit.router.paged
 import subit.utils.*
 import subit.utils.FileUtils.canDelete
 import subit.utils.FileUtils.canGet
 import subit.utils.FileUtils.getSpaceInfo
 import subit.utils.FileUtils.getUserFiles
 import java.io.InputStream
+import java.util.*
 
 fun Route.files()
 {
@@ -39,16 +40,30 @@ fun Route.files()
     })
     {
         get("/{id}/{type}", {
-            description = "获取文件, 若是管理员可以获取任意文件, 否则只能获取自己上传的文件. 注意若文件过期则只能获取info"
+            description =
+                "获取文件, 若是管理员可以获取任意文件, 否则只能获取自己上传的文件. 注意若文件过期则只能获取info"
             request {
                 authenticated(false)
-                pathParameter<String>("id") { required = true; description = "文件ID" }
-                pathParameter<GetFileType>("type") { required = true; description = "获取类型, 可以获取文件信息或文件的数据" }
+                pathParameter<String>("id")
+                {
+                    required = true
+                    description = "文件ID"
+                    example = UUID.randomUUID().toString()
+                }
+                pathParameter<GetFileType>("type")
+                {
+                    required = true
+                    description = "获取类型, 可以获取文件信息或文件的数据"
+                    example = GetFileType.INFO
+                }
             }
             response {
                 "200: 获取文件信息" to {
                     description = "当type为INFO时返回文件信息"
                     body<FileUtils.FileInfo>()
+                    {
+                        example("example", FileUtils.FileInfo("fileName", UserId(0), true, 0, "md5"))
+                    }
                 }
                 "200: 获取文件数据" to {
                     description = "当type为DATA时返回文件数据"
@@ -62,7 +77,12 @@ fun Route.files()
             description = "删除文件, 除管理员外只能删除自己上传的文件"
             request {
                 authenticated(true)
-                pathParameter<String>("id") { required = true; description = "文件ID" }
+                pathParameter<String>("id")
+                {
+                    required = true
+                    description = "文件ID"
+                    example = UUID.randomUUID().toString()
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -75,10 +95,15 @@ fun Route.files()
             description = "上传文件"
             request {
                 authenticated(true)
-                body {
+                multipartBody()
+                {
                     required = true
                     description = "第一部分是文件信息, 第二部分是文件数据"
-                    mediaType(ContentType.MultiPart.FormData)
+                    part<UploadFile>("info")
+                    part<Any>("file")
+                    {
+                        mediaTypes = listOf(ContentType.Application.OctetStream)
+                    }
                 }
             }
             response {
@@ -91,12 +116,18 @@ fun Route.files()
             description = "获取用户上传的文件的列表, 若不是管理员只能获取目标用户公开的文件"
             request {
                 authenticated(false)
-                pathParameter<UserId>("id") { required = true; description = "用户ID, 为0表示当前登陆的用户" }
-                queryParameter<Long>("begin") { required = true; description = "起始位置" }
-                queryParameter<Int>("count") { required = true; description = "获取数量" }
+                pathParameter<RawUserId>("id")
+                {
+                    required = true
+                    description = "用户ID, 为0表示当前登陆的用户"
+                }
+                paged()
             }
             response {
-                statuses<Files>(HttpStatus.OK)
+                statuses<Files>(
+                    HttpStatus.OK,
+                    example = Files(FileUtils.SpaceInfo(0L, 0L, 0), sliceOf(UUID.randomUUID().toString()))
+                )
             }
         }) { getFileList() }
 
@@ -104,7 +135,12 @@ fun Route.files()
             description = "修改文件的公开状态, 只能修改自己上传的文件"
             request {
                 authenticated(true)
-                body<ChangePublic> { required = true; description = "文件信息" }
+                body<ChangePublic>
+                {
+                    required = true
+                    description = "文件信息"
+                    example("example", ChangePublic(UUID.randomUUID().toString(), true))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -117,7 +153,12 @@ fun Route.files()
             description = "修改其他用户的文件权限"
             request {
                 authenticated(true)
-                body<ChangePermission> { required = true; description = "文件信息" }
+                body<ChangePermission>
+                {
+                    required = true
+                    description = "文件信息"
+                    example("example", ChangePermission(UserId(0), PermissionLevel.NORMAL))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -175,16 +216,22 @@ private suspend fun Context.uploadFile()
     var input: InputStream? = null
     var size: Long? = null
     multipart.forEachPart { part ->
-        when (part)
+        when (part.name)
         {
-            is PartData.FormItem -> fileInfo = FileUtils.fileInfoSerializer.decodeFromString(part.value)
-            is PartData.FileItem ->
+            "info" ->
             {
-                input = part.streamProvider()
-                size = part.headers["Content-Length"]?.toLongOrNull()
+                part as PartData.FormItem
+                fileInfo = FileUtils.fileInfoSerializer.decodeFromString(part.value)
             }
 
-            else                 -> Unit
+            "file" ->
+            {
+                part as PartData.FileItem
+                size = part.headers["Content-Length"]?.toLongOrNull()
+                input = part.streamProvider()
+            }
+
+            else   -> Unit
         }
     }
     if (fileInfo == null || input == null) return call.respond(HttpStatus.BadRequest)
@@ -219,6 +266,7 @@ private suspend fun Context.getFileList()
 
 @Serializable
 private data class ChangePublic(val id: String, val public: Boolean)
+
 private suspend fun Context.changePublic()
 {
     val (id, public) = receiveAndCheckBody<ChangePublic>().let {
@@ -226,7 +274,6 @@ private suspend fun Context.changePublic()
         val public = it.public
         id to public
     } ?: return call.respond(HttpStatus.BadRequest)
-
     val file = FileUtils.getFileInfo(id) ?: return call.respond(HttpStatus.NotFound)
 
     if (file.user != getLoginUser()?.id) return call.respond(HttpStatus.Forbidden)
@@ -236,6 +283,7 @@ private suspend fun Context.changePublic()
 
 @Serializable
 private data class ChangePermission(val id: UserId, val permission: PermissionLevel)
+
 private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)

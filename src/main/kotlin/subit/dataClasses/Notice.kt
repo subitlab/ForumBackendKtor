@@ -84,6 +84,10 @@ sealed interface Notice
     ): Notice
     {
         override val type: Type get() = Type.SYSTEM
+        companion object
+        {
+            val example = SystemNotice(NoticeId(1), UserId(1), "系统通知内容")
+        }
     }
 
     /**
@@ -101,6 +105,10 @@ sealed interface Notice
     {
         override val type: Type get() = Type.POST_COMMENT
         override val obj: Id<*, *> get() = post
+        companion object
+        {
+            val example = PostCommentNotice(NoticeId(1), UserId(1), PostId(1), 1)
+        }
     }
 
     /**
@@ -116,6 +124,10 @@ sealed interface Notice
     {
         override val type: Type get() = Type.COMMENT_REPLY
         override val obj: Id<*, *> get() = comment
+        companion object
+        {
+            val example = CommentReplyNotice(NoticeId(1), UserId(1), CommentId(1), 1)
+        }
     }
 
     /**
@@ -133,6 +145,10 @@ sealed interface Notice
     {
         override val type: Type get() = Type.LIKE
         override val obj: Id<*, *> get() = post
+        companion object
+        {
+            val example = LikeNotice(NoticeId(1), UserId(1), PostId(1), 1)
+        }
     }
 
     /**
@@ -150,5 +166,9 @@ sealed interface Notice
     {
         override val type: Type get() = Type.STAR
         override val obj: Id<*, *> get() = post
+        companion object
+        {
+            val example = StarNotice(NoticeId(1), UserId(1), PostId(1), 1)
+        }
     }
 }

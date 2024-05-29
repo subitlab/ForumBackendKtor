@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.block
 
 import io.github.smiley4.ktorswaggerui.dsl.*
@@ -20,7 +21,7 @@ import subit.utils.statuses
 
 fun Route.block()
 {
-    route("/block",{
+    route("/block", {
         tags = listOf("板块")
     })
     {
@@ -28,7 +29,22 @@ fun Route.block()
             description = "创建板块"
             request {
                 authenticated(true)
-                body<NewBlock> { required = true; description = "新板块信息" }
+                body<NewBlock>
+                {
+                    required = true
+                    description = "新板块信息"
+                    example(
+                        "example", NewBlock(
+                            "板块名称",
+                            "板块描述",
+                            BlockId(0),
+                            PermissionLevel.ADMIN,
+                            PermissionLevel.ADMIN,
+                            PermissionLevel.ADMIN,
+                            PermissionLevel.ADMIN
+                        )
+                    )
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -39,8 +55,17 @@ fun Route.block()
             description = "修改板块信息"
             request {
                 authenticated(true)
-                pathParameter<BlockId>("id") { required = true; description = "板块ID" }
-                body<EditBlockInfo> { required = true; description = "新板块信息" }
+                pathParameter<RawBlockId>("id")
+                {
+                    required = true
+                    description = "板块ID"
+                }
+                body<EditBlockInfo>
+                {
+                    required = true
+                    description = "新板块信息"
+                    example("example", EditBlockInfo(name = "板块名称", description = "板块描述"))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -51,7 +76,11 @@ fun Route.block()
             description = "获取板块信息"
             request {
                 authenticated(false)
-                pathParameter<BlockId>("id") { required = true; description = "板块ID" }
+                pathParameter<RawBlockId>("id")
+                {
+                    required = true
+                    description = "板块ID"
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -62,7 +91,11 @@ fun Route.block()
             description = "删除板块"
             request {
                 authenticated(true)
-                pathParameter<BlockId>("id") { required = true; description = "板块ID" }
+                pathParameter<RawBlockId>("id")
+                {
+                    required = true
+                    description = "板块ID"
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -73,7 +106,12 @@ fun Route.block()
             description = "修改用户在板块的权限"
             request {
                 authenticated(true)
-                body<ChangePermission> { required = true; description = "新权限" }
+                body<ChangePermission>
+                {
+                    required = true
+                    description = "新权限"
+                    example("example", ChangePermission(UserId(0), BlockId(0), PermissionLevel.ADMIN))
+                }
             }
             response {
                 statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
@@ -84,10 +122,15 @@ fun Route.block()
             description = "获取板块的子板块"
             request {
                 authenticated(false)
-                pathParameter<BlockId>("id") { required = true; description = "板块ID" }
+                pathParameter<RawBlockId>("id")
+                {
+                    required = true
+                    description = "板块ID"
+                }
             }
             response {
-                statuses<List<BlockId>>(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+                statuses<List<BlockId>>(HttpStatus.OK, example = listOf(BlockId(0)))
+                statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
             }
         }) { getChildren() }
 
@@ -95,11 +138,15 @@ fun Route.block()
             description = "搜索板块"
             request {
                 authenticated(false)
-                queryParameter<String>("key") { required = true; description = "关键字" }
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "关键字"
+                }
                 paged()
             }
             response {
-                statuses<Slice<BlockId>>(HttpStatus.OK)
+                statuses<Slice<BlockId>>(HttpStatus.OK, example = sliceOf(BlockId(0)))
             }
         }) { searchBlock() }
     }
@@ -115,6 +162,7 @@ private data class NewBlock(
     val readingPermission: PermissionLevel,
     val anonymousPermission: PermissionLevel,
 )
+
 private suspend fun Context.newBlock()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -146,6 +194,7 @@ private data class EditBlockInfo(
     val readingPermission: PermissionLevel? = null,
     val anonymousPermission: PermissionLevel? = null,
 )
+
 private suspend fun Context.editBlockInfo()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -179,10 +228,12 @@ private suspend fun Context.deleteBlock()
     val block = blocks.getBlock(id) ?: return call.respond(HttpStatus.NotFound)
     blocks.setState(id, State.DELETED)
     get<Operations>().addOperation(loginUser.id, id)
-    if (loginUser.id != block.creator) get<Notices>().createNotice(Notice.makeSystemNotice(
-        user = block.creator,
-        content = "您的板块 ${block.name} 已被删除"
-    ))
+    if (loginUser.id != block.creator) get<Notices>().createNotice(
+        Notice.makeSystemNotice(
+            user = block.creator,
+            content = "您的板块 ${block.name} 已被删除"
+        )
+    )
     call.respond(HttpStatus.OK)
 }
 
@@ -192,6 +243,7 @@ private data class ChangePermission(
     val block: BlockId,
     val permission: PermissionLevel
 )
+
 private suspend fun Context.changePermission()
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
@@ -203,17 +255,22 @@ private suspend fun Context.changePermission()
         permission = changePermission.permission
     )
     get<Operations>().addOperation(loginUser.id, changePermission)
-    get<Notices>().createNotice(Notice.makeSystemNotice(
-        user = changePermission.user,
-        content = "您在板块 ${get<Blocks>().getBlock(changePermission.block)?.name} 的权限已被修改"
-    ))
+    get<Notices>().createNotice(
+        Notice.makeSystemNotice(
+            user = changePermission.user,
+            content = "您在板块 ${get<Blocks>().getBlock(changePermission.block)?.name} 的权限已被修改"
+        )
+    )
     call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.getChildren()
 {
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val loginUser = checkPermission { checkCanRead(id); user } ?: return call.respond(HttpStatus.Unauthorized)
+    val loginUser = checkPermission {
+        checkCanRead(id)
+        return@checkPermission user
+    } ?: return call.respond(HttpStatus.Unauthorized)
     get<Blocks>().getChildren(id).filter {
         get<Permissions>().getPermission(it.id, loginUser.id) >= it.reading
     }.map { it.id }.let { call.respond(it) }

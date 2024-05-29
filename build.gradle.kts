@@ -9,6 +9,7 @@ val h2_version: String by project
 val hikaricp_version: String by project
 val koin_version: String by project
 val jline_version: String by project
+val swagger_ui_version: String by project
 
 plugins {
     kotlin("jvm") version "2.0.0"
@@ -39,7 +40,7 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
     implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
     implementation("io.ktor:ktor-server-swagger")
-    implementation("io.github.smiley4:ktor-swagger-ui:2.9.0") // 创建api页面
+    implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     //mysql
     implementation("mysql:mysql-connector-java:8.0.33")

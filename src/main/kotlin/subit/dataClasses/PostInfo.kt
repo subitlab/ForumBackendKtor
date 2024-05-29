@@ -35,6 +35,18 @@ data class PostInfo(
 {
     companion object: KoinComponent
     {
+        val example = PostInfo(
+            PostId(1),
+            "帖子标题",
+            "帖子内容",
+            UserId(1),
+            false,
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            0,
+            BlockId(1),
+            State.NORMAL
+        )
         private val likes: Likes by inject()
         private val stars: Stars by inject()
     }
@@ -66,3 +78,23 @@ data class PostFull(
     val dislike: Long,
     val star: Long,
 )
+{
+    companion object
+    {
+        val example = PostFull(
+            PostId(1),
+            "帖子标题",
+            "帖子内容",
+            UserId(1),
+            false,
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            0,
+            BlockId(1),
+            State.NORMAL,
+            0,
+            0,
+            0
+        )
+    }
+}

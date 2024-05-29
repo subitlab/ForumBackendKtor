@@ -22,3 +22,17 @@ data class Comment(
     val create: Long,
     val state: State
 )
+{
+    companion object
+    {
+        val example = Comment(
+            CommentId(1),
+            PostId(1),
+            null,
+            UserId(1),
+            "评论内容",
+            System.currentTimeMillis(),
+            State.NORMAL
+        )
+    }
+}

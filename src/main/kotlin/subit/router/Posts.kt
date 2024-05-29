@@ -26,12 +26,14 @@ fun Route.posts()
             description = "获取帖子信息"
             request {
                 authenticated(false)
-                pathParameter<Long>("id") {
-                    required = true; description = "要获取的帖子的id, 若是匿名帖则author始终是null"
+                pathParameter<RawPostId>("id")
+                {
+                    required = true
+                    description = "要获取的帖子的id, 若是匿名帖则author始终是null"
                 }
             }
             response {
-                statuses<PostFull>(HttpStatus.OK)
+                statuses<PostFull>(HttpStatus.OK, example = PostFull.example)
                 statuses(HttpStatus.NotFound)
             }
         }) { getPost() }
@@ -40,7 +42,11 @@ fun Route.posts()
             description = "删除帖子"
             request {
                 authenticated(true)
-                pathParameter<Long>("id") { required = true; description = "要删除的帖子的id" }
+                pathParameter<RawPostId>("id")
+                {
+                    required = true
+                    description = "要删除的帖子的id"
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -52,10 +58,15 @@ fun Route.posts()
             description = "编辑帖子(block及以上管理员可修改)"
             request {
                 authenticated(true)
-                body<EditPost> { required = true; description = "编辑帖子, 成功返回帖子ID" }
+                body<EditPost>
+                {
+                    required = true
+                    description = "编辑帖子"
+                    example("example", EditPost("新标题", "新内容"))
+                }
             }
             response {
-                statuses<Long>(HttpStatus.OK)
+                statuses(HttpStatus.OK)
                 statuses(HttpStatus.BadRequest)
             }
         }) { editPost() }
@@ -64,8 +75,17 @@ fun Route.posts()
             description = "点赞/点踩/取消点赞/收藏/取消收藏 帖子"
             request {
                 authenticated(true)
-                pathParameter<Long>("id") { required = true; description = "帖子的id" }
-                body<LikePost> { required = true; description = "点赞/点踩/取消点赞/收藏/取消收藏" }
+                pathParameter<RawPostId>("id")
+                {
+                    required = true
+                    description = "帖子的id"
+                }
+                body<LikePost>
+                {
+                    required = true
+                    description = "点赞/点踩/取消点赞/收藏/取消收藏"
+                    example("example", LikePost(LikeType.LIKE))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -77,10 +97,15 @@ fun Route.posts()
             description = "新建帖子"
             request {
                 authenticated(true)
-                body<NewPost> { required = true; description = "发帖, 成功返回帖子ID" }
+                body<NewPost>
+                {
+                    required = true
+                    description = "发帖, 成功返回帖子ID"
+                    example("example", NewPost("标题", "内容", false, BlockId(0), false))
+                }
             }
             response {
-                statuses<PostInfo>(HttpStatus.OK)
+                statuses<PostInfo>(HttpStatus.OK, example = PostInfo.example)
                 statuses(HttpStatus.BadRequest)
             }
         }) { newPost() }
@@ -89,11 +114,15 @@ fun Route.posts()
             description = "获取用户发送的帖子列表"
             request {
                 authenticated(false)
-                pathParameter<UserId>("user") { required = true; description = "作者ID" }
+                pathParameter<RawUserId>("user")
+                {
+                    required = true
+                    description = "作者ID"
+                }
                 paged()
             }
             response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK)
+                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
             }
         }) { getUserPosts() }
 
@@ -101,12 +130,21 @@ fun Route.posts()
             description = "获取板块帖子列表"
             request {
                 authenticated(false)
-                pathParameter<BlockId>("block") { required = true; description = "板块ID" }
-                queryParameter<Posts.PostListSort>("sort") { required = true; description = "排序方式" }
+                pathParameter<RawBlockId>("block")
+                {
+                    required = true
+                    description = "板块ID"
+                }
+                queryParameter<Posts.PostListSort>("sort")
+                {
+                    required = true
+                    description = "排序方式"
+                    example = Posts.PostListSort.NEW
+                }
                 paged()
             }
             response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK)
+                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
             }
         }) { getBlockPosts() }
 
@@ -114,11 +152,15 @@ fun Route.posts()
             description = "获取板块置顶帖子列表"
             request {
                 authenticated(false)
-                pathParameter<BlockId>("block") { required = true; description = "板块ID" }
+                pathParameter<RawBlockId>("block")
+                {
+                    required = true
+                    description = "板块ID"
+                }
                 paged()
             }
             response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK)
+                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
             }
         }) { getBlockTopPosts() }
 
@@ -126,11 +168,20 @@ fun Route.posts()
             description = "设置帖子是否置顶"
             request {
                 authenticated(true)
-                pathParameter<Long>("id") { required = true; description = "帖子的id" }
-                pathParameter<Boolean>("top") { required = true; description = "是否置顶" }
+                pathParameter<RawPostId>("id")
+                {
+                    required = true
+                    description = "帖子的id"
+                }
+                pathParameter<Boolean>("top")
+                {
+                    required = true
+                    description = "是否置顶"
+                    example = true
+                }
             }
             response {
-                statuses<Long>(HttpStatus.OK)
+                statuses(HttpStatus.OK)
                 statuses(HttpStatus.BadRequest)
             }
         }) { setBlockTopPosts() }
@@ -139,11 +190,16 @@ fun Route.posts()
             description = "搜索帖子"
             request {
                 authenticated(false)
-                queryParameter<String>("key") { required = true; description = "关键字" }
+                queryParameter<String>("key")
+                {
+                    required = true
+                    description = "关键字"
+                    example = "关键字"
+                }
                 paged()
             }
             response {
-                statuses<Slice<PostId>>(HttpStatus.OK)
+                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
             }
         }) { searchPost() }
 
@@ -151,7 +207,12 @@ fun Route.posts()
             description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
             request {
                 authenticated(true)
-                body<PostId> { required = true; description = "帖子ID" }
+                body<PostId>
+                {
+                    required = true
+                    description = "帖子ID"
+                    example("example", PostId(0))
+                }
             }
             response {
                 statuses(HttpStatus.OK)
@@ -170,7 +231,13 @@ private suspend fun Context.getPost()
     checkPermission { checkCanRead(postInfo) }
     val postFull = postInfo.toPostFull()
     if (!postFull.anonymous) call.respond(postFull) // 若不是匿名帖则直接返回
-    else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(postFull.copy(author = UserId(0)))
+    else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(
+        postFull.copy(
+            author = UserId(
+                0
+            )
+        )
+    )
     else call.respond(postFull) // 若是匿名帖且用户权限足够则返回
 }
 
@@ -225,11 +292,11 @@ private suspend fun Context.likePost()
     checkPermission { checkCanRead(post) }
     when (type)
     {
-        LikeType.LIKE    -> get<Likes>().like(loginUser.id, id, true)
+        LikeType.LIKE -> get<Likes>().like(loginUser.id, id, true)
         LikeType.DISLIKE -> get<Likes>().like(loginUser.id, id, false)
-        LikeType.UNLIKE  -> get<Likes>().unlike(loginUser.id, id)
-        LikeType.STAR    -> get<Stars>().addStar(loginUser.id, id)
-        LikeType.UNSTAR  -> get<Stars>().removeStar(loginUser.id, id)
+        LikeType.UNLIKE -> get<Likes>().unlike(loginUser.id, id)
+        LikeType.STAR -> get<Stars>().addStar(loginUser.id, id)
+        LikeType.UNSTAR -> get<Stars>().removeStar(loginUser.id, id)
     }
     if (loginUser.id != post.author && (type == LikeType.LIKE || type == LikeType.STAR))
         get<Notices>().createNotice(
