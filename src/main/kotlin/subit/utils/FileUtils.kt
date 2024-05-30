@@ -198,6 +198,7 @@ object FileUtils
 object AvatarUtils
 {
     private val avatarFolder = File(FileUtils.dataFolder, "/avatars")
+    private val defaultAvatarFolder = File(avatarFolder, "default")
 
     init
     {
@@ -230,7 +231,6 @@ object AvatarUtils
         val avatarFile = File(userAvatarFolder, "${avatarCount}.png")
         avatarFile.createNewFile()
         // 在默认头像文件夹中随机选择一个头像
-        val defaultAvatarFolder = File(avatarFolder, "default")
         val defaultAvatarFiles = defaultAvatarFolder.listFiles()
         val defaultAvatar = defaultAvatarFiles?.randomOrNull()
         // 保存头像

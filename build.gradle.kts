@@ -85,3 +85,7 @@ tasks.withType<ProcessResources> {
         }
     }
 }
+
+kotlin {
+    jvmToolchain(17)
+}
