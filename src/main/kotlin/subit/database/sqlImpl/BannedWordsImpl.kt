@@ -37,6 +37,7 @@ class BannedWordsImpl: BannedWords, DaoSqlImpl<BannedWordsImpl.BannedWordsTable>
     }
     override suspend fun check(str: String): Boolean = query()
     {
-        selectAll().fetchBatchedResults().any { it.any { row -> str.contains(row[word].value) } }
+        //可以优化查询方式
+        selectAll().any { row -> str.contains(row[word].value) }
     }
 }
