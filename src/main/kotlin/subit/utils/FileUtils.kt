@@ -8,6 +8,7 @@ import subit.config.filesConfig
 import subit.dataClasses.PermissionLevel
 import subit.dataClasses.UserFull
 import subit.dataClasses.UserId
+import subit.logger.ForumLogger
 import subit.workDir
 import java.awt.image.BufferedImage
 import java.io.File
@@ -197,6 +198,7 @@ object FileUtils
  */
 object AvatarUtils
 {
+    private val logger = ForumLogger.getLogger()
     private val avatarFolder = File(FileUtils.dataFolder, "/avatars")
     private val defaultAvatarFolder = File(avatarFolder, "default")
 
@@ -229,12 +231,16 @@ object AvatarUtils
         // 文件夹中已有的头像数量
         val avatarCount = userAvatarFolder.listFiles()?.size ?: 0
         val avatarFile = File(userAvatarFolder, "${avatarCount}.png")
-        avatarFile.createNewFile()
         // 在默认头像文件夹中随机选择一个头像
         val defaultAvatarFiles = defaultAvatarFolder.listFiles()
         val defaultAvatar = defaultAvatarFiles?.randomOrNull()
+        if (defaultAvatar == null)
+        {
+            logger.warning("No default avatar found")
+            return BufferedImage(1024, 1024, BufferedImage.TYPE_INT_ARGB)
+        }
         // 保存头像
-        defaultAvatar?.copyTo(avatarFile)
+        defaultAvatar.copyTo(avatarFile)
         return ImageIO.read(defaultAvatar)
     }
 

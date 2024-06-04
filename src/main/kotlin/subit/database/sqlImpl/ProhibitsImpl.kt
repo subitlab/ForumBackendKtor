@@ -16,7 +16,7 @@ class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), P
 {
     object ProhibitsTable: Table("prohibits")
     {
-        val user = reference("user", UsersImpl.UserTable).uniqueIndex()
+        val user = reference("user", UsersImpl.UserTable).index()
         val time = timestamp("time")
         val reason = text("reason")
         val operator = reference("operator", UsersImpl.UserTable).index()

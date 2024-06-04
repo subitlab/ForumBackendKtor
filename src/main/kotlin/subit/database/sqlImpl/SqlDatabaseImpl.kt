@@ -168,9 +168,9 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
  * @property unwrap 反转换函数
  */
 class WarpColumnType<T: Any, R: Any>(
-    private val base: ColumnType<T>,
-    private val warp: (T)->R,
-    private val unwrap: (R)->T
+    val base: ColumnType<T>,
+    val warp: (T)->R,
+    val unwrap: (R)->T
 ): ColumnType<R>()
 {
     override fun sqlType() = base.sqlType()
