@@ -2,10 +2,14 @@ package subit.database.sqlImpl
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.sql.selectAll
 import subit.dataClasses.Prohibit
 import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
@@ -14,12 +18,14 @@ import subit.database.Prohibits
 
 class ProhibitsImpl: DaoSqlImpl<ProhibitsImpl.ProhibitsTable>(ProhibitsTable), Prohibits
 {
-    object ProhibitsTable: Table("prohibits")
+    object ProhibitsTable: IdTable<UserId>("prohibits")
     {
-        val user = reference("user", UsersImpl.UserTable).index()
+        val user = reference("user", UsersImpl.UserTable)
         val time = timestamp("time")
         val reason = text("reason")
         val operator = reference("operator", UsersImpl.UserTable).index()
+        override val id = user
+        override val primaryKey = PrimaryKey(user)
     }
 
     private fun deserialize(row: ResultRow) = Prohibit(
