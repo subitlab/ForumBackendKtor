@@ -3,8 +3,6 @@ package subit.logger
 import me.nullaqua.api.reflect.CallerSensitive
 import me.nullaqua.kotlin.reflect.getCallerClass
 import me.nullaqua.kotlin.reflect.getCallerClasses
-import subit.Loader
-import subit.config.ConfigLoader
 import subit.config.loggerConfig
 import subit.console.AnsiStyle.Companion.RESET
 import subit.console.Console
@@ -118,8 +116,6 @@ object ForumLogger
         globalLogger.logger.handlers.forEach(globalLogger.logger::removeHandler)
         globalLogger.logger.addHandler(ToConsoleHandler)
         globalLogger.logger.addHandler(ToFileHandler)
-        ConfigLoader.reload("logger.yml")
-        Loader.getResource("/logo/SubIT-logo.txt")?.copyTo(out) ?: getLogger().warning("logo not found")
     }
 
     private class LoggerOutputStream(private val level: Level): OutputStream()

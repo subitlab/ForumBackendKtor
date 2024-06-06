@@ -31,13 +31,12 @@ class ConfigLoader<T: Any> private constructor(
     private var listeners: MutableSet<(T, T)->Unit> = mutableSetOf()
 )
 {
-    @Suppress("UNCHECKED_CAST")
-    private var config: T = getConfigOrCreate(filename, default as Any, type) as T
+    private var config: T = default
 
     private fun setValue(value: T)
     {
         listeners.forEach {
-            logger.severe("Error in config listener")
+            logger.warning("Error in config listener")
             {
                 it(config, value)
             }
@@ -71,27 +70,26 @@ class ConfigLoader<T: Any> private constructor(
             filesConfig
             loggerConfig
             systemConfig
+
+            reloadAll()
         }
 
         /**
          * [WeakReference] 采用弱引用, 避免不被回收
          * @author nullaqua
          */
-        private val configMap: MutableMap<String, WeakReference<ConfigLoader<*>>> =
+        private val configMap: MutableMap<String, ConfigLoader<*>> =
             Collections.synchronizedMap(HashMap())
 
         fun configs() = configMap.keys
-        fun reload(name: String) = configMap[name]?.let {
-            it.get()?.apply { reload() } ?: configMap.remove(name)
-        }
+        fun reload(name: String) = getConfigLoader(name)?.reload()
         fun reloadAll() = configMap.keys.forEach(::reload)
+        fun getConfigLoader(name: String) = configMap[name]
 
         private fun addLoader(loader: ConfigLoader<*>)
         {
-            val r = configMap[loader.filename]
-            if (r?.get() != null) error("Loader already exists")
-            else if (r != null) configMap.remove(loader.filename)
-            configMap[loader.filename] = WeakReference(loader)
+            if (configMap[loader.filename] != null) error("Loader already exists")
+            configMap[loader.filename] = loader
         }
 
         fun <T: Any> createLoader(filename: String, default: T, type: KType, vararg listeners: (T, T)->Unit) =

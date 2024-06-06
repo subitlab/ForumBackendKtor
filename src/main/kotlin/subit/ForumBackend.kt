@@ -29,6 +29,7 @@ import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
 import subit.router.router
 import subit.utils.FileUtils
+import subit.utils.ForumThreadGroup
 import subit.utils.HttpStatus
 import subit.utils.respond
 import java.io.File
@@ -38,7 +39,10 @@ lateinit var version: String
 lateinit var workDir: File
     private set
 
-fun main(args: Array<String>)
+/**
+ * 解析命令行, 返回的是处理后的命令行, 和从命令行中读取的配置文件(默认是config.yaml, 可通过-config=xxxx.yaml更改)
+ */
+private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
 {
     val argsMap = args.mapNotNull {
         it.indexOf("=").let { idx ->
@@ -51,26 +55,45 @@ fun main(args: Array<String>)
     }.toMap()
     workDir = File(argsMap["-workDir"] ?: ".")
     workDir.mkdirs()
-    ForumLogger // 初始化日志
-    subit.config.ConfigLoader.init() // 初始化配置文件加载器
-    val args1 = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
-    val configFile = File(workDir, "config.yaml")
+
+
+    val resArgs = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
+    val configFile = File(workDir, argsMap["-config"] ?: "config.yaml")
+
+    return Pair(resArgs, configFile)
+}
+
+fun main(args: Array<String>)
+{
+    // 处理命令行应在最前面, 因为需要来解析workDir, 否则后面的程序无法正常运行
+    val (args1, configFile) = runCatching { parseCommandLineArgs(args) }.getOrElse { return }
+
+    subit.config.ConfigLoader.init() // 初始化配置文件加载器, 会加载所有配置文件
+
+    // 检查主配置文件是否存在, 不存在则创建默认配置文件, 并结束程序
     if (!configFile.exists())
     {
         configFile.createNewFile()
         val defaultConfig =
             Loader.getResource("default_config.yaml")?.readAllBytes() ?: error("default_config.yaml not found")
         configFile.writeBytes(defaultConfig)
-        ForumLogger.getLogger("ForumBackend.main")
-            .severe("config.yaml not found, the default config has been created, please modify it and restart the program")
+        ForumLogger.getLogger("ForumBackend.main").severe(
+            "config.yaml not found, the default config has been created, "+
+            "please modify it and restart the program"
+        )
         return
     }
+    // 加载配置文件
     val customConfig = ConfigLoader.load(configFile.path)
+
+    // 生成环境
     val environment = commandLineEnvironment(args = args1)
     {
         this.config = this.config.withFallback(customConfig)
     }
+    // 启动服务器
     embeddedServer(Netty, environment).start(wait = true)
+    ForumThreadGroup.shutdown(0)
 }
 
 /**
