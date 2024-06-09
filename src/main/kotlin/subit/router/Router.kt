@@ -100,6 +100,14 @@ fun Application.router() = routing()
             checkParameters()
         }
 
+        options("{...}")
+        {
+            //跨域请求
+            call.response.header("Access-Control-Allow-Origin", "*")
+            call.response.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            call.respond("")
+        }
+
         admin()
         auth()
         bannedWords()

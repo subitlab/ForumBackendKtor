@@ -45,18 +45,14 @@ lateinit var workDir: File
 private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
 {
     val argsMap = args.mapNotNull {
-        it.indexOf("=").let { idx ->
-            when (idx)
-            {
-                -1 -> null
-                else -> Pair(it.take(idx), it.drop(idx+1))
-            }
+        when (val idx = it.indexOf("="))
+        {
+            -1 -> null
+            else -> Pair(it.take(idx), it.drop(idx+1))
         }
     }.toMap()
     workDir = File(argsMap["-workDir"] ?: ".")
     workDir.mkdirs()
-
-
     val resArgs = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
     val configFile = File(workDir, argsMap["-config"] ?: "config.yaml")
 
@@ -69,7 +65,6 @@ fun main(args: Array<String>)
     val (args1, configFile) = runCatching { parseCommandLineArgs(args) }.getOrElse { return }
 
     subit.config.ConfigLoader.init() // 初始化配置文件加载器, 会加载所有配置文件
-
     // 检查主配置文件是否存在, 不存在则创建默认配置文件, 并结束程序
     if (!configFile.exists())
     {
@@ -85,7 +80,6 @@ fun main(args: Array<String>)
     }
     // 加载配置文件
     val customConfig = ConfigLoader.load(configFile.path)
-
     // 生成环境
     val environment = commandLineEnvironment(args = args1)
     {

@@ -67,7 +67,7 @@ data class PostFull(
     val id: PostId,
     val title: String,
     val content: String,
-    val author: UserId?,
+    val author: UserId,
     val anonymous: Boolean,
     val create: Long,
     val lastModified: Long,
