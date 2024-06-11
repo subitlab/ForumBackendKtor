@@ -40,6 +40,11 @@ data class CheckPermissionContext(val context: Context, val user: UserFull?): Ko
     private suspend fun hasAdminIn(block: BlockId): Boolean =
         user != null && (getPermission(block) >= PermissionLevel.ADMIN)
     suspend fun checkHasAdminIn(block: BlockId) = if (!hasAdminIn(block)) finish(HttpStatus.Forbidden) else Unit
+    suspend fun canRead(block: BlockId): Boolean = getPermission(block).let()
+    {
+        val blockFull = blocks.getBlock(block) ?: return false
+        return !(!hasAdminIn(block) && it < blockFull.reading)
+    }
     suspend fun checkCanRead(block: BlockId) = getPermission(block).let()
     {
         val blockFull = blocks.getBlock(block) ?: return finish(HttpStatus.NotFound)

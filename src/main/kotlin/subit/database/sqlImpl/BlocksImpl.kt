@@ -101,7 +101,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         }
     }
 
-    override suspend fun getChildren(parent: BlockId): List<BlockFull> = query()
+    override suspend fun getChildren(parent: BlockId?): List<BlockFull> = query()
     {
         selectAll().where { BlocksTable.parent eq parent }.map(::deserializeBlock)
     }

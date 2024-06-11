@@ -119,7 +119,7 @@ fun Route.block()
         }) { changePermission() }
 
         get("/{id}/children", {
-            description = "获取板块的子板块"
+            description = "获取板块的子板块, 若id为0则表示获取没有父板块的板块"
             request {
                 authenticated(false)
                 pathParameter<RawBlockId>("id")
@@ -266,14 +266,15 @@ private suspend fun Context.changePermission()
 
 private suspend fun Context.getChildren()
 {
-    val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val loginUser = checkPermission {
-        checkCanRead(id)
-        return@checkPermission user
-    } ?: return call.respond(HttpStatus.Unauthorized)
-    get<Blocks>().getChildren(id).filter {
-        get<Permissions>().getPermission(it.id, loginUser.id) >= it.reading
-    }.map { it.id }.let { call.respond(it) }
+    val id1 = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val id = if (id1 == BlockId(0)) null else id1
+
+    checkPermission {
+        if (id!=null) checkCanRead(id)
+    }
+    checkPermission {
+        get<Blocks>().getChildren(id).filter { canRead(it.id) }.map { it.id }.let { call.respond(it) }
+    }
 }
 
 private suspend fun Context.searchBlock()
