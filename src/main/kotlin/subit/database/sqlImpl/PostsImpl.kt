@@ -255,7 +255,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
             .where { (blocksTable.reading lessEq PermissionLevel.NORMAL) and (state eq State.NORMAL) }
             .groupBy(id)
             .orderBy(order, SortOrder.DESC)
-            .asSlice(1, count)
+            .asSlice(0, count)
             .map { it[id].value }
     }
 }
