@@ -2,11 +2,25 @@ database:
   # 数据库实现, 可选值: sql, memory
   impl: sql
   sql: # 该配置项仅在 impl 为 sql 时必须, 其余情况下无效
+    #数据库用户名
     user: 'YourSqlUser'
+    #数据库密码
     password: 'YourSqlPassword'
+
+    # 数据库连接地址
+    ## mysql
     url: 'jdbc:mysql://YourSqlHost:YourSqlPort/YourDatabaseName'
+    ## postgres
+    ## url: 'jdbc:postgresql://YourSqlHost:YourSqlPort/YourDatabaseName'
+
+    # 数据库驱动
+    ## mysql
     driver: 'com.mysql.cj.jdbc.Driver'
+    ## postgres
+    ## driver: 'org.postgresql.Driver'
+
     lazyInit: true
 
+# jwt登陆验证
 #jwt:
 #  secret: "SUBIT_SECRET" # Your can set your own secret key here, or a random one will be used

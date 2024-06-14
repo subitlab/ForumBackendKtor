@@ -77,6 +77,15 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
     override val name: String = "sql"
 
+    enum class DatabaseType
+    {
+        MYSQL,
+        POSTGRESQL,
+        UNKNOWN
+    }
+    lateinit var databaseType: DatabaseType
+        private set
+
     /**
      * 初始化数据库.
      */
@@ -103,6 +112,10 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
             shutdown(1, "Database configuration not found.")
         }
+
+        databaseType = if (driver.contains("mysql")) DatabaseType.MYSQL
+        else if (driver.contains("postgres")) DatabaseType.POSTGRESQL
+        else DatabaseType.UNKNOWN
 
         logger.info("Load database configuration. url: $url, driver: $driver, user: $user")
         val module = module(!lazyInit)
@@ -161,49 +174,49 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
 /**
  * 包装的列类型, 用于将数据库中的列类型转换为其他类型
- * @param T 原始类型
- * @param R 转换后的类型
+ * @param Base 原始类型
+ * @param T 转换后的类型
  * @property base 原始列类型
  * @property warp 转换函数
  * @property unwrap 反转换函数
  */
-class WarpColumnType<T: Any, R: Any>(
-    val base: ColumnType<T>,
-    val warp: (T)->R,
-    val unwrap: (R)->T
-): ColumnType<R>()
+abstract class WarpColumnType<Base: Any, T: Any>(
+    private val base: ColumnType<Base>,
+    private val warp: (Base)->T,
+    private val unwrap: (T)->Base
+): ColumnType<T>()
 {
     override fun sqlType() = base.sqlType()
     override fun valueFromDB(value: Any) = base.valueFromDB(value)?.let(warp)
-    override fun notNullValueToDB(value: R): Any = base.notNullValueToDB(unwrap(value))
-    override fun nonNullValueToString(value: R): String = base.nonNullValueToString(unwrap(value))
-    override fun valueToString(value: R?): String = value?.let(unwrap).let(base::valueToString)
+    override fun notNullValueToDB(value: T): Any = base.notNullValueToDB(unwrap(value))
+//    override fun nonNullValueToString(value: T): String = base.nonNullValueToString(unwrap(value))
+//    override fun valueToString(value: T?): String = value?.let(unwrap).let(base::valueToString)
 }
 
 // BlockId
-val BlockIdColumn = WarpColumnType(IntegerColumnType(), ::BlockId, BlockId::value)
-fun Table.blockId(name: String) = registerColumn(name, BlockIdColumn)
+class BlockIdColumnType: WarpColumnType<Int, BlockId>(IntegerColumnType(), ::BlockId, BlockId::value)
+fun Table.blockId(name: String) = registerColumn(name, BlockIdColumnType())
 
 // UserId
-val UserIdColumn = WarpColumnType(IntegerColumnType(), ::UserId, UserId::value)
-fun Table.userId(name: String) = registerColumn(name, UserIdColumn)
+class UserIdColumnType: WarpColumnType<Int, UserId>(IntegerColumnType(), ::UserId, UserId::value)
+fun Table.userId(name: String) = registerColumn(name, UserIdColumnType())
 
 // PostId
-val PostIdColumn = WarpColumnType(LongColumnType(), ::PostId, PostId::value)
-fun Table.postId(name: String) = registerColumn(name, PostIdColumn)
+class PostIdColumnType: WarpColumnType<Long, PostId>(LongColumnType(), ::PostId, PostId::value)
+fun Table.postId(name: String) = registerColumn(name, PostIdColumnType())
 
 // CommentId
-val CommentIdColumn = WarpColumnType(LongColumnType(), ::CommentId, CommentId::value)
-fun Table.commentId(name: String) = registerColumn(name, CommentIdColumn)
+class CommentIdColumnType: WarpColumnType<Long, CommentId>(LongColumnType(), ::CommentId, CommentId::value)
+fun Table.commentId(name: String) = registerColumn(name, CommentIdColumnType())
 
 // ReportId
-val ReportIdColumn = WarpColumnType(LongColumnType(), ::ReportId, ReportId::value)
-fun Table.reportId(name: String) = registerColumn(name, ReportIdColumn)
+class ReportIdColumnType: WarpColumnType<Long, ReportId>(LongColumnType(), ::ReportId, ReportId::value)
+fun Table.reportId(name: String) = registerColumn(name, ReportIdColumnType())
 
 // NoticeId
-val NoticeIdColumn = WarpColumnType(LongColumnType(), ::NoticeId, NoticeId::value)
-fun Table.noticeId(name: String) = registerColumn(name, NoticeIdColumn)
+class NoticeIdColumnType: WarpColumnType<Long, NoticeId>(LongColumnType(), ::NoticeId, NoticeId::value)
+fun Table.noticeId(name: String) = registerColumn(name, NoticeIdColumnType())
 
 // BlockUserId
-val BlockUserIdColumn = WarpColumnType(LongColumnType(), BlockUserId::byRawValue, BlockUserId::value)
-fun Table.blockUserId(name: String) = registerColumn(name, BlockUserIdColumn)
+class BlockUserIdColumnType: WarpColumnType<Long, BlockUserId>(LongColumnType(), BlockUserId::byRawValue, BlockUserId::value)
+fun Table.blockUserId(name: String) = registerColumn(name, BlockUserIdColumnType())

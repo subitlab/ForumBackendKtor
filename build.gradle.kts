@@ -44,6 +44,9 @@ dependencies {
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     //mysql
     implementation("mysql:mysql-connector-java:8.0.33")
+    //postgresql
+    implementation("org.postgresql:postgresql:42.7.3")
+    //sql
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version") // 数据库

@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.div
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.minus
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
@@ -16,6 +17,9 @@ import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.*
 import subit.database.Posts.PostListSort.*
+import subit.database.sqlImpl.PostsImpl.PostsTable.create
+import subit.database.sqlImpl.PostsImpl.PostsTable.view
+import kotlin.collections.set
 
 /**
  * 帖子数据库交互类
@@ -218,6 +222,33 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         PostsTable.update({ id eq pid }) { it[view] = view+1 }
     }
 
+    private val mysqlGetRecommendPosts: DivideOp<Long, Long>
+    private val postgresqlGetRecommendPosts: DivideOp<Long, Long>
+
+    init
+    {
+        /// common ///
+        // 再加一是避免点赞收藏评论都是零, 此时分母时间将失去意义
+        val x = (view + LikesImpl.LikesTable.like.count() * 3 + StarsImpl.StarsTable.post.count() * 5 + CommentsImpl.CommentsTable.id.count() * 2 + 1)
+        val now = CustomFunction("NOW", KotlinInstantColumnType())
+
+        /// postgresql ///
+        // EPOCH FROM (NOW() - posts."create")
+        val epochFrom = CustomFunction("EPOCH FROM ", LongColumnType(), now - create)
+        // EXTRACT(EPOCH FROM (NOW() - posts."create"))
+        val extract = CustomFunction("EXTRACT", DoubleColumnType(), epochFrom)/1024.0
+        postgresqlGetRecommendPosts = x/CustomFunction("POW", LongColumnType(), extract, doubleParam(1.8))
+
+        /// mysql ///
+        val minute = object: Expression<Nothing>()
+        {
+            // 转换到SQL语句, 直接转换称"MINUTE"
+            override fun toQueryBuilder(queryBuilder: QueryBuilder) = queryBuilder { append("MINUTE") }
+        }
+        val time = (CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0)/1024.0
+        mysqlGetRecommendPosts = x/CustomFunction("POW", LongColumnType(), time, doubleParam(1.8))
+    }
+
     override suspend fun getRecommendPosts(count: Int): Slice<PostId> = query()
     {
         val blocksTable = (blocks as BlocksImpl).table
@@ -232,21 +263,13 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
          *
          * 计算发帖到现在的时间需要使用函数TIMESTAMPDIFF(MINUTE, create, NOW())
          */
-        // 定义一个MINUTE, 因为不是函数(不能在后面加括号"MINUTE()", 会报错)只能自己定义一个 Expression
-        // 类型这里写的是Nothing, 这里无论填什么类型都不影响SQL请求, 只是方便在代码中处理
-        val minute = object: Expression<Nothing>()
+
+        val order = when (SqlDatabaseImpl.databaseType)
         {
-            // 转换到SQL语句, 直接转换称"MINUTE"
-            override fun toQueryBuilder(queryBuilder: QueryBuilder) = queryBuilder { append("MINUTE") }
+            SqlDatabaseImpl.DatabaseType.MYSQL      -> mysqlGetRecommendPosts
+            SqlDatabaseImpl.DatabaseType.POSTGRESQL -> postgresqlGetRecommendPosts
+            else -> mysqlGetRecommendPosts
         }
-        // SQL中的NOW()函数
-        val now = CustomFunction("NOW", KotlinInstantColumnType())
-        // 调用TIMESTAMPDIFF函数, 返回类型是DoubleColumnType, 传参分别为minute, create, now
-        // 除以1024是避免分母太大, 导致计算结果过小, 小于最低的精度
-        val time = (CustomFunction("TIMESTAMPDIFF", DoubleColumnType(), minute, create, now)+1.0)/1024.0
-        // 再加一是避免点赞收藏评论都是零, 此时分母时间将失去意义
-        val x = (view+likesTable.like.count()*3+starsTable.post.count()*5+commentsTable.id.count()*2+1)
-        val order = x/CustomFunction("POW", LongColumnType(), time, doubleParam(1.8))
         table.join(blocksTable, JoinType.INNER, block, blocksTable.id)
             .join(likesTable, JoinType.LEFT, id, likesTable.post)
             .join(starsTable, JoinType.LEFT, id, starsTable.post)
