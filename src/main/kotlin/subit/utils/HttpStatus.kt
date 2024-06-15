@@ -56,6 +56,8 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val UserInBlackList = HttpStatus(HttpStatusCode.NotAcceptable, "对方已将拉黑")
         // 系统维护中
         val Maintaining = HttpStatus(HttpStatusCode.NotAcceptable, "系统维护中")
+        // 发送验证码过于频繁
+        val SendEmailCodeTooFrequent = HttpStatus(HttpStatusCode.TooManyRequests, "发送验证码过于频繁")
     }
 }
 @Serializable

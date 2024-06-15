@@ -257,7 +257,11 @@ private data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeU
 private suspend fun Context.sendEmailCode()
 {
     val emailInfo = receiveAndCheckBody<EmailInfo>()
-    if (!checkEmail(emailInfo.email)) return call.respond(HttpStatus.EmailFormatError)
-    get<EmailCodes>().sendEmailCode(emailInfo.email, emailInfo.usage)
+    if (!checkEmail(emailInfo.email))
+        return call.respond(HttpStatus.EmailFormatError)
+    val emailCodes = get<EmailCodes>()
+    if (!emailCodes.canSendEmail(emailInfo.email, emailInfo.usage))
+        return call.respond(HttpStatus.SendEmailCodeTooFrequent)
+    emailCodes.sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)
 }

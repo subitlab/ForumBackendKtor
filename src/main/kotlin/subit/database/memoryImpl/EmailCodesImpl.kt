@@ -1,5 +1,9 @@
 package subit.database.memoryImpl
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.plus
 import subit.config.emailConfig
 import subit.database.EmailCodes
 import subit.logger.ForumLogger
@@ -9,7 +13,7 @@ import java.util.*
 class EmailCodesImpl: EmailCodes
 {
     private val codes = Collections.synchronizedMap(
-        hashMapOf<Pair<String, EmailCodes.EmailCodeUsage>, Pair<String, Date>>()
+        hashMapOf<Pair<String, EmailCodes.EmailCodeUsage>, Pair<String, Instant>>()
     )
 
     init
@@ -30,21 +34,26 @@ class EmailCodesImpl: EmailCodes
 
     private fun clearExpiredEmailCode()
     {
-        val now = Date()
-        codes.entries.removeIf { it.value.second.before(now) }
+        codes.entries.removeIf { it.value.second < Clock.System.now() }
     }
 
     override suspend fun addEmailCode(email: String, code: String, usage: EmailCodes.EmailCodeUsage)
     {
-        codes[email to usage] = code to Date(System.currentTimeMillis()+emailConfig.codeValidTime*1000)
+        codes[email to usage] = code to Clock.System.now().plus(emailConfig.codeValidTime, DateTimeUnit.SECOND)
     }
 
     override suspend fun verifyEmailCode(email: String, code: String, usage: EmailCodes.EmailCodeUsage): Boolean
     {
         val pair = codes[email to usage] ?: return false
         if (pair.first != code) return false
-        if (pair.second.before(Date())) return false
+        if (pair.second < Clock.System.now()) return false
         codes.remove(email to usage)
         return true
+    }
+
+    override suspend fun canSendEmail(email: String, usage: EmailCodes.EmailCodeUsage): Boolean
+    {
+        val pair = codes[email to usage] ?: return true
+        return pair.second < Clock.System.now().plus(60 - emailConfig.codeValidTime, DateTimeUnit.SECOND)
     }
 }
