@@ -48,7 +48,7 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
         when (val idx = it.indexOf("="))
         {
             -1 -> null
-            else -> Pair(it.take(idx), it.drop(idx+1))
+            else -> Pair(it.take(idx), it.drop(idx + 1))
         }
     }.toMap()
     workDir = File(argsMap["-workDir"] ?: ".")
@@ -73,7 +73,7 @@ fun main(args: Array<String>)
             Loader.getResource("default_config.yaml")?.readAllBytes() ?: error("default_config.yaml not found")
         configFile.writeBytes(defaultConfig)
         ForumLogger.getLogger("ForumBackend.main").severe(
-            "config.yaml not found, the default config has been created, "+
+            "config.yaml not found, the default config has been created, " +
             "please modify it and restart the program"
         )
         return
@@ -97,6 +97,11 @@ fun main(args: Array<String>)
 fun Application.init()
 {
     version = environment.config.property("version").getString()
+
+    Loader.getResource("logo/SubIT-logo.txt")
+        ?.bufferedReader()
+        ?.use { it.readText().split("\n").forEach(ForumLogger.globalLogger::info) }
+    ?: ForumLogger.globalLogger.warning("SubIT-logo.txt not found")
 
     startCommandThread()
 
