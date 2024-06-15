@@ -15,6 +15,7 @@ import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.*
 import subit.router.*
 import subit.utils.HttpStatus
+import subit.utils.respond
 import subit.utils.statuses
 
 fun Route.posts()
@@ -292,11 +293,11 @@ private suspend fun Context.likePost()
     checkPermission { checkCanRead(post) }
     when (type)
     {
-        LikeType.LIKE -> get<Likes>().like(loginUser.id, id, true)
+        LikeType.LIKE    -> get<Likes>().like(loginUser.id, id, true)
         LikeType.DISLIKE -> get<Likes>().like(loginUser.id, id, false)
-        LikeType.UNLIKE -> get<Likes>().unlike(loginUser.id, id)
-        LikeType.STAR -> get<Stars>().addStar(loginUser.id, id)
-        LikeType.UNSTAR -> get<Stars>().removeStar(loginUser.id, id)
+        LikeType.UNLIKE  -> get<Likes>().unlike(loginUser.id, id)
+        LikeType.STAR    -> get<Stars>().addStar(loginUser.id, id)
+        LikeType.UNSTAR  -> get<Stars>().removeStar(loginUser.id, id)
     }
     if (loginUser.id != post.author && (type == LikeType.LIKE || type == LikeType.STAR))
         get<Notices>().createNotice(

@@ -63,7 +63,7 @@ fun Route.admin()
                     description = "封禁信息, 其中time是封禁结束的时间戳"
                     example(
                         "example",
-                        ProhibitUser(UserId(1), true, System.currentTimeMillis()+1000*60*60*24, "reason")
+                        ProhibitUser(UserId(1), true, System.currentTimeMillis() + 1000 * 60 * 60 * 24, "reason")
                     )
                 }
             }

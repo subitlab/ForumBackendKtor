@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch")
+
 package subit.router.home
 
 import io.github.smiley4.ktorswaggerui.dsl.get

@@ -68,13 +68,15 @@ fun Route.notice()
                 }
             }
             response {
-                statuses<NoticeResponse>(HttpStatus.OK, examples = listOf(
-                    NoticeResponse.fromNotice(StarNotice.example),
-                    NoticeResponse.fromNotice(LikeNotice.example),
-                    NoticeResponse.fromNotice(SystemNotice.example),
-                    NoticeResponse.fromNotice(PostCommentNotice.example),
-                    NoticeResponse.fromNotice(CommentReplyNotice.example),
-                ))
+                statuses<NoticeResponse>(
+                    HttpStatus.OK, examples = listOf(
+                        NoticeResponse.fromNotice(StarNotice.example),
+                        NoticeResponse.fromNotice(LikeNotice.example),
+                        NoticeResponse.fromNotice(SystemNotice.example),
+                        NoticeResponse.fromNotice(PostCommentNotice.example),
+                        NoticeResponse.fromNotice(CommentReplyNotice.example),
+                    )
+                )
                 statuses(HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.BadRequest)
             }
         }) { getNotice() }

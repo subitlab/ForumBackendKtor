@@ -27,10 +27,11 @@ import subit.router.privateChat.privateChat
 import subit.router.report.report
 import subit.router.user.user
 import subit.utils.HttpStatus
+import subit.utils.respond
 
 typealias Context = PipelineContext<*, ApplicationCall>
 
-inline fun <reified T : Any> Context.get(
+inline fun <reified T: Any> Context.get(
     qualifier: Qualifier? = null,
     noinline parameters: ParametersDefinition? = null
 ) = application.get<T>(qualifier, parameters)

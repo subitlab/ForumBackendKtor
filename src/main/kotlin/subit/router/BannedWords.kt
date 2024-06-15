@@ -12,11 +12,12 @@ import subit.database.checkPermission
 import subit.database.receiveAndCheckBody
 import subit.router.*
 import subit.utils.HttpStatus
+import subit.utils.respond
 import subit.utils.statuses
 
 fun Route.bannedWords()
 {
-    route("/bannedWord",{
+    route("/bannedWord", {
         tags = listOf("违禁词汇")
     })
     {
@@ -98,6 +99,7 @@ private suspend fun Context.getBannedWords()
 
 @Serializable
 private data class NewBannedWord(val word: String)
+
 private suspend fun Context.newBannedWord()
 {
     val newBannedWord = receiveAndCheckBody<NewBannedWord>()

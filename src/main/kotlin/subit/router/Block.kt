@@ -270,7 +270,7 @@ private suspend fun Context.getChildren()
     val id = if (id1 == BlockId(0)) null else id1
 
     checkPermission {
-        if (id!=null) checkCanRead(id)
+        if (id != null) checkCanRead(id)
     }
     checkPermission {
         get<Blocks>().getChildren(id).filter { canRead(it.id) }.map { it.id }.let { call.respond(it) }
