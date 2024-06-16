@@ -7,7 +7,6 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
@@ -15,7 +14,6 @@ import subit.dataClasses.*
 import subit.dataClasses.CommentId.Companion.toCommentIdOrNull
 import subit.dataClasses.PostId.Companion.toPostIdOrNull
 import subit.database.*
-import subit.logger.ForumLogger
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
