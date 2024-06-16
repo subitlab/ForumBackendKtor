@@ -112,7 +112,7 @@ private suspend fun Context.getList()
     val type = call.parameters["type"]?.runCatching { Type.valueOf(this) }?.getOrNull()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val notices = get<Notices>()
-    notices.getNotices(loginUser.id, type, begin, count).map(Notice::id).let { call.respond(it) }
+    notices.getNotices(loginUser.id, type, begin, count).map(Notice::id).let { call.respond(HttpStatus.OK, it) }
 }
 
 @Serializable
@@ -154,7 +154,7 @@ private suspend fun Context.getNotice()
      * 注意由于[Notice.type]不在构造函数中等问题, 无法序列化, 故手动转为[NoticeResponse]
      */
 
-    call.respond(NoticeResponse.fromNotice(notice))
+    call.respond(HttpStatus.OK, NoticeResponse.fromNotice(notice))
 }
 
 private suspend fun Context.deleteNotice()

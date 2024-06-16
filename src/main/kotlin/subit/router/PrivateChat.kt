@@ -177,7 +177,7 @@ private suspend fun Context.getPrivateChatUsers()
     val (begin, count) = call.getPage()
     val userId = getLoginUser()?.id ?: return call.respond(HttpStatus.Unauthorized)
     val chats = privateChats.getChatUsers(userId, begin, count)
-    call.respond(chats)
+    call.respond(HttpStatus.OK, chats)
 }
 
 private suspend fun Context.getPrivateChats()
@@ -188,11 +188,12 @@ private suspend fun Context.getPrivateChats()
     val after = call.parameters["after"]?.toLongOrNull()
     val before = call.parameters["before"]?.toLongOrNull()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    if (after != null)
+    val res = if (after != null)
         privateChats.getPrivateChatsAfter(loginUser.id, userId, Instant.fromEpochMilliseconds(after), begin, count)
     else if (before != null)
         privateChats.getPrivateChatsBefore(loginUser.id, userId, Instant.fromEpochMilliseconds(before), begin, count)
-    else call.respond(HttpStatus.BadRequest)
+    else return call.respond(HttpStatus.BadRequest)
+    call.respond(HttpStatus.OK, res)
 }
 
 @Serializable
@@ -202,11 +203,11 @@ private suspend fun Context.getUnreadCount(withObj: Boolean)
 {
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
 
-    if (!withObj) return call.respond(UnreadCount(get<PrivateChats>().getUnreadCount(loginUser.id)))
+    if (!withObj) return call.respond(HttpStatus.OK, UnreadCount(get<PrivateChats>().getUnreadCount(loginUser.id)))
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val privateChats = get<PrivateChats>()
     val count = privateChats.getUnreadCount(loginUser.id, userId)
-    call.respond(UnreadCount(count))
+    call.respond(HttpStatus.OK, UnreadCount(count))
 }
 
 @Serializable
@@ -218,7 +219,7 @@ private suspend fun Context.getIsBlock()
     val userId = call.parameters["userId"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val privateChats = get<PrivateChats>()
     val isBlock = privateChats.getIsBlock(userId, loginUser.id)
-    call.respond(IsBlock(isBlock))
+    call.respond(HttpStatus.OK, IsBlock(isBlock))
 }
 
 private suspend fun Context.setBlock()

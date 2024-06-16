@@ -216,7 +216,7 @@ private suspend fun Context.getBlockInfo()
 {
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     checkPermission { checkCanRead(id) }
-    get<Blocks>().getBlock(id)?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+    get<Blocks>().getBlock(id)?.let { call.respond(HttpStatus.OK, it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.deleteBlock()
@@ -273,7 +273,7 @@ private suspend fun Context.getChildren()
         if (id != null) checkCanRead(id)
     }
     checkPermission {
-        get<Blocks>().getChildren(id).filter { canRead(it.id) }.map { it.id }.let { call.respond(it) }
+        get<Blocks>().getChildren(id).filter { canRead(it.id) }.map { it.id }.let { call.respond(HttpStatus.OK, it) }
     }
 }
 
@@ -283,5 +283,5 @@ private suspend fun Context.searchBlock()
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val blocks = get<Blocks>().searchBlock(getLoginUser()?.id, key, begin, count).map(BlockFull::id)
-    call.respond(blocks)
+    call.respond(HttpStatus.OK, blocks)
 }

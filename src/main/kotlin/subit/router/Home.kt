@@ -4,6 +4,7 @@ package subit.router.home
 
 import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.route
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -45,5 +46,5 @@ suspend fun Context.getHotPosts()
     val posts = get<Posts>()
     val count = call.parameters["count"]?.toIntOrNull() ?: 10
     val result = posts.getRecommendPosts(count)
-    call.respond(result)
+    call.respond(HttpStatusCode.OK, result)
 }

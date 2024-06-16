@@ -15,6 +15,7 @@ import subit.dataClasses.*
 import subit.dataClasses.CommentId.Companion.toCommentIdOrNull
 import subit.dataClasses.PostId.Companion.toPostIdOrNull
 import subit.database.*
+import subit.logger.ForumLogger
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -162,6 +163,8 @@ private suspend fun Context.commentPost()
             obj = postId,
         )
     )
+
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.commentComment()
@@ -186,6 +189,8 @@ private suspend fun Context.commentComment()
             obj = commentId,
         )
     )
+
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.deleteComment()
@@ -197,6 +202,7 @@ private suspend fun Context.deleteComment()
         }
     } ?: return call.respond(HttpStatus.NotFound)
     get<Comments>().setCommentState(commentId, State.DELETED)
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.getPostComments()
@@ -205,7 +211,7 @@ private suspend fun Context.getPostComments()
     get<Posts>().getPost(postId)?.let { postInfo ->
         checkPermission { checkCanRead(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
-    get<Comments>().getComments(post = postId)?.map(Comment::id)?.let { call.respond(it) }
+    get<Comments>().getComments(post = postId)?.map(Comment::id)?.let { call.respond(HttpStatus.OK, it) }
     ?: call.respond(HttpStatus.NotFound)
 }
 
@@ -219,7 +225,7 @@ private suspend fun Context.getCommentComments()
     } ?: return call.respond(HttpStatus.NotFound)
     get<Comments>().getComments(parent = commentId)
         ?.map(Comment::id)
-        ?.let { call.respond(it) } ?: call.respond(HttpStatus.NotFound)
+        ?.let { call.respond(HttpStatus.OK, it) } ?: call.respond(HttpStatus.NotFound)
 }
 
 private suspend fun Context.getComment()
@@ -230,5 +236,5 @@ private suspend fun Context.getComment()
         checkPermission { checkCanRead(postInfo) }
     } ?: return call.respond(HttpStatus.NotFound)
     if (comment.state != State.NORMAL) checkPermission { checkHasGlobalAdmin() }
-    call.respond(comment)
+    call.respond(HttpStatus.OK, comment)
 }

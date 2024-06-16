@@ -172,7 +172,7 @@ private suspend fun Context.register()
     ) ?: return call.respond(HttpStatus.EmailExist)
     // 创建成功, 返回token
     val token = JWTAuth.makeToken(id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
-    return call.respond(token)
+    return call.respond(HttpStatus.OK, token)
 }
 
 @Serializable
@@ -191,7 +191,7 @@ private suspend fun Context.login()
              ?: users.getUser(loginInfo.email!!)?.id
              ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
     val token = JWTAuth.makeToken(id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
-    return call.respond(token)
+    return call.respond(HttpStatus.OK, token)
 }
 
 @Serializable
@@ -211,7 +211,7 @@ private suspend fun Context.loginByCode()
         return call.respond(HttpStatus.WrongEmailCode)
     val user = get<Users>().getUser(email) ?: return call.respond(HttpStatus.AccountNotExist)
     val token = JWTAuth.makeToken(user.id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
-    return call.respond(token)
+    return call.respond(HttpStatus.OK, token)
 }
 
 @Serializable
@@ -248,7 +248,7 @@ private suspend fun Context.changePassword()
     if (!checkPassword(newPassword)) return call.respond(HttpStatus.PasswordFormatError)
     users.setPassword(user.email, newPassword)
     val token = JWTAuth.makeToken(user.id) ?: /*理论上不会进入此分支*/ return call.respond(HttpStatus.AccountNotExist)
-    return call.respond(token)
+    return call.respond(HttpStatus.OK, token)
 }
 
 @Serializable

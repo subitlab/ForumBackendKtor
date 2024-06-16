@@ -106,7 +106,7 @@ fun Route.posts()
                 }
             }
             response {
-                statuses<PostInfo>(HttpStatus.OK, example = PostInfo.example)
+                statuses<PostIdResponse>(HttpStatus.OK, example = PostIdResponse(PostId(0)))
                 statuses(HttpStatus.BadRequest)
             }
         }) { newPost() }
@@ -231,15 +231,16 @@ private suspend fun Context.getPost()
     val loginUser = getLoginUser()
     checkPermission { checkCanRead(postInfo) }
     val postFull = postInfo.toPostFull()
-    if (!postFull.anonymous) call.respond(postFull) // 若不是匿名帖则直接返回
+    if (!postFull.anonymous) call.respond(HttpStatus.OK, postFull) // 若不是匿名帖则直接返回
     else if (loginUser == null || loginUser.permission < PermissionLevel.ADMIN) call.respond(
+        HttpStatus.OK,
         postFull.copy(
             author = UserId(
                 0
             )
         )
     )
-    else call.respond(postFull) // 若是匿名帖且用户权限足够则返回
+    else call.respond(HttpStatus.OK, postFull) // 若是匿名帖且用户权限足够则返回
 }
 
 @Serializable
@@ -262,13 +263,14 @@ private suspend fun Context.deletePost()
     val post = get<Posts>().getPost(id) ?: return call.respond(HttpStatus.NotFound)
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     checkPermission { checkCanDelete(post) }
-    get<Posts>().setPostState(id, State.DELETED).also { call.respond(HttpStatus.OK) }
+    get<Posts>().setPostState(id, State.DELETED)
     if (post.author != loginUser.id) get<Notices>().createNotice(
         Notice.makeSystemNotice(
             user = post.author,
             content = "您的帖子 ${post.title} 已被删除"
         )
     )
+    call.respond(HttpStatus.OK)
 }
 
 @Serializable
@@ -319,6 +321,8 @@ private data class NewPost(
     val top: Boolean
 )
 
+@Serializable private data class PostIdResponse(val id: PostId)
+
 private suspend fun Context.newPost()
 {
     val post = receiveAndCheckBody<NewPost>()
@@ -334,7 +338,7 @@ private suspend fun Context.newPost()
         block = post.block,
         top = post.top
     )
-    get<Posts>().getPost(id)?.let { call.respond(it) } ?: call.respond(HttpStatus.InternalServerError)
+    call.respond(HttpStatus.OK, PostIdResponse(id))
 }
 
 private suspend fun Context.getUserPosts()
@@ -343,7 +347,7 @@ private suspend fun Context.getUserPosts()
     val author = call.parameters["user"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
     val posts = get<Posts>().getUserPosts(loginUser, author, begin, count)
-    call.respond(posts)
+    call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.getBlockPosts()
@@ -353,7 +357,7 @@ private suspend fun Context.getBlockPosts()
     val (begin, count) = call.getPage()
     checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockPosts(block, type, begin, count)
-    call.respond(posts)
+    call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.getBlockTopPosts()
@@ -362,7 +366,7 @@ private suspend fun Context.getBlockTopPosts()
     val (begin, count) = call.getPage()
     checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockTopPosts(block, begin, count)
-    call.respond(posts)
+    call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.setBlockTopPosts()
@@ -380,7 +384,7 @@ private suspend fun Context.searchPost()
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
     val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
-    call.respond(posts)
+    call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.addView()

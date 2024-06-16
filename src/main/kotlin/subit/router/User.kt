@@ -226,15 +226,15 @@ private suspend fun Context.getUserInfo()
     if (id == UserId(0))
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
-        call.respond(loginUser)
+        return call.respond(HttpStatus.OK, loginUser)
     }
     else
     {
         val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         if (loginUser != null && loginUser.permission >= PermissionLevel.ADMIN)
-            call.respond(user)
+            call.respond(HttpStatus.OK, user)
         else
-            call.respond(user.toBasicUserInfo())
+            call.respond(HttpStatus.OK, user.toBasicUserInfo())
     }
 }
 
@@ -289,6 +289,7 @@ private suspend fun Context.changeAvatar()
         val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
         AvatarUtils.setAvatar(user.id, image)
     }
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.deleteAvatar()
@@ -335,7 +336,7 @@ private suspend fun Context.getStars()
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
         val stars = get<Stars>().getStars(user = loginUser.id, begin = begin, limit = count).map { it.post }
-        return call.respond(get<Posts>().getPosts(stars))
+        return call.respond(HttpStatus.OK, get<Posts>().getPosts(stars))
     }
     // 查询其他用户的收藏
     val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
@@ -343,7 +344,7 @@ private suspend fun Context.getStars()
     if (!user.showStars && (loginUser == null || loginUser.permission < PermissionLevel.ADMIN))
         return call.respond(HttpStatus.Forbidden)
     val stars = get<Stars>().getStars(user = user.id, begin = begin, limit = count).map { it.post }
-    call.respond(get<Posts>().getPosts(stars))
+    call.respond(HttpStatus.OK, get<Posts>().getPosts(stars))
 }
 
 @Serializable
@@ -362,5 +363,5 @@ private suspend fun Context.searchUser()
 {
     val username = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
-    call.respond(get<Users>().searchUser(username, begin, count).map(UserFull::id))
+    call.respond(HttpStatus.OK, get<Users>().searchUser(username, begin, count).map(UserFull::id))
 }

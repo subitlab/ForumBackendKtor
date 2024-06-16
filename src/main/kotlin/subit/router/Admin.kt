@@ -157,7 +157,7 @@ private suspend fun Context.prohibitList()
     checkPermission { hasGlobalAdmin() }
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    call.respond(get<Prohibits>().getProhibitList(begin, count))
+    call.respond(HttpStatus.OK, get<Prohibits>().getProhibitList(begin, count))
 }
 
 @Serializable

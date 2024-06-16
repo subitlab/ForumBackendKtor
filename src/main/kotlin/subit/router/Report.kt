@@ -118,6 +118,7 @@ private suspend fun Context.newReport()
     val content = receiveAndCheckBody<ReportContent>().content
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     get<Reports>().addReport(type, id, loginUser.id, content)
+    call.respond(HttpStatus.OK)
 }
 
 private suspend fun Context.getReports()
@@ -132,7 +133,7 @@ private suspend fun Context.getReports()
         "all"   -> null
         else    -> return call.respond(HttpStatus.BadRequest)
     }
-    call.respond(get<Reports>().getReports(begin, count, handled).map(Report::id))
+    call.respond(HttpStatus.OK, get<Reports>().getReports(begin, count, handled).map(Report::id))
 }
 
 private suspend fun Context.getReport()
@@ -140,7 +141,7 @@ private suspend fun Context.getReport()
     checkPermission { checkHasGlobalAdmin() }
     val id = call.parameters["id"]?.toReportIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val report = get<Reports>().getReport(id) ?: return call.respond(HttpStatus.NotFound)
-    call.respond(report)
+    call.respond(HttpStatus.OK, report)
 }
 
 private suspend fun Context.handleReport()

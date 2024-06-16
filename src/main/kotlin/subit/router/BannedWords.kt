@@ -94,7 +94,7 @@ private suspend fun Context.getBannedWords()
     val (begin, count) = call.getPage()
     val bannedWords = get<BannedWords>()
     checkPermission { checkHasGlobalAdmin() }
-    call.respond(bannedWords.getBannedWords(begin, count))
+    call.respond(HttpStatus.OK, bannedWords.getBannedWords(begin, count))
 }
 
 @Serializable

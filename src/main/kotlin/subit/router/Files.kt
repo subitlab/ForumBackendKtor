@@ -179,16 +179,20 @@ private enum class GetFileType
 private suspend fun Context.getFile()
 {
     val id = call.parameters["id"].toUUIDOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val file = FileUtils.getFileInfo(id) ?: return call.respond(HttpStatus.NotFound)
+    val fileInfo = FileUtils.getFileInfo(id) ?: return call.respond(HttpStatus.NotFound)
     val user = getLoginUser()
-    if (!user.canGet(file)) return call.respond(HttpStatus.Forbidden)
+    if (!user.canGet(fileInfo)) return call.respond(HttpStatus.Forbidden)
     val type = call.parameters["type"] ?: return call.respond(HttpStatus.BadRequest)
     return when
     {
-        type.equals(GetFileType.INFO.name, true) -> call.respond(file)
+        type.equals(GetFileType.INFO.name, true) -> call.respond(HttpStatus.OK, fileInfo)
         type.equals(GetFileType.DATA.name, true) ->
-            FileUtils.getFile(id, file)?.let { call.respondFile(it) } ?: call.respond(HttpStatus.NotFound)
-
+        {
+            val file = FileUtils.getFile(id, fileInfo) ?: return call.respond(HttpStatus.NotFound)
+            call.response.header("Content-Disposition", "attachment; filename=\"${fileInfo.fileName}\"")
+            call.response.header("Content-md5", fileInfo.md5)
+            call.respondFile(file)
+        }
         else                                     -> call.respond(HttpStatus.BadRequest)
     }
 }
@@ -242,6 +246,7 @@ private suspend fun Context.uploadFile()
         user = user.id,
         public = fileInfo!!.public
     )
+    call.respond(HttpStatus.OK)
 }
 
 @Serializable
@@ -257,11 +262,11 @@ private suspend fun Context.getFileList()
     {
         val files = user.id.getUserFiles().map { it.first.toString() }
         val info = user.getSpaceInfo()
-        return call.respond(Files(info, files.asIterable().asSlice(begin, count)))
+        return call.respond(HttpStatus.OK, Files(info, files.asIterable().asSlice(begin, count)))
     }
     val file = id.getUserFiles().filter { user.canGet(it.second) }.map { it.first.toString() }
     val info = get<Users>().getUser(id)?.getSpaceInfo() ?: return call.respond(HttpStatus.NotFound)
-    call.respond(Files(info, file.asIterable().asSlice(begin, count)))
+    call.respond(HttpStatus.OK, Files (info, file.asIterable().asSlice(begin, count)))
 }
 
 @Serializable
