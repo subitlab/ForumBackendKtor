@@ -77,15 +77,6 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
     override val name: String = "sql"
 
-    enum class DatabaseType
-    {
-        MYSQL,
-        POSTGRESQL,
-        UNKNOWN
-    }
-    lateinit var databaseType: DatabaseType
-        private set
-
     /**
      * 初始化数据库.
      */
@@ -113,14 +104,10 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             shutdown(1, "Database configuration not found.")
         }
 
-        databaseType = if (driver.contains("mysql")) DatabaseType.MYSQL
-        else if (driver.contains("postgres")) DatabaseType.POSTGRESQL
-        else DatabaseType.UNKNOWN
-
         logger.info("Load database configuration. url: $url, driver: $driver, user: $user")
         val module = module(!lazyInit)
         {
-            named("database")
+            named("sql-database-impl")
 
             single {
                 Database.connect(createHikariDataSource(url, driver, user, password))

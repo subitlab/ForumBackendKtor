@@ -33,10 +33,13 @@ import subit.utils.ForumThreadGroup
 import subit.utils.HttpStatus
 import subit.utils.respond
 import java.io.File
+import kotlin.properties.Delegates
 
 lateinit var version: String
     private set
 lateinit var workDir: File
+    private set
+var debug by Delegates.notNull<Boolean>()
     private set
 
 /**
@@ -51,12 +54,28 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
             else -> Pair(it.take(idx), it.drop(idx + 1))
         }
     }.toMap()
+
+    // 从命令行中加载信息
+
+    // 工作目录
     workDir = File(argsMap["-workDir"] ?: ".")
     workDir.mkdirs()
-    val resArgs = argsMap.entries.filterNot { it.key == "-config" }.map { (k, v) -> "$k=$v" }.toTypedArray()
-    val configFile = File(workDir, argsMap["-config"] ?: "config.yaml")
 
-    return Pair(resArgs, configFile)
+    // 是否开启debug模式
+    debug = argsMap["-debug"]?.toBoolean() ?: false
+
+    // 去除命令行中的-config参数, 因为ktor会解析此参数进而不加载打包的application.yaml
+    // 其余参数还原为字符串数组
+    val resArgs = argsMap.entries
+        .filterNot { it.key == "-config" || it.key == "-workDir" || it.key == "-debug" }
+        .map { (k, v) -> "$k=$v" }
+        .toTypedArray()
+    // 命令行中输入的自定义配置文件
+    // 如果输入的绝对路径, 则直接使用, 否则在工作目录下寻找
+    val configFileName = argsMap["-config"] ?: "config.yaml"
+    val configFile = if (configFileName.startsWith("/")) File(configFileName) else File(workDir, configFileName)
+
+    return resArgs to configFile
 }
 
 fun main(args: Array<String>)
@@ -64,7 +83,9 @@ fun main(args: Array<String>)
     // 处理命令行应在最前面, 因为需要来解析workDir, 否则后面的程序无法正常运行
     val (args1, configFile) = runCatching { parseCommandLineArgs(args) }.getOrElse { return }
 
-    subit.config.ConfigLoader.init() // 初始化配置文件加载器, 会加载所有配置文件
+    // 初始化配置文件加载器, 会加载所有配置文件
+    subit.config.ConfigLoader.init()
+
     // 检查主配置文件是否存在, 不存在则创建默认配置文件, 并结束程序
     if (!configFile.exists())
     {
@@ -78,15 +99,19 @@ fun main(args: Array<String>)
         )
         return
     }
-    // 加载配置文件
+
+    // 加载主配置文件
     val customConfig = ConfigLoader.load(configFile.path)
+
     // 生成环境
     val environment = commandLineEnvironment(args = args1)
     {
+        // 将打包的application.yaml与命令行中提供的配置文件(没提供某人config.yaml)合并
         this.config = this.config.withFallback(customConfig)
     }
     // 启动服务器
     embeddedServer(Netty, environment).start(wait = true)
+    // 若服务器关闭则终止整个程序
     ForumThreadGroup.shutdown(0)
 }
 
@@ -165,9 +190,12 @@ private fun Application.installDeserialization() = install(ContentNegotiation)
     {
         // 设置默认值也序列化, 否则不默认值不会被序列化
         encodeDefaults = true
-        prettyPrint = true
-        isLenient = true
+        // 若debug模式开启, 则将json序列化为可读性更高的格式
+        prettyPrint = debug
+        // 忽略未知字段
         ignoreUnknownKeys = true
+        // 宽松模式, 若字段类型不匹配, 则尝试转换
+        isLenient = true
     })
 }
 
