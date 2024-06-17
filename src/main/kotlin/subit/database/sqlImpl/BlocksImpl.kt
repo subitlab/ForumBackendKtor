@@ -10,7 +10,6 @@ import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Blocks
 import subit.database.Permissions
-import subit.database.sqlImpl.PostsImpl.PostsTable
 
 /**
  * 板块数据库交互类
@@ -111,7 +110,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         BlocksTable.join(permissionTable, JoinType.LEFT, id, permissionTable.block, additionalConstraint)
             .select(id)
             .where { BlocksTable.parent eq parent }
-            .andWhere { PostsTable.state eq State.NORMAL }
+            .andWhere { state eq State.NORMAL }
             .groupBy(id, reading)
             .having { (permissionTable.permission.max() greaterEq reading) or (reading lessEq PermissionLevel.NORMAL) }
             .orderBy(id, SortOrder.DESC)
@@ -128,7 +127,7 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         BlocksTable.join(permissionTable, JoinType.LEFT, id, permissionTable.block, additionalConstraint)
             .select(BlocksTable.columns)
             .where { (name like "%$key%") or (description like "%$key%") }
-            .andWhere { PostsTable.state eq State.NORMAL }
+            .andWhere { state eq State.NORMAL }
             .groupBy(id, reading)
             .having { (permissionTable.permission.max() greaterEq reading) or (reading lessEq PermissionLevel.NORMAL) }
             .orderBy(id, SortOrder.DESC)

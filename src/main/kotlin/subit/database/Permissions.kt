@@ -1,4 +1,5 @@
 @file:Suppress("unused")
+
 package subit.database
 
 import io.ktor.server.application.*
@@ -28,7 +29,7 @@ inline fun <reified T> checkPermission(
     body: CheckPermissionScope.()->T
 ): T = CheckPermissionScope(user).body()
 
-open class CheckPermissionScope(val user: UserFull?): KoinComponent
+open class CheckPermissionScope @PublishedApi internal constructor(val user: UserFull?): KoinComponent
 {
     protected val permissions = get<Permissions>()
     protected val blocks = get<Blocks>()
@@ -152,7 +153,8 @@ open class CheckPermissionScope(val user: UserFull?): KoinComponent
     }
 }
 
-class CheckPermissionInContextScope(val context: Context, user: UserFull?): CheckPermissionScope(user)
+class CheckPermissionInContextScope @PublishedApi internal constructor(val context: Context, user: UserFull?):
+    CheckPermissionScope(user)
 {
     /**
      * 结束请求
@@ -266,7 +268,7 @@ class CheckPermissionInContextScope(val context: Context, user: UserFull?): Chec
         }
         if (block == null)
         {
-            if(hasGlobalAdmin() && other.permission < getGlobalPermission() && permission < getGlobalPermission())
+            if (hasGlobalAdmin() && other.permission < getGlobalPermission() && permission < getGlobalPermission())
                 return
             else return finish(
                 HttpStatus.Forbidden.copy(
