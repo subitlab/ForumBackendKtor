@@ -10,6 +10,7 @@ import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.Blocks
 import subit.database.Permissions
+import subit.database.sqlImpl.PostsImpl.PostsTable
 
 /**
  * 板块数据库交互类
@@ -101,26 +102,37 @@ class BlocksImpl: DaoSqlImpl<BlocksImpl.BlocksTable>(BlocksTable), Blocks, KoinC
         }
     }
 
-    override suspend fun getChildren(parent: BlockId?): List<BlockFull> = query()
+    override suspend fun getChildren(loginUser: UserId?, parent: BlockId?, begin: Long, count: Int) = query()
     {
-        selectAll().where { BlocksTable.parent eq parent }.map(::deserializeBlock)
+        val permissionTable = (permissions as PermissionsImpl).table
+        val additionalConstraint: (SqlExpressionBuilder.()->Op<Boolean>)? =
+            if (loginUser != null) ({ permissionTable.user eq loginUser })
+            else null
+        BlocksTable.join(permissionTable, JoinType.LEFT, id, permissionTable.block, additionalConstraint)
+            .select(id)
+            .where { BlocksTable.parent eq parent }
+            .andWhere { PostsTable.state eq State.NORMAL }
+            .groupBy(id, reading)
+            .having { (permissionTable.permission.max() greaterEq reading) or (reading lessEq PermissionLevel.NORMAL) }
+            .orderBy(id, SortOrder.DESC)
+            .asSlice(begin, count)
+            .map { it[id].value }
     }
 
-    override suspend fun searchBlock(user: UserId?, key: String, begin: Long, count: Int): Slice<BlockFull> = query()
+    override suspend fun searchBlock(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<BlockId> = query()
     {
-        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
-        val r = BlocksTable.selectAll().where()
-        {
-            (name like "%$key%") or (description like "%$key%")
-        }.asSlice(begin, count)
-        {
-            val block = it[id].value
-            if (map.containsKey(block)) return@asSlice (map[block] == true)
-            val permission = user?.let { permissions.getPermission(block, user) } ?: PermissionLevel.NORMAL
-            val res = permission >= it[reading]
-            map[block] = res
-            res
-        }
-        return@query r.map(::deserializeBlock)
+        val permissionTable = (permissions as PermissionsImpl).table
+        val additionalConstraint: (SqlExpressionBuilder.()->Op<Boolean>)? =
+            if (loginUser != null) ({ permissionTable.user eq loginUser })
+            else null
+        BlocksTable.join(permissionTable, JoinType.LEFT, id, permissionTable.block, additionalConstraint)
+            .select(BlocksTable.columns)
+            .where { (name like "%$key%") or (description like "%$key%") }
+            .andWhere { PostsTable.state eq State.NORMAL }
+            .groupBy(id, reading)
+            .having { (permissionTable.permission.max() greaterEq reading) or (reading lessEq PermissionLevel.NORMAL) }
+            .orderBy(id, SortOrder.DESC)
+            .asSlice(begin, count)
+            .map { it[id].value }
     }
 }

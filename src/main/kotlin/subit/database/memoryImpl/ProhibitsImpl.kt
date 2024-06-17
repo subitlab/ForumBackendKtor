@@ -35,7 +35,6 @@ class ProhibitsImpl: Prohibits
     override suspend fun getProhibitList(begin: Long, count: Int): Slice<Prohibit>
     {
         clearProhibit()
-        val list = map.values.sortedBy { it.time }
-        return list.asSlice(begin, count)
+        return map.values.sortedBy { it.time }.asSequence().asSlice(begin, count)
     }
 }

@@ -60,7 +60,8 @@ class BlocksImpl: Blocks
         map[block] = b.copy(state = state)
     }
 
-    override suspend fun getChildren(parent: BlockId?): List<BlockFull> = map.values.filter { it.parent == parent }
-    override suspend fun searchBlock(user: UserId?, key: String, begin: Long, count: Int): Slice<BlockFull> =
-        map.values.filter { it.name.contains(key) }.asSlice(begin, count)
+    override suspend fun getChildren(loginUser: UserId?, parent: BlockId?, begin: Long, count: Int): Slice<BlockId> =
+        map.values.filter { it.parent == parent }.asSequence().asSlice(begin, count).map { it.id }
+    override suspend fun searchBlock(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<BlockId> =
+        map.values.filter { it.name.contains(key) }.asSequence().asSlice(begin, count).map { it.id }
 }

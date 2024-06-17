@@ -17,131 +17,128 @@ import subit.router.authenticated
 import subit.router.get
 import subit.utils.*
 
-fun Route.auth()
+fun Route.auth() = route("/auth", {
+    tags = listOf("账户")
+})
 {
-    route("/auth", {
-        tags = listOf("账户")
-    })
-    {
-        post("/register", {
-            description = "注册, 若成功返回token"
-            request {
-                body<RegisterInfo>
-                {
-                    required = true
-                    description = "注册信息"
-                    example("example", RegisterInfo("username", "password", "email", "code"))
-                }
+    post("/register", {
+        description = "注册, 若成功返回token"
+        request {
+            body<RegisterInfo>
+            {
+                required = true
+                description = "注册信息"
+                example("example", RegisterInfo("username", "password", "email", "code"))
             }
-            this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
-                statuses(
-                    HttpStatus.WrongEmailCode,
-                    HttpStatus.EmailExist,
-                    HttpStatus.EmailFormatError,
-                    HttpStatus.UsernameFormatError,
-                    HttpStatus.PasswordFormatError,
-                    HttpStatus.NotInWhitelist
-                )
-            }
-        }) { register() }
+        }
+        this.response {
+            statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
+            statuses(
+                HttpStatus.WrongEmailCode,
+                HttpStatus.EmailExist,
+                HttpStatus.EmailFormatError,
+                HttpStatus.UsernameFormatError,
+                HttpStatus.PasswordFormatError,
+                HttpStatus.NotInWhitelist
+            )
+        }
+    }) { register() }
 
-        post("/login", {
-            description = "登陆, 若成功返回token"
-            request {
-                body<LoginInfo>()
-                {
-                    required = true
-                    description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
-                    example("example", LoginInfo(email = "email", password = "password", id = UserId(0)))
-                }
+    post("/login", {
+        description = "登陆, 若成功返回token"
+        request {
+            body<LoginInfo>()
+            {
+                required = true
+                description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                example("example", LoginInfo(email = "email", password = "password", id = UserId(0)))
             }
-            this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
-                statuses(
-                    HttpStatus.PasswordError,
-                    HttpStatus.AccountNotExist,
-                )
-            }
-        }) { login() }
+        }
+        this.response {
+            statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
+            statuses(
+                HttpStatus.PasswordError,
+                HttpStatus.AccountNotExist,
+            )
+        }
+    }) { login() }
 
-        post("/loginByCode", {
-            description = "通过邮箱验证码登陆, 若成功返回token"
-            request {
-                body<LoginByCodeInfo>()
-                {
-                    required = true
-                    description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
-                    example("example", LoginByCodeInfo(email = "email@abc.com", code = "123456"))
-                }
+    post("/loginByCode", {
+        description = "通过邮箱验证码登陆, 若成功返回token"
+        request {
+            body<LoginByCodeInfo>()
+            {
+                required = true
+                description = "登陆信息, id(用户ID)和email(用户的邮箱)二选一"
+                example("example", LoginByCodeInfo(email = "email@abc.com", code = "123456"))
             }
-            this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
-                statuses(
-                    HttpStatus.AccountNotExist,
-                    HttpStatus.WrongEmailCode,
-                )
-            }
-        }) { loginByCode() }
+        }
+        this.response {
+            statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
+            statuses(
+                HttpStatus.AccountNotExist,
+                HttpStatus.WrongEmailCode,
+            )
+        }
+    }) { loginByCode() }
 
-        post("/resetPassword", {
-            description = "重置密码(忘记密码)"
-            request {
-                body<ResetPasswordInfo>
-                {
-                    required = true
-                    description = "重置密码信息"
-                    example("example", ResetPasswordInfo("email@abc.com", "code", "newPassword"))
-                }
+    post("/resetPassword", {
+        description = "重置密码(忘记密码)"
+        request {
+            body<ResetPasswordInfo>
+            {
+                required = true
+                description = "重置密码信息"
+                example("example", ResetPasswordInfo("email@abc.com", "code", "newPassword"))
             }
-            this.response {
-                statuses(HttpStatus.OK)
-                statuses(
-                    HttpStatus.WrongEmailCode,
-                    HttpStatus.AccountNotExist,
-                )
-            }
-        }) { resetPassword() }
+        }
+        this.response {
+            statuses(HttpStatus.OK)
+            statuses(
+                HttpStatus.WrongEmailCode,
+                HttpStatus.AccountNotExist,
+            )
+        }
+    }) { resetPassword() }
 
-        post("/sendEmailCode", {
-            description = "发送邮箱验证码"
-            request {
-                body<EmailInfo>
-                {
-                    required = true
-                    description = "邮箱信息"
-                    example("example", EmailInfo("email@abc.com", EmailCodes.EmailCodeUsage.REGISTER))
-                }
+    post("/sendEmailCode", {
+        description = "发送邮箱验证码"
+        request {
+            body<EmailInfo>
+            {
+                required = true
+                description = "邮箱信息"
+                example("example", EmailInfo("email@abc.com", EmailCodes.EmailCodeUsage.REGISTER))
             }
-            this.response {
-                statuses(HttpStatus.OK)
-                statuses(
-                    HttpStatus.EmailFormatError,
-                )
-            }
-        }) { sendEmailCode() }
+        }
+        this.response {
+            statuses(HttpStatus.OK)
+            statuses(
+                HttpStatus.EmailFormatError,
+            )
+        }
+    }) { sendEmailCode() }
 
-        post("/changePassword", {
-            description = "修改密码"
-            request {
-                authenticated(true)
-                body<ChangePasswordInfo>
-                {
-                    required = true
-                    description = "修改密码信息"
-                    example("example", ChangePasswordInfo("oldPassword", "newPassword"))
-                }
+    post("/changePassword", {
+        description = "修改密码"
+        request {
+            authenticated(true)
+            body<ChangePasswordInfo>
+            {
+                required = true
+                description = "修改密码信息"
+                example("example", ChangePasswordInfo("oldPassword", "newPassword"))
             }
-            this.response {
-                statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
-                statuses(
-                    HttpStatus.Unauthorized,
-                    HttpStatus.PasswordError,
-                    HttpStatus.PasswordFormatError,
-                )
-            }
-        }) { changePassword() }
-    }
+        }
+        this.response {
+            statuses<JWTAuth.Token>(HttpStatus.OK, example = JWTAuth.Token("token"))
+            statuses(
+                HttpStatus.Unauthorized,
+                HttpStatus.PasswordError,
+                HttpStatus.PasswordFormatError,
+            )
+        }
+    }) { changePassword() }
 }
 
 @Serializable

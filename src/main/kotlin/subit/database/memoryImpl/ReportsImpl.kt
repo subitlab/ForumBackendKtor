@@ -30,8 +30,8 @@ class ReportsImpl: Reports
     }
     override suspend fun getReports(begin: Long, count: Int, handled: Boolean?): Slice<Report>
     {
-        if (handled == true) return this.handled.values.map { it.first }.asSlice(begin, count)
-        if (handled == false) return unHandled.values.asSlice(begin, count)
-        return (unHandled.values + this.handled.values.map { it.first }).asSlice(begin, count)
+        if (handled == true) return this.handled.values.map { it.first }.asSequence().asSlice(begin, count)
+        if (handled == false) return unHandled.values.asSequence().asSlice(begin, count)
+        return (unHandled.values + this.handled.values.map { it.first }).asSequence().asSlice(begin, count)
     }
 }

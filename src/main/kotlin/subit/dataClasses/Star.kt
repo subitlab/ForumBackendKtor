@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Star(
     val user: UserId,
-    val post: PostId?,
+    val post: PostId,
     val time: Long
 )
 {

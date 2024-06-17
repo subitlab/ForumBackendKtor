@@ -66,7 +66,7 @@ interface Users
     suspend fun changeFilePermission(id: UserId, permission: PermissionLevel): Boolean
 
     /**
-     * 若用户不存在返回false
+     * 搜索用户
      */
     suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull>
 }

@@ -21,118 +21,115 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.comment()
+fun Route.comment() = route("/comment", {
+    tags = listOf("评论")
+})
 {
-    route("/comment", {
-        tags = listOf("评论")
-    })
-    {
-        post("/post/{postId}", {
-            description = "评论一个帖子"
-            request {
-                authenticated(true)
-                pathParameter<RawPostId>("postId")
-                {
-                    required = true
-                    description = "帖子id"
-                }
-                body<CommentContent>
-                {
-                    description = "评论内容"
-                    example("example", CommentContent("评论内容"))
-                }
+    post("/post/{postId}", {
+        description = "评论一个帖子"
+        request {
+            authenticated(true)
+            pathParameter<RawPostId>("postId")
+            {
+                required = true
+                description = "帖子id"
             }
-            response {
-                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
-                statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
+            body<CommentContent>
+            {
+                description = "评论内容"
+                example("example", CommentContent("评论内容"))
             }
-        }) { commentPost() }
+        }
+        response {
+            statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
+            statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
+        }
+    }) { commentPost() }
 
-        post("/comment/{commentId}", {
-            description = "评论一个评论"
-            request {
-                authenticated(true)
-                pathParameter<RawCommentId>("commentId")
-                {
-                    required = true
-                    description = "评论id"
-                }
-                body<CommentContent>
-                {
-                    description = "评论内容"
-                    example("example", CommentContent("评论内容"))
-                }
+    post("/comment/{commentId}", {
+        description = "评论一个评论"
+        request {
+            authenticated(true)
+            pathParameter<RawCommentId>("commentId")
+            {
+                required = true
+                description = "评论id"
             }
-            response {
-                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
-                statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
+            body<CommentContent>
+            {
+                description = "评论内容"
+                example("example", CommentContent("评论内容"))
             }
-        }) { commentComment() }
+        }
+        response {
+            statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
+            statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
+        }
+    }) { commentComment() }
 
-        delete("/{commentId}", {
-            description = "删除一个评论, 需要板块管理员权限"
-            request {
-                authenticated(true)
-                pathParameter<RawCommentId>("commentId")
-                {
-                    required = true
-                    description = "评论id"
-                }
+    delete("/{commentId}", {
+        description = "删除一个评论, 需要板块管理员权限"
+        request {
+            authenticated(true)
+            pathParameter<RawCommentId>("commentId")
+            {
+                required = true
+                description = "评论id"
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
-            }
-        }) { deleteComment() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
+        }
+    }) { deleteComment() }
 
-        get("/post/{postId}", {
-            description = "获取一个帖子的评论列表"
-            request {
-                authenticated(false)
-                pathParameter<RawPostId>("postId")
-                {
-                    required = true
-                    description = "帖子id"
-                }
+    get("/post/{postId}", {
+        description = "获取一个帖子的评论列表"
+        request {
+            authenticated(false)
+            pathParameter<RawPostId>("postId")
+            {
+                required = true
+                description = "帖子id"
             }
-            response {
-                statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
-                statuses(HttpStatus.NotFound)
-            }
-        }) { getPostComments() }
+        }
+        response {
+            statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getPostComments() }
 
-        get("/comment/{commentId}", {
-            description = "获取一个评论的评论列表"
-            request {
-                authenticated(false)
-                pathParameter<RawCommentId>("commentId")
-                {
-                    required = true
-                    description = "评论id"
-                }
+    get("/comment/{commentId}", {
+        description = "获取一个评论的评论列表"
+        request {
+            authenticated(false)
+            pathParameter<RawCommentId>("commentId")
+            {
+                required = true
+                description = "评论id"
             }
-            response {
-                statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
-                statuses(HttpStatus.NotFound)
-            }
-        }) { getCommentComments() }
+        }
+        response {
+            statuses<List<CommentId>>(HttpStatus.OK, example = listOf(CommentId(0)))
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getCommentComments() }
 
-        get("/{commentId}", {
-            description = "获取一个评论的信息"
-            request {
-                authenticated(false)
-                pathParameter<RawCommentId>("commentId")
-                {
-                    required = true
-                    description = "评论id"
-                }
+    get("/{commentId}", {
+        description = "获取一个评论的信息"
+        request {
+            authenticated(false)
+            pathParameter<RawCommentId>("commentId")
+            {
+                required = true
+                description = "评论id"
             }
-            response {
-                statuses<Comment>(HttpStatus.OK, example = Comment.example)
-                statuses(HttpStatus.NotFound)
-            }
-        }) { getComment() }
-    }
+        }
+        response {
+            statuses<Comment>(HttpStatus.OK, example = Comment.example)
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getComment() }
 }
 
 @Serializable

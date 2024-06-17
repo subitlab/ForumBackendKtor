@@ -17,211 +17,211 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.posts()
-{
-    route("/post", {
-        tags = listOf("帖子")
-    }) {
-        get("/{id}", {
-            description = "获取帖子信息"
-            request {
-                authenticated(false)
-                pathParameter<RawPostId>("id")
-                {
-                    required = true
-                    description = "要获取的帖子的id, 若是匿名帖则author始终是null"
-                }
+fun Route.posts() = route("/post", {
+    tags = listOf("帖子")
+}) {
+    get("/{id}", {
+        description = "获取帖子信息"
+        request {
+            authenticated(false)
+            pathParameter<RawPostId>("id")
+            {
+                required = true
+                description = "要获取的帖子的id, 若是匿名帖则author始终是null"
             }
-            response {
-                statuses<PostFull>(HttpStatus.OK, example = PostFull.example)
-                statuses(HttpStatus.NotFound)
-            }
-        }) { getPost() }
+        }
+        response {
+            statuses<PostFull>(HttpStatus.OK, example = PostFull.example)
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getPost() }
 
-        delete("/{id}", {
-            description = "删除帖子"
-            request {
-                authenticated(true)
-                pathParameter<RawPostId>("id")
-                {
-                    required = true
-                    description = "要删除的帖子的id"
-                }
+    delete("/{id}", {
+        description = "删除帖子"
+        request {
+            authenticated(true)
+            pathParameter<RawPostId>("id")
+            {
+                required = true
+                description = "要删除的帖子的id"
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.BadRequest)
-            }
-        }) { deletePost() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { deletePost() }
 
-        put("/{id}", {
-            description = "编辑帖子(block及以上管理员可修改)"
-            request {
-                authenticated(true)
-                body<EditPost>
-                {
-                    required = true
-                    description = "编辑帖子"
-                    example("example", EditPost("新标题", "新内容"))
-                }
+    put("/{id}", {
+        description = "编辑帖子(block及以上管理员可修改)"
+        request {
+            authenticated(true)
+            body<EditPost>
+            {
+                required = true
+                description = "编辑帖子"
+                example("example", EditPost("新标题", "新内容"))
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.BadRequest)
-            }
-        }) { editPost() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { editPost() }
 
-        post("/{id}/like", {
-            description = "点赞/点踩/取消点赞/收藏/取消收藏 帖子"
-            request {
-                authenticated(true)
-                pathParameter<RawPostId>("id")
-                {
-                    required = true
-                    description = "帖子的id"
-                }
-                body<LikePost>
-                {
-                    required = true
-                    description = "点赞/点踩/取消点赞/收藏/取消收藏"
-                    example("example", LikePost(LikeType.LIKE))
-                }
+    post("/{id}/like", {
+        description = "点赞/点踩/取消点赞/收藏/取消收藏 帖子"
+        request {
+            authenticated(true)
+            pathParameter<RawPostId>("id")
+            {
+                required = true
+                description = "帖子的id"
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound)
+            body<LikePost>
+            {
+                required = true
+                description = "点赞/点踩/取消点赞/收藏/取消收藏"
+                example("example", LikePost(LikeType.LIKE))
             }
-        }) { likePost() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound)
+        }
+    }) { likePost() }
 
-        post("/new", {
-            description = "新建帖子"
-            request {
-                authenticated(true)
-                body<NewPost>
-                {
-                    required = true
-                    description = "发帖, 成功返回帖子ID"
-                    example("example", NewPost("标题", "内容", false, BlockId(0), false))
-                }
+    post("/new", {
+        description = "新建帖子"
+        request {
+            authenticated(true)
+            body<NewPost>
+            {
+                required = true
+                description = "发帖, 成功返回帖子ID"
+                example("example", NewPost("标题", "内容", false, BlockId(0), false))
             }
-            response {
-                statuses<PostIdResponse>(HttpStatus.OK, example = PostIdResponse(PostId(0)))
-                statuses(HttpStatus.BadRequest)
-            }
-        }) { newPost() }
+        }
+        response {
+            statuses<WarpPostId>(HttpStatus.OK, example = WarpPostId(PostId(0)))
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { newPost() }
 
-        get("/list/user/{user}", {
-            description = "获取用户发送的帖子列表"
-            request {
-                authenticated(false)
-                pathParameter<RawUserId>("user")
-                {
-                    required = true
-                    description = "作者ID"
-                }
-                paged()
+    get("/list/user/{user}", {
+        description = "获取用户发送的帖子列表"
+        request {
+            authenticated(false)
+            pathParameter<RawUserId>("user")
+            {
+                required = true
+                description = "作者ID"
             }
-            response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
-            }
-        }) { getUserPosts() }
+            paged()
+        }
+        response {
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+        }
+    }) { getUserPosts() }
 
-        get("/list/block/{block}", {
-            description = "获取板块帖子列表"
-            request {
-                authenticated(false)
-                pathParameter<RawBlockId>("block")
-                {
-                    required = true
-                    description = "板块ID"
-                }
-                queryParameter<Posts.PostListSort>("sort")
-                {
-                    required = true
-                    description = "排序方式"
-                    example = Posts.PostListSort.NEW
-                }
-                paged()
+    get("/list/block/{block}", {
+        description = "获取板块帖子列表"
+        request {
+            authenticated(false)
+            pathParameter<RawBlockId>("block")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
+            queryParameter<Posts.PostListSort>("sort")
+            {
+                required = true
+                description = "排序方式"
+                example = Posts.PostListSort.NEW
             }
-        }) { getBlockPosts() }
+            paged()
+        }
+        response {
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+        }
+    }) { getBlockPosts() }
 
-        get("/top/{block}", {
-            description = "获取板块置顶帖子列表"
-            request {
-                authenticated(false)
-                pathParameter<RawBlockId>("block")
-                {
-                    required = true
-                    description = "板块ID"
-                }
-                paged()
+    get("/top/{block}", {
+        description = "获取板块置顶帖子列表"
+        request {
+            authenticated(false)
+            pathParameter<RawBlockId>("block")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses<Slice<PostInfo>>(HttpStatus.OK, example = sliceOf(PostInfo.example))
-            }
-        }) { getBlockTopPosts() }
+            paged()
+        }
+        response {
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+        }
+    }) { getBlockTopPosts() }
 
-        get("/{id}/setTop/{top}", {
-            description = "设置帖子是否置顶"
-            request {
-                authenticated(true)
-                pathParameter<RawPostId>("id")
-                {
-                    required = true
-                    description = "帖子的id"
-                }
-                pathParameter<Boolean>("top")
-                {
-                    required = true
-                    description = "是否置顶"
-                    example = true
-                }
+    get("/{id}/setTop/{top}", {
+        description = "设置帖子是否置顶"
+        request {
+            authenticated(true)
+            pathParameter<RawPostId>("id")
+            {
+                required = true
+                description = "帖子的id"
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.BadRequest)
+            pathParameter<Boolean>("top")
+            {
+                required = true
+                description = "是否置顶"
+                example = true
             }
-        }) { setBlockTopPosts() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { setBlockTopPosts() }
 
-        get("/search", {
-            description = "搜索帖子"
-            request {
-                authenticated(false)
-                queryParameter<String>("key")
-                {
-                    required = true
-                    description = "关键字"
-                    example = "关键字"
-                }
-                paged()
+    get("/search", {
+        description = "搜索帖子"
+        request {
+            authenticated(false)
+            queryParameter<String>("key")
+            {
+                required = true
+                description = "关键字"
+                example = "关键字"
             }
-            response {
-                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
-            }
-        }) { searchPost() }
+            paged()
+        }
+        response {
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+        }
+    }) { searchPost() }
 
-        post("/view", {
-            description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
-            request {
-                authenticated(true)
-                body<PostId>
-                {
-                    required = true
-                    description = "帖子ID"
-                    example("example", PostId(0))
-                }
+    post("/view", {
+        description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
+        request {
+            authenticated(true)
+            body<WarpPostId>
+            {
+                required = true
+                description = "帖子ID"
+                example("example", WarpPostId(PostId(0)))
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Unauthorized)
-                statuses(HttpStatus.BadRequest)
-            }
-        }) { addView() }
-    }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.Unauthorized)
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { addView() }
 }
+
+@Serializable
+private data class WarpPostId(val post: PostId)
 
 private suspend fun Context.getPost()
 {
@@ -320,24 +320,25 @@ private data class NewPost(
     val top: Boolean
 )
 
-@Serializable private data class PostIdResponse(val id: PostId)
-
 private suspend fun Context.newPost()
 {
-    val post = receiveAndCheckBody<NewPost>()
+    val newPost = receiveAndCheckBody<NewPost>()
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
-    checkPermission { checkCanPost(post.block) }
-    if (post.anonymous) checkPermission { checkCanAnonymous(post.block) }
-    if (post.top) checkPermission { checkHasAdminIn(post.block) }
+
+    val block = get<Blocks>().getBlock(newPost.block) ?: return call.respond(HttpStatus.NotFound)
+    checkPermission { checkCanPost(block) }
+
+    if (newPost.anonymous) checkPermission { checkCanAnonymous(block) }
+    if (newPost.top) checkPermission { checkHasAdminIn(block.id) }
     val id = get<Posts>().createPost(
-        title = post.title,
-        content = post.content,
+        title = newPost.title,
+        content = newPost.content,
         author = loginUser.id,
-        anonymous = post.anonymous,
-        block = post.block,
-        top = post.top
+        anonymous = newPost.anonymous,
+        block = newPost.block,
+        top = newPost.top
     )
-    call.respond(HttpStatus.OK, PostIdResponse(id))
+    call.respond(HttpStatus.OK, WarpPostId(id))
 }
 
 private suspend fun Context.getUserPosts()
@@ -345,16 +346,17 @@ private suspend fun Context.getUserPosts()
     val loginUser = getLoginUser()
     val author = call.parameters["user"]?.toUserIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
-    val posts = get<Posts>().getUserPosts(loginUser, author, begin, count)
+    val posts = get<Posts>().getUserPosts(loginUser?.id, author, begin, count)
     call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.getBlockPosts()
 {
     val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val blockFull = get<Blocks>().getBlock(block) ?: return call.respond(HttpStatus.NotFound)
+    checkPermission { checkCanRead(blockFull) }
     val type = call.parameters["sort"]?.let(Posts.PostListSort::valueOf) ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
-    checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockPosts(block, type, begin, count)
     call.respond(HttpStatus.OK, posts)
 }
@@ -362,8 +364,9 @@ private suspend fun Context.getBlockPosts()
 private suspend fun Context.getBlockTopPosts()
 {
     val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
+    val blockFull = get<Blocks>().getBlock(block) ?: return call.respond(HttpStatus.NotFound)
+    checkPermission { checkCanRead(blockFull) }
     val (begin, count) = call.getPage()
-    checkPermission { checkCanRead(block) }
     val posts = get<Posts>().getBlockTopPosts(block, begin, count)
     call.respond(HttpStatus.OK, posts)
 }
@@ -382,7 +385,7 @@ private suspend fun Context.searchPost()
 {
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
-    val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count).map(PostInfo::id)
+    val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count)
     call.respond(HttpStatus.OK, posts)
 }
 

@@ -144,7 +144,11 @@ object TestDatabase: Command, KoinComponent
         return when (args.size)
         {
             1    -> database.keys
-            2    -> database[args[0]]?.run { second.memberFunctions.map { it.name } } ?: emptyList()
+            2    -> database[args[0]]?.run {
+                second.memberFunctions
+                    .map { it.name }
+                    .filter { it !in listOf("equals", "hashCode", "toString") }
+            } ?: emptyList()
 
             else ->
             {

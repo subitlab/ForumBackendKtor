@@ -18,39 +18,37 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.notice()
+fun Route.notice() = route("/notice", {
+    tags = listOf("通知")
+    request {
+        authenticated(true)
+    }
+})
 {
-    route("/notice", {
-        tags = listOf("通知")
-        request {
-            authenticated(true)
-        }
-    })
-    {
-        get("/list", {
-            description = """
+    get("/list", {
+        description = """
                 获取通知列表
                 
                 除去此接口获取的通知外, 待处理的举报和未读的私信也应在通知中显示, 
                 详细请参阅 获取举报列表接口(/report/list) 和 获取所有未读私信数量接口(/privateChat/unread/all)
                 """.trimIndent()
-            request {
-                paged()
-                queryParameter<Type>("type")
-                {
-                    required = false
-                    description = "通知类型, 可选值为${Type.entries.joinToString { it.name }}, 不填则获取所有通知"
-                    example = Type.SYSTEM
-                }
+        request {
+            paged()
+            queryParameter<Type>("type")
+            {
+                required = false
+                description = "通知类型, 可选值为${Type.entries.joinToString { it.name }}, 不填则获取所有通知"
+                example = Type.SYSTEM
             }
-            response {
-                statuses<Slice<NoticeId>>(HttpStatus.OK, example = sliceOf(NoticeId(0)))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getList() }
+        }
+        response {
+            statuses<Slice<NoticeId>>(HttpStatus.OK, example = sliceOf(NoticeId(0)))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getList() }
 
-        get("/{id}", {
-            description = """
+    get("/{id}", {
+        description = """
                 获取通知, 通知有多种类型, 每种类型有结构不同, 可通过type区分. 请注意处理.
                 
                 相应中的type字段为通知类型, 可能为${Type.entries.joinToString { it.name }}
@@ -59,50 +57,49 @@ fun Route.notice()
                 - count: 数量, 当类型为点赞/收藏/评论/回复/待处理举报时, 为数量, 其他情况下为null
                 - content: 内容, 当类型为系统通知时, 为通知内容, 其他情况下为null
                 """.trimIndent()
-            request {
-                pathParameter<RawNoticeId>("id")
-                {
-                    required = true
-                    description = "通知ID"
-                }
+        request {
+            pathParameter<RawNoticeId>("id")
+            {
+                required = true
+                description = "通知ID"
             }
-            response {
-                statuses<NoticeResponse>(
-                    HttpStatus.OK, examples = listOf(
-                        NoticeResponse.fromNotice(StarNotice.example),
-                        NoticeResponse.fromNotice(LikeNotice.example),
-                        NoticeResponse.fromNotice(SystemNotice.example),
-                        NoticeResponse.fromNotice(PostCommentNotice.example),
-                        NoticeResponse.fromNotice(CommentReplyNotice.example),
-                    )
+        }
+        response {
+            statuses<NoticeResponse>(
+                HttpStatus.OK, examples = listOf(
+                    NoticeResponse.fromNotice(StarNotice.example),
+                    NoticeResponse.fromNotice(LikeNotice.example),
+                    NoticeResponse.fromNotice(SystemNotice.example),
+                    NoticeResponse.fromNotice(PostCommentNotice.example),
+                    NoticeResponse.fromNotice(CommentReplyNotice.example),
                 )
-                statuses(HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.BadRequest)
-            }
-        }) { getNotice() }
+            )
+            statuses(HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.BadRequest)
+        }
+    }) { getNotice() }
 
-        delete("/{id}", {
-            description = "删除通知(设为已读)"
-            request {
-                pathParameter<RawNoticeId>("id")
-                {
-                    required = true
-                    description = "通知ID"
-                    example = NoticeId(0)
-                }
+    delete("/{id}", {
+        description = "删除通知(设为已读)"
+        request {
+            pathParameter<RawNoticeId>("id")
+            {
+                required = true
+                description = "通知ID"
+                example = NoticeId(0)
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.BadRequest)
-            }
-        }) { deleteNotice() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.BadRequest)
+        }
+    }) { deleteNotice() }
 
-        delete("/all", {
-            description = "删除所有通知(设为已读)"
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { deleteAll() }
-    }
+    delete("/all", {
+        description = "删除所有通知(设为已读)"
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { deleteAll() }
 }
 
 private suspend fun Context.getList()

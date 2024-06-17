@@ -19,7 +19,8 @@ import subit.dataClasses.Slice
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.database.*
 import subit.database.Posts.PostListSort.*
-import kotlin.collections.set
+import subit.database.sqlImpl.PostsImpl.PostsTable.create
+import subit.database.sqlImpl.PostsImpl.PostsTable.view
 
 /**
  * 帖子数据库交互类
@@ -83,8 +84,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
     override suspend fun editPost(pid: PostId, title: String?, content: String?, top: Boolean?): Unit = query()
     {
         update({ id eq pid })
-        {
-            postInfo ->
+        { postInfo ->
             title?.let { postInfo[PostsTable.title] = title }
             content?.let { postInfo[PostsTable.content] = content }
             top?.let { postInfo[PostsTable.top] = top }
@@ -106,23 +106,36 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
      * 获取帖子列表
      */
     override suspend fun getUserPosts(
-        loginUser: UserFull?,
+        loginUser: UserId?,
         author: UserId,
         begin: Long,
         limit: Int,
-    ): Slice<PostInfo> = query()
+    ): Slice<PostId> = query()
     {
-        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
-        selectAll().where { PostsTable.author eq author }.asSlice(begin, limit)
-        { row ->
-            if (row[block].value in map) return@asSlice (map[row[block].value] == true)
-            val blockFull = blocks.getBlock(row[block].value) ?: return@asSlice false
-            val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser.id) }
-                             ?: PermissionLevel.NORMAL
-            val res = permission >= blockFull.reading && (row[state] == State.NORMAL || loginUser.hasGlobalAdmin())
-            map[row[block].value] = res
-            res
-        }.map(::deserializePost)
+        // 构建查询，联结 PostsTable, BlocksTable 和 PermissionsTable
+        val permissionTable = (permissions as PermissionsImpl).table
+        val blockTable = (blocks as BlocksImpl).table
+
+        if (loginUser == null)
+        {
+            return@query PostsTable.join(blockTable, JoinType.INNER, block, blockTable.id)
+                .select(id)
+                .where { (PostsTable.author eq author) and (state eq State.NORMAL) and (blockTable.reading lessEq PermissionLevel.NORMAL) }
+                .orderBy(create, SortOrder.DESC)
+                .asSlice(begin, limit)
+                .map { it[id].value }
+        }
+
+        PostsTable.join(blockTable, JoinType.INNER, block, blockTable.id)
+            .join(permissionTable, JoinType.LEFT, block, permissionTable.block) { permissionTable.user eq loginUser }
+            .select(id)
+            .where { PostsTable.author eq author }
+            .andWhere { state eq State.NORMAL }
+            .groupBy(id, create, blockTable.id, blockTable.reading)
+            .having { (permissionTable.permission.max() greaterEq blockTable.reading) or (blockTable.reading lessEq PermissionLevel.NORMAL) }
+            .orderBy(create, SortOrder.DESC)
+            .asSlice(begin, limit)
+            .map { it[id].value }
     }
 
     override suspend fun getBlockPosts(
@@ -182,19 +195,14 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         r.asSlice(begin, count).map { it[id].value }
     }
 
-    override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = query()
+    override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostId> = query()
     {
-        PostsTable.selectAll().where { (PostsTable.block eq block) and (top eq true) and (state eq State.NORMAL) }
+        PostsTable.select(id)
+            .where { PostsTable.block eq block }
+            .andWhere { top eq true }
+            .andWhere { state eq State.NORMAL }
             .asSlice(begin, count)
-            .map(::deserializePost)
-    }
-
-    override suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?> = query()
-    {
-        list.map {
-            if (it != null) selectAll().where { id eq it }.firstOrNull()
-            else null
-        }.map { it?.let(::deserializePost) }
+            .map { it[id].value }
     }
 
     override suspend fun searchPosts(
@@ -202,24 +210,39 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         key: String,
         begin: Long,
         count: Int
-    ): Slice<PostInfo> = query()
+    ): Slice<PostId> = query()
     {
-        val map = hashMapOf<BlockId, Boolean>() // 避免重复查询一个板块的权限
-        PostsTable.selectAll().where { ((title like "%$key%") or (content like "%$key%")) and (state eq State.NORMAL) }
-            .asSlice(begin, count) {
-                if (it[block].value in map) return@asSlice (map[it[block].value] == true)
-                val blockFull = blocks.getBlock(it[block].value) ?: return@asSlice false
-                val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser) }
-                                 ?: PermissionLevel.NORMAL
-                val res = permission >= blockFull.reading
-                map[it[block].value] = res
-                res
-            }.map(::deserializePost)
+        val permissionTable = (permissions as PermissionsImpl).table
+        val blockTable = (blocks as BlocksImpl).table
+        val additionalConstraint: (SqlExpressionBuilder.()->Op<Boolean>)? =
+            if (loginUser != null) ({ permissionTable.user eq loginUser })
+            else null
+        PostsTable.join(blockTable, JoinType.INNER, block, blockTable.id)
+            .join(permissionTable, JoinType.LEFT, block, permissionTable.block, additionalConstraint)
+            .select(id)
+            .where { (title like "%$key%") or (content like "%$key%") }
+            .andWhere { state eq State.NORMAL }
+            .groupBy(id, create, blockTable.id, blockTable.reading)
+            .having { (permissionTable.permission.max() greaterEq blockTable.reading) or (blockTable.reading lessEq PermissionLevel.NORMAL) }
+            .orderBy(hotScoreOrder, SortOrder.DESC)
+            .asSlice(begin, count)
+            .map { it[id].value }
     }
 
     override suspend fun addView(pid: PostId): Unit = query()
     {
-        PostsTable.update({ id eq pid }) { it[view] = view+1 }
+        PostsTable.update({ id eq pid }) { it[view] = view + 1 }
+    }
+
+    private val hotScoreOrder by lazy {
+        val x =
+            (view + LikesImpl.LikesTable.like.count() * 3 + StarsImpl.StarsTable.post.count() * 5 + CommentsImpl.CommentsTable.id.count() * 2 + 1)
+        val now = CustomFunction("NOW", KotlinInstantColumnType())
+
+        @Suppress("UNCHECKED_CAST")
+        val minute = (Minute(now - create) as Function<Double> + 1.0) / 1024.0
+        val order = x / CustomFunction("POW", LongColumnType(), minute, doubleParam(1.8))
+        order
     }
 
     override suspend fun getRecommendPosts(count: Int): Slice<PostId> = query()
@@ -237,12 +260,6 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
          * 计算发帖到现在的时间需要使用函数TIMESTAMPDIFF(MINUTE, create, NOW())
          */
 
-        val x = (view + LikesImpl.LikesTable.like.count() * 3 + StarsImpl.StarsTable.post.count() * 5 + CommentsImpl.CommentsTable.id.count() * 2 + 1)
-        val now = CustomFunction("NOW", KotlinInstantColumnType())
-        @Suppress("UNCHECKED_CAST")
-        val minute = (Minute(now - create) as Function<Double> + 1.0) / 1024.0
-        val order = x/CustomFunction("POW", LongColumnType(), minute, doubleParam(1.8))
-
         table.join(blocksTable, JoinType.INNER, block, blocksTable.id)
             .join(likesTable, JoinType.LEFT, id, likesTable.post)
             .join(starsTable, JoinType.LEFT, id, starsTable.post)
@@ -250,7 +267,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
             .select(id)
             .where { (blocksTable.reading lessEq PermissionLevel.NORMAL) and (state eq State.NORMAL) }
             .groupBy(id)
-            .orderBy(order, SortOrder.DESC)
+            .orderBy(hotScoreOrder, SortOrder.DESC)
             .asSlice(0, count)
             .map { it[id].value }
     }

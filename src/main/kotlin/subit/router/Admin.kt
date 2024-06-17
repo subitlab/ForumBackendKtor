@@ -20,82 +20,79 @@ import subit.utils.checkUserInfo
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.admin()
+fun Route.admin() = route("/admin", {
+    tags = listOf("用户管理")
+    request {
+        authenticated(true)
+    }
+    response {
+        statuses(HttpStatus.Unauthorized, HttpStatus.Forbidden)
+    }
+})
 {
-    route("/admin", {
-        tags = listOf("用户管理")
+    post("/createUser", {
+        description = "创建用户, 需要超级管理员权限, 使用此接口创建用户无需邮箱验证码, 但需要邮箱为学校邮箱"
         request {
-            authenticated(true)
+            body<CreateUser>
+            {
+                required = true
+                description = "新用户信息"
+                example("example", CreateUser("username", "password", "email"))
+            }
         }
         response {
-            statuses(HttpStatus.Unauthorized, HttpStatus.Forbidden)
+            statuses(
+                HttpStatus.OK,
+                HttpStatus.EmailExist,
+                HttpStatus.EmailFormatError,
+                HttpStatus.UsernameFormatError,
+                HttpStatus.PasswordFormatError,
+            )
         }
-    })
-    {
-        post("/createUser", {
-            description = "创建用户, 需要超级管理员权限, 使用此接口创建用户无需邮箱验证码, 但需要邮箱为学校邮箱"
-            request {
-                body<CreateUser>
-                {
-                    required = true
-                    description = "新用户信息"
-                    example("example", CreateUser("username", "password", "email"))
-                }
-            }
-            response {
-                statuses(
-                    HttpStatus.OK,
-                    HttpStatus.EmailExist,
-                    HttpStatus.EmailFormatError,
-                    HttpStatus.UsernameFormatError,
-                    HttpStatus.PasswordFormatError,
+    }) { createUser() }
+
+    post("/prohibitUser", {
+        description = "封禁用户, 需要当前用户的权限大于ADMIN且大于对方的权限"
+        request {
+            body<ProhibitUser>
+            {
+                required = true
+                description = "封禁信息, 其中time是封禁结束的时间戳"
+                example(
+                    "example",
+                    ProhibitUser(UserId(1), true, System.currentTimeMillis() + 1000 * 60 * 60 * 24, "reason")
                 )
             }
-        }) { createUser() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+        }
+    }) { prohibitUser() }
 
-        post("/prohibitUser", {
-            description = "封禁用户, 需要当前用户的权限大于ADMIN且大于对方的权限"
-            request {
-                body<ProhibitUser>
-                {
-                    required = true
-                    description = "封禁信息, 其中time是封禁结束的时间戳"
-                    example(
-                        "example",
-                        ProhibitUser(UserId(1), true, System.currentTimeMillis() + 1000 * 60 * 60 * 24, "reason")
-                    )
-                }
-            }
-            response {
-                statuses(HttpStatus.OK)
-            }
-        }) { prohibitUser() }
+    get("/prohibitList", {
+        description = "获取封禁列表, 需要当前用户的user权限大于ADMIN"
+        request {
+            paged()
+        }
+        response {
+            statuses<Slice<Prohibit>>(HttpStatus.OK, example = sliceOf(Prohibit.example))
+        }
+    }) { prohibitList() }
 
-        get("/prohibitList", {
-            description = "获取封禁列表, 需要当前用户的user权限大于ADMIN"
-            request {
-                paged()
+    post("/changePermission", {
+        description = "修改用户权限, 需要当前用户的权限大于ADMIN且大于对方的权限"
+        request {
+            body<ChangePermission>
+            {
+                required = true
+                description = "修改信息"
+                example("example", ChangePermission(UserId(1), PermissionLevel.ADMIN))
             }
-            response {
-                statuses<Slice<Prohibit>>(HttpStatus.OK, example = sliceOf(Prohibit.example))
-            }
-        }) { prohibitList() }
-
-        post("/changePermission", {
-            description = "修改用户权限, 需要当前用户的权限大于ADMIN且大于对方的权限"
-            request {
-                body<ChangePermission>
-                {
-                    required = true
-                    description = "修改信息"
-                    example("example", ChangePermission(UserId(1), PermissionLevel.ADMIN))
-                }
-            }
-            response {
-                statuses(HttpStatus.OK)
-            }
-        }) { changePermission() }
-    }
+        }
+        response {
+            statuses(HttpStatus.OK)
+        }
+    }) { changePermission() }
 }
 
 @Serializable
@@ -106,7 +103,7 @@ private suspend fun Context.createUser()
     val users = get<Users>()
     val operations = get<Operations>()
 
-    checkPermission { hasGlobalAdmin() }
+    checkPermission { checkHasGlobalAdmin() }
     val createUser = receiveAndCheckBody<CreateUser>()
     checkUserInfo(createUser.username, createUser.password, createUser.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)

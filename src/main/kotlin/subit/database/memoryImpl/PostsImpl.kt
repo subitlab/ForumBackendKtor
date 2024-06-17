@@ -58,18 +58,18 @@ class PostsImpl: Posts, KoinComponent
 
     override suspend fun getPost(pid: PostId): PostInfo? = map[pid]?.first
 
-    override suspend fun getUserPosts(loginUser: UserFull?, author: UserId, begin: Long, limit: Int): Slice<PostInfo>
-    {
-        val list = map.values.filter { it.first.author == author }
+    override suspend fun getUserPosts(loginUser: UserId?, author: UserId, begin: Long, limit: Int): Slice<PostId> =
+        map.values.filter { it.first.author == author }
             .filter {
                 val blockFull = blocks.getBlock(it.first.block) ?: return@filter false
-                val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser.id) }
+                val permission = loginUser?.let { permissions.getPermission(blockFull.id, loginUser) }
                                  ?: PermissionLevel.NORMAL
-                permission >= blockFull.reading && (it.first.state == State.NORMAL || loginUser.hasGlobalAdmin())
+                permission >= blockFull.reading && (it.first.state == State.NORMAL)
             }
             .map { it.first }
-        return list.asSlice(begin, limit)
-    }
+            .asSequence()
+            .asSlice(begin, limit)
+            .map { it.id }
 
     override suspend fun getBlockPosts(
         block: BlockId,
@@ -91,15 +91,18 @@ class PostsImpl: Posts, KoinComponent
                 Posts.PostListSort.LAST_COMMENT -> -(comments as CommentsImpl).getLastComment(it.id).time
             }
         }
-        .asSlice(begin, count).map { it.id }
+        .asSequence()
+        .asSlice(begin, count)
+        .map { it.id }
 
-    override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo> = map.values
+    override suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostId> = map.values
         .filter { it.first.block == block && it.second }
         .map { it.first }
+        .asSequence()
         .asSlice(begin, count)
+        .map { it.id }
 
-    override suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?> = list.map { it?.let { map[it]?.first } }
-    override suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int) = map.values
+    override suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<PostId> = map.values
         .filter { it.first.title.contains(key) || it.first.content.contains(key) }
         .filter {
             val blockFull = blocks.getBlock(it.first.block) ?: return@filter false
@@ -107,8 +110,9 @@ class PostsImpl: Posts, KoinComponent
                              ?: PermissionLevel.NORMAL
             permission >= blockFull.reading
         }
+        .asSequence()
         .asSlice(begin, count)
-        .map { it.first }
+        .map { it.first.id }
 
     override suspend fun addView(pid: PostId)
     {
@@ -129,6 +133,7 @@ class PostsImpl: Posts, KoinComponent
     override suspend fun getRecommendPosts(count: Int): Slice<PostId> = map.values
         .filter { it.first.state == State.NORMAL }
         .sortedByDescending { getHotScore(it.first.id) }
+        .asSequence()
         .asSlice(1, count)
         .map { it.first.id }
 }

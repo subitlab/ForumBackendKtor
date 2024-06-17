@@ -111,7 +111,7 @@ object CommandSet: TreeCommand(
             {
                 @Suppress("CAST_NEVER_SUCCEEDS")
                 line = Console.lineReader.readLine(prompt, rightPrompt, null as? MaskingCallback, null)
-                val words = DefaultParser ().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
+                val words = DefaultParser().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
                 if (words.isEmpty() || (words.size == 1 && words.first().isEmpty())) continue
                 val command = CommandSet.getCommand(words[0])
                 if (command == null || command.log) logger.info("Console is used command: $line")
@@ -134,7 +134,7 @@ object CommandSet: TreeCommand(
             catch (e: EndOfFileException)
             {
                 logger.warning("Console is closed")
-                shutdown(0)
+                shutdown(0, "Console is closed")
             }
             catch (e: Exception)
             {

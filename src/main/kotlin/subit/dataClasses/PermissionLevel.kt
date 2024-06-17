@@ -41,7 +41,7 @@ enum class PermissionLevel
          * 优先级是 ROOT > BANNED > SUPER_ADMIN > ADMIN > NORMAL
          * 即当前传入的两个权限中有ROOT, 则返回ROOT, 有BANNED, 则返回BANNED, 以此类推
          */
-        fun getEffectivePermission(a: PermissionLevel, b: PermissionLevel): PermissionLevel
+        private fun getEffectivePermission(a: PermissionLevel, b: PermissionLevel): PermissionLevel
         {
             return when
             {
@@ -57,6 +57,11 @@ enum class PermissionLevel
          * 优先级是 ROOT > BANNED > SUPER_ADMIN > ADMIN > NORMAL
          * 即当前传入的两个权限中有ROOT, 则返回ROOT, 有BANNED, 则返回BANNED, 以此类推
          */
+        @Deprecated(
+            message = "权限结构变更, 计算权限时不再需要权限合并, 故该方法废弃.",
+            level = DeprecationLevel.ERROR,
+            replaceWith = ReplaceWith("")
+        )
         fun getEffectivePermission(vararg permissions: PermissionLevel): PermissionLevel =
             permissions.reduce(Companion::getEffectivePermission)
     }

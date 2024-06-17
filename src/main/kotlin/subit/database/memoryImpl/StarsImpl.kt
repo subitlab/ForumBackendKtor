@@ -29,5 +29,5 @@ class StarsImpl: Stars
 
     override suspend fun getStars(user: UserId?, post: PostId?, begin: Long, limit: Int): Slice<Star> =
         set.filter { (user == null || it.user == user) && (post == null || it.post == post) }
-            .sortedByDescending(Star::time).asSlice(begin, limit)
+            .sortedByDescending(Star::time).asSequence().asSlice(begin, limit)
 }

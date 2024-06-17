@@ -34,7 +34,7 @@ class PrivateChatsImpl: PrivateChats
     {
         val list1 = privateChats[user1 link user2] ?: emptyList()
         val list2 = privateChats[user2 link user1] ?: emptyList()
-        return (list1+list2).let { list ->
+        return (list1 + list2).let { list ->
             if (before != null) list.filter { it.time <= before }
             else if (after != null) list.filter { it.time >= after }
             else list
@@ -42,7 +42,7 @@ class PrivateChatsImpl: PrivateChats
             if (before != null) list.sortedByDescending { it.time }
             else if (after != null) list.sortedBy { it.time }
             else list
-        }.asSlice(begin, count)
+        }.asSequence().asSlice(begin, count)
     }
 
     override suspend fun getPrivateChatsBefore(
@@ -63,16 +63,15 @@ class PrivateChatsImpl: PrivateChats
     ): Slice<PrivateChat> =
         getPrivateChats(user1, user2, after = time.toEpochMilliseconds(), begin = begin, count = count)
 
-    override suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId>
-    {
-        val list = privateChats.keys.asSequence()
+    override suspend fun getChatUsers(uid: UserId, begin: Long, count: Int): Slice<UserId> =
+        privateChats.keys.asSequence()
             .filter { it ushr 32 == uid.value.toLong() || it and 0xffffffff == uid.value.toLong() }
             .groupBy { (it ushr 32) xor (it and 0xffffffff) xor uid.value.toLong() }
             .map { it.key to it.value.max() }
             .sortedByDescending { it.second }
-            .map { it.first.toUserId() }.toList()
-        return list.asSlice(begin, count)
-    }
+            .asSequence()
+            .map { it.first.toUserId() }
+            .asSlice(begin, count)
 
     override suspend fun getUnreadCount(uid: UserId, other: UserId): Long = unread[other link uid] ?: 0
     override suspend fun getUnreadCount(uid: UserId): Long = unread.values.filter { it.toInt() == uid.value }.sum()
@@ -86,8 +85,10 @@ class PrivateChatsImpl: PrivateChats
         unread.keys.removeIf { it.toInt() == uid.value }
     }
 
-    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean) {
+    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean)
+    {
         block[from link to] = isBlock
     }
+
     override suspend fun getIsBlock(from: UserId, to: UserId): Boolean = block[from link to] ?: false
 }

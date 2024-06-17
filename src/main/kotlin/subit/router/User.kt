@@ -28,194 +28,191 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 val logger = ForumLogger.getLogger()
-fun Route.user()
+fun Route.user() = route("/user", {
+    tags = listOf("用户")
+    description = "用户接口"
+})
 {
-    route("/user", {
-        tags = listOf("用户")
-        description = "用户接口"
-    })
-    {
-        get("/info/{id}", {
-            description = """
+    get("/info/{id}", {
+        description = """
                 获取用户信息, id为0时获取当前登陆用户的信息。
                 获取当前登陆用户的信息或当前登陆的用户的user权限不低于ADMIN时可以获取完整用户信息, 否则只能获取基础信息
                 """.trimIndent()
-            request {
-                authenticated(false)
-                pathParameter<RawUserId>("id")
+        request {
+            authenticated(false)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = "用户ID"
+            }
+        }
+        response {
+            "200: 获取完整用户信息成功" to {
+                description = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回"
+                body<UserFull>()
                 {
-                    required = true
-                    description = "用户ID"
+                    example("example", UserFull.example)
                 }
             }
-            response {
-                "200: 获取完整用户信息成功" to {
-                    description = "当id为0, 即获取当前用户信息或user权限不低于ADMIN时返回"
-                    body<UserFull>()
-                    {
-                        example("example", UserFull.example)
-                    }
+            "200: 获取基础用户的信息成功" to {
+                description = "当id不为0即获取其他用户的信息且user权限低于ADMIN时返回"
+                body<BasicUserInfo>()
+                {
+                    example("example", BasicUserInfo.example)
                 }
-                "200: 获取基础用户的信息成功" to {
-                    description = "当id不为0即获取其他用户的信息且user权限低于ADMIN时返回"
-                    body<BasicUserInfo>()
-                    {
-                        example("example", BasicUserInfo.example)
-                    }
-                }
-                statuses(HttpStatus.NotFound, HttpStatus.Unauthorized)
             }
-        }) { getUserInfo() }
+            statuses(HttpStatus.NotFound, HttpStatus.Unauthorized)
+        }
+    }) { getUserInfo() }
 
-        post("/introduce/{id}", {
-            description = "修改个人简介, 修改自己的需要user权限在NORMAL以上, 修改他人需要在ADMIN以上"
-            request {
-                authenticated(true)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = """
+    post("/introduce/{id}", {
+        description = "修改个人简介, 修改自己的需要user权限在NORMAL以上, 修改他人需要在ADMIN以上"
+        request {
+            authenticated(true)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = """
                         要修改的用户ID, 0为当前登陆用户
                     """.trimIndent()
-                }
-                body<ChangeIntroduction>
-                {
-                    required = true
-                    description = "个人简介"
-                    example("example", ChangeIntroduction("个人简介"))
-                }
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+            body<ChangeIntroduction>
+            {
+                required = true
+                description = "个人简介"
+                example("example", ChangeIntroduction("个人简介"))
             }
-        }) { changeIntroduction() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { changeIntroduction() }
 
-        post("/avatar/{id}", {
-            description = "修改头像, 修改他人头像要求user权限在ADMIN以上"
-            request {
-                authenticated(true)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = "要修改的用户ID, 0为当前登陆用户"
-                }
+    post("/avatar/{id}", {
+        description = "修改头像, 修改他人头像要求user权限在ADMIN以上"
+        request {
+            authenticated(true)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = "要修改的用户ID, 0为当前登陆用户"
+            }
+            body()
+            {
+                required = true
+                mediaType(ContentType.Image.Any)
+                description = "头像图片, 要求是正方形的"
+            }
+        }
+        response {
+            statuses(
+                HttpStatus.OK,
+                HttpStatus.NotFound,
+                HttpStatus.Forbidden,
+                HttpStatus.Unauthorized,
+                HttpStatus.PayloadTooLarge,
+                HttpStatus.UnsupportedMediaType
+            )
+        }
+    }) { changeAvatar() }
+
+    get("/avatar/{id}", {
+        description = "获取头像"
+        request {
+            authenticated(false)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = "要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆"
+            }
+        }
+        response {
+            statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized)
+            HttpStatus.OK.code to {
+                description = "获取头像成功"
                 body()
                 {
-                    required = true
-                    mediaType(ContentType.Image.Any)
-                    description = "头像图片, 要求是正方形的"
+                    description = "获取到的头像, 总是png格式的"
+                    mediaType(ContentType.Image.PNG)
                 }
             }
-            response {
-                statuses(
-                    HttpStatus.OK,
-                    HttpStatus.NotFound,
-                    HttpStatus.Forbidden,
-                    HttpStatus.Unauthorized,
-                    HttpStatus.PayloadTooLarge,
-                    HttpStatus.UnsupportedMediaType
-                )
-            }
-        }) { changeAvatar() }
+        }
+    }) { getAvatar() }
 
-        get("/avatar/{id}", {
-            description = "获取头像"
-            request {
-                authenticated(false)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = "要获取的用户ID, 0为当前登陆用户, 若id不为0则无需登陆, 否则需要登陆"
-                }
+    delete("/avatar/{id}", {
+        description = "删除头像, 即恢复默认头像, 删除他人头像要求user权限在ADMIN以上"
+        request {
+            authenticated(true)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = "要删除的用户ID, 0为当前登陆用户"
             }
-            response {
-                statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized)
-                HttpStatus.OK.code to {
-                    description = "获取头像成功"
-                    body()
-                    {
-                        description = "获取到的头像, 总是png格式的"
-                        mediaType(ContentType.Image.PNG)
-                    }
-                }
-            }
-        }) { getAvatar() }
+        }
+        response {
+            statuses(
+                HttpStatus.OK,
+                HttpStatus.NotFound,
+                HttpStatus.Forbidden,
+                HttpStatus.Unauthorized,
+            )
+        }
+    }) { deleteAvatar() }
 
-        delete("/avatar/{id}", {
-            description = "删除头像, 即恢复默认头像, 删除他人头像要求user权限在ADMIN以上"
-            request {
-                authenticated(true)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = "要删除的用户ID, 0为当前登陆用户"
-                }
-            }
-            response {
-                statuses(
-                    HttpStatus.OK,
-                    HttpStatus.NotFound,
-                    HttpStatus.Forbidden,
-                    HttpStatus.Unauthorized,
-                )
-            }
-        }) { deleteAvatar() }
-
-        get("/stars/{id}", {
-            description = "获取用户收藏的帖子"
-            request {
-                authenticated(false)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = """
+    get("/stars/{id}", {
+        description = "获取用户收藏的帖子"
+        request {
+            authenticated(false)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = """
                         要获取的用户ID, 0为当前登陆用户
                         
                         若目标用户ID不是0, 且当前登陆用户不是管理员, 则目标用户需要展示收藏, 否则返回Forbidden
                     """.trimIndent()
-                }
-                paged()
             }
-            response {
-                statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.Forbidden)
-                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
-            }
-        }) { getStars() }
+            paged()
+        }
+        response {
+            statuses(HttpStatus.BadRequest, HttpStatus.Unauthorized, HttpStatus.NotFound, HttpStatus.Forbidden)
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+        }
+    }) { getStars() }
 
-        post("/switchStars", {
-            description = "切换是否公开收藏"
-            request {
-                authenticated(true)
-                body<SwitchStars>
-                {
-                    required = true
-                    description = "是否公开收藏"
-                    example("example", SwitchStars(true))
-                }
+    post("/switchStars", {
+        description = "切换是否公开收藏"
+        request {
+            authenticated(true)
+            body<SwitchStars>
+            {
+                required = true
+                description = "是否公开收藏"
+                example("example", SwitchStars(true))
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { switchStars() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { switchStars() }
 
-        get("/search", {
-            description = "搜索用户 会返回所有用户名包含key的用户"
-            request {
-                queryParameter<String>("key")
-                {
-                    required = true
-                    description = "关键字"
-                    example = "关键字"
-                }
-                paged()
+    get("/search", {
+        description = "搜索用户 会返回所有用户名包含key的用户"
+        request {
+            queryParameter<String>("key")
+            {
+                required = true
+                description = "关键字"
+                example = "关键字"
             }
-            response {
-                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
-            }
-        }) { searchUser() }
-    }
+            paged()
+        }
+        response {
+            statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
+        }
+    }) { searchUser() }
 }
 
 private suspend fun Context.getUserInfo()
@@ -336,7 +333,7 @@ private suspend fun Context.getStars()
     {
         if (loginUser == null) return call.respond(HttpStatus.Unauthorized)
         val stars = get<Stars>().getStars(user = loginUser.id, begin = begin, limit = count).map { it.post }
-        return call.respond(HttpStatus.OK, get<Posts>().getPosts(stars))
+        return call.respond(HttpStatus.OK, stars)
     }
     // 查询其他用户的收藏
     val user = get<Users>().getUser(id) ?: return call.respond(HttpStatus.NotFound)
@@ -344,7 +341,7 @@ private suspend fun Context.getStars()
     if (!user.showStars && (loginUser == null || loginUser.permission < PermissionLevel.ADMIN))
         return call.respond(HttpStatus.Forbidden)
     val stars = get<Stars>().getStars(user = user.id, begin = begin, limit = count).map { it.post }
-    call.respond(HttpStatus.OK, get<Posts>().getPosts(stars))
+    call.respond(HttpStatus.OK, stars)
 }
 
 @Serializable
@@ -352,7 +349,6 @@ private data class SwitchStars(val showStars: Boolean)
 
 private suspend fun Context.switchStars()
 {
-    application
     val loginUser = getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
     val switchStars = receiveAndCheckBody<SwitchStars>()
     get<Users>().changeShowStars(loginUser.id, switchStars.showStars)

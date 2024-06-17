@@ -17,31 +17,28 @@ import subit.router.get
 import subit.utils.HttpStatus
 import subit.utils.statuses
 
-fun Route.home()
+fun Route.home() = route("/home", {
+    tags = listOf("首页")
+})
 {
-    route("/home", {
-        tags = listOf("首页")
-    })
-    {
-        get("/recommend", {
-            description = "获取首页推荐帖子"
-            request {
-                queryParameter<Int>("count")
-                {
-                    required = false
-                    description = "获取数量, 不填为10"
-                    example = 10
-                }
+    get("/recommend", {
+        description = "获取首页推荐帖子"
+        request {
+            queryParameter<Int>("count")
+            {
+                required = false
+                description = "获取数量, 不填为10"
+                example = 10
             }
-            response {
-                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
-                statuses(HttpStatus.NotFound)
-            }
-        }) { getHotPosts() }
-    }
+        }
+        response {
+            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getHotPosts() }
 }
 
-suspend fun Context.getHotPosts()
+private suspend fun Context.getHotPosts()
 {
     val posts = get<Posts>()
     val count = call.parameters["count"]?.toIntOrNull() ?: 10

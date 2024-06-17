@@ -19,139 +19,136 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.privateChat()
+fun Route.privateChat() = route("/privateChat", {
+    tags = listOf("私信")
+    request {
+        authenticated(true)
+    }
+})
 {
-    route("/privateChat", {
-        tags = listOf("私信")
+    post("/send", {
+        description = "发送私信"
         request {
-            authenticated(true)
+            body<SendPrivateChat>
+            {
+                required = true
+                description = "私信内容"
+                example("example", SendPrivateChat(UserId(0), "私信内容"))
+            }
         }
-    })
-    {
-        post("/send", {
-            description = "发送私信"
-            request {
-                body<SendPrivateChat>
-                {
-                    required = true
-                    description = "私信内容"
-                    example("example", SendPrivateChat(UserId(0), "私信内容"))
-                }
-            }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Unauthorized)
-            }
-        }) { sendPrivateChat() }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Unauthorized)
+        }
+    }) { sendPrivateChat() }
 
-        get("/listUser", {
-            description = "获取私信列表"
-            request {
-                paged()
-            }
-            response {
-                statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getPrivateChatUsers() }
+    get("/listUser", {
+        description = "获取私信列表"
+        request {
+            paged()
+        }
+        response {
+            statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getPrivateChatUsers() }
 
-        get("/listChat/{userId}", {
-            description = "获取与某人的私信列表"
-            request {
-                pathParameter<RawUserId>("userId")
-                {
-                    required = true
-                    description = "对方的id"
-                }
-                queryParameter<Long>("after")
-                {
-                    required = false
-                    description = """
+    get("/listChat/{userId}", {
+        description = "获取与某人的私信列表"
+        request {
+            pathParameter<RawUserId>("userId")
+            {
+                required = true
+                description = "对方的id"
+            }
+            queryParameter<Long>("after")
+            {
+                required = false
+                description = """
                         传入时间戳, 此项非必须的, 传入后将返回从此时间起向后从begin开始count条数据
                         
                         与before互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间正向排序,
                         即若begin为1, count为3, 将放回晚于after的最早的3条消息, 且这3条消息的时间依次递增
                         """.trimIndent()
-                    example = System.currentTimeMillis()
-                }
-                queryParameter<Long>("before")
-                {
-                    required = false
-                    description = """
+                example = System.currentTimeMillis()
+            }
+            queryParameter<Long>("before")
+            {
+                required = false
+                description = """
                         传入时间戳, 此项非必须的, 传入后将返回从此时间起向前从begin开始count条数据
                         
                         与after互斥, 且必须传入其中一个. 若传入此项, 返回的消息将按照时间逆向排序,
                         即若begin为1, count为3, 将放回早于before的最晚的3条消息, 且这3条消息的时间依次递减
                         """.trimIndent()
-                    example = System.currentTimeMillis()
-                }
-                paged()
+                example = System.currentTimeMillis()
             }
-            response {
-                statuses<Slice<PrivateChat>>(HttpStatus.OK, example = sliceOf(PrivateChat.example))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getPrivateChats() }
+            paged()
+        }
+        response {
+            statuses<Slice<PrivateChat>>(HttpStatus.OK, example = sliceOf(PrivateChat.example))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getPrivateChats() }
 
-        get("/unread/all", {
-            description = "获取所有未读私信数量"
-            response {
-                statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getUnreadCount(false) }
+    get("/unread/all", {
+        description = "获取所有未读私信数量"
+        response {
+            statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getUnreadCount(false) }
 
-        get("/unread/{userId}", {
-            description = "获取与某人的未读私信数量"
-            request {
-                pathParameter<RawUserId>("userId")
-                {
-                    required = true
-                    description = "对方的id"
-                }
+    get("/unread/{userId}", {
+        description = "获取与某人的未读私信数量"
+        request {
+            pathParameter<RawUserId>("userId")
+            {
+                required = true
+                description = "对方的id"
             }
-            response {
-                statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getUnreadCount(true) }
+        }
+        response {
+            statuses<UnreadCount>(HttpStatus.OK, example = UnreadCount(0L))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getUnreadCount(true) }
 
-        get("/isBlock/{userId}", {
-            description = "获取是否被某人拉黑"
-            request {
-                authenticated(true)
-                pathParameter<RawUserId>("userId")
-                {
-                    required = true
-                    description = "对方的id,注意是对方是否拉黑当前登录者"
-                }
+    get("/isBlock/{userId}", {
+        description = "获取是否被某人拉黑"
+        request {
+            authenticated(true)
+            pathParameter<RawUserId>("userId")
+            {
+                required = true
+                description = "对方的id,注意是对方是否拉黑当前登录者"
             }
-            response {
-                statuses<IsBlock>(HttpStatus.OK, example = IsBlock(false))
-                statuses(HttpStatus.Unauthorized)
-            }
-        }) { getIsBlock() }
+        }
+        response {
+            statuses<IsBlock>(HttpStatus.OK, example = IsBlock(false))
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { getIsBlock() }
 
-        post("/block/{userId}", {
-            description = "修改对某人的拉黑状态"
-            request {
-                pathParameter<RawUserId>("userId")
-                {
-                    required = true
-                    description = "对方的id"
-                }
-                body<IsBlock>()
-                {
-                    required = true
-                    description = "是否拉黑"
-                    example("example", IsBlock(false))
-                }
+    post("/block/{userId}", {
+        description = "修改对某人的拉黑状态"
+        request {
+            pathParameter<RawUserId>("userId")
+            {
+                required = true
+                description = "对方的id"
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.Unauthorized)
+            body<IsBlock>()
+            {
+                required = true
+                description = "是否拉黑"
+                example("example", IsBlock(false))
             }
-        }) { setBlock() }
-    }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.Unauthorized)
+        }
+    }) { setBlock() }
 }
 
 @Serializable

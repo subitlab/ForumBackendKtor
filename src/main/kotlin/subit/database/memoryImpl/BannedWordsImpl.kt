@@ -20,6 +20,6 @@ class BannedWordsImpl: BannedWords
     {
         if (set.remove(oldWord)) set.add(newWord)
     }
-    override suspend fun getBannedWords(begin: Long, count: Int): Slice<String> = set.toList().asSlice(begin, count)
+    override suspend fun getBannedWords(begin: Long, count: Int): Slice<String> = set.asSequence().asSlice(begin, count)
     override suspend fun check(str: String): Boolean = set.any(str::contains)
 }

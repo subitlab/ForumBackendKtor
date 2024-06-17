@@ -35,11 +35,11 @@ interface Posts
      * @param loginUser 当前操作用户, null表示未登录, 返回的帖子应是该用户可见的.
      */
     suspend fun getUserPosts(
-        loginUser: UserFull? = null,
+        loginUser: UserId? = null,
         author: UserId,
         begin: Long = 1,
         limit: Int = Int.MAX_VALUE,
-    ): Slice<PostInfo>
+    ): Slice<PostId>
 
     suspend fun getBlockPosts(
         block: BlockId,
@@ -48,9 +48,8 @@ interface Posts
         count: Int
     ): Slice<PostId>
 
-    suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostInfo>
-    suspend fun getPosts(list: Slice<PostId?>): Slice<PostInfo?>
-    suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<PostInfo>
+    suspend fun getBlockTopPosts(block: BlockId, begin: Long, count: Int): Slice<PostId>
+    suspend fun searchPosts(loginUser: UserId?, key: String, begin: Long, count: Int): Slice<PostId>
     suspend fun addView(pid: PostId)
 
     /**

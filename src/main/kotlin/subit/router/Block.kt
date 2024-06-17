@@ -10,146 +10,146 @@ import subit.JWTAuth.getLoginUser
 import subit.dataClasses.*
 import subit.dataClasses.BlockId.Companion.toBlockIdOrNull
 import subit.database.*
-import subit.router.Context
-import subit.router.authenticated
-import subit.router.get
-import subit.router.paged
+import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.block()
+fun Route.block() = route("/block", {
+    tags = listOf("板块")
+})
 {
-    route("/block", {
-        tags = listOf("板块")
-    })
-    {
-        post("/new", {
-            description = "创建板块"
-            request {
-                authenticated(true)
-                body<NewBlock>
-                {
-                    required = true
-                    description = "新板块信息"
-                    example(
-                        "example", NewBlock(
-                            "板块名称",
-                            "板块描述",
-                            BlockId(0),
-                            PermissionLevel.ADMIN,
-                            PermissionLevel.ADMIN,
-                            PermissionLevel.ADMIN,
-                            PermissionLevel.ADMIN
-                        )
+    post("/new", {
+        description = "创建板块"
+        request {
+            authenticated(true)
+            body<NewBlock>
+            {
+                required = true
+                description = "新板块信息"
+                example(
+                    "example", NewBlock(
+                        "板块名称",
+                        "板块描述",
+                        BlockId(0),
+                        PermissionLevel.ADMIN,
+                        PermissionLevel.ADMIN,
+                        PermissionLevel.ADMIN,
+                        PermissionLevel.ADMIN
                     )
-                }
+                )
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { newBlock() }
+        }
+        response {
+            statuses<WarpBlockId>(HttpStatus.OK)
+            statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { newBlock() }
 
-        put("/{id}", {
-            description = "修改板块信息"
-            request {
-                authenticated(true)
-                pathParameter<RawBlockId>("id")
-                {
-                    required = true
-                    description = "板块ID"
-                }
-                body<EditBlockInfo>
-                {
-                    required = true
-                    description = "新板块信息"
-                    example("example", EditBlockInfo(name = "板块名称", description = "板块描述"))
-                }
+    put("/{id}", {
+        description = "修改板块信息"
+        request {
+            authenticated(true)
+            pathParameter<RawBlockId>("id")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+            body<EditBlockInfo>
+            {
+                required = true
+                description = "新板块信息"
+                example("example", EditBlockInfo(name = "板块名称", description = "板块描述"))
             }
-        }) { editBlockInfo() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { editBlockInfo() }
 
-        get("/{id}", {
-            description = "获取板块信息"
-            request {
-                authenticated(false)
-                pathParameter<RawBlockId>("id")
-                {
-                    required = true
-                    description = "板块ID"
-                }
+    get("/{id}", {
+        description = "获取板块信息"
+        request {
+            authenticated(false)
+            pathParameter<RawBlockId>("id")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { getBlockInfo() }
+        }
+        response {
+            statuses<BlockFull>(HttpStatus.OK)
+            statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { getBlockInfo() }
 
-        delete("/{id}", {
-            description = "删除板块"
-            request {
-                authenticated(true)
-                pathParameter<RawBlockId>("id")
-                {
-                    required = true
-                    description = "板块ID"
-                }
+    delete("/{id}", {
+        description = "删除板块"
+        request {
+            authenticated(true)
+            pathParameter<RawBlockId>("id")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { deleteBlock() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { deleteBlock() }
 
-        post("/changePermission", {
-            description = "修改用户在板块的权限"
-            request {
-                authenticated(true)
-                body<ChangePermission>
-                {
-                    required = true
-                    description = "新权限"
-                    example("example", ChangePermission(UserId(0), BlockId(0), PermissionLevel.ADMIN))
-                }
+    post("/changePermission", {
+        description = "修改用户在板块的权限"
+        request {
+            authenticated(true)
+            body<ChangePermission>
+            {
+                required = true
+                description = "新权限"
+                example("example", ChangePermission(UserId(0), BlockId(0), PermissionLevel.ADMIN))
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { changePermission() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { changePermission() }
 
-        get("/{id}/children", {
-            description = "获取板块的子板块, 若id为0则表示获取没有父板块的板块"
-            request {
-                authenticated(false)
-                pathParameter<RawBlockId>("id")
-                {
-                    required = true
-                    description = "板块ID"
-                }
+    get("/{id}/children", {
+        description = "获取板块的子板块, 若id为0则表示获取没有父板块的板块"
+        request {
+            authenticated(false)
+            paged()
+            pathParameter<RawBlockId>("id")
+            {
+                required = true
+                description = "板块ID"
             }
-            response {
-                statuses<List<BlockId>>(HttpStatus.OK, example = listOf(BlockId(0)))
-                statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { getChildren() }
+        }
+        response {
+            statuses<Slice<BlockId>>(HttpStatus.OK, example = sliceOf(BlockId(0)))
+            statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { getChildren() }
 
-        get("/search", {
-            description = "搜索板块"
-            request {
-                authenticated(false)
-                queryParameter<String>("key")
-                {
-                    required = true
-                    description = "关键字"
-                }
-                paged()
+    get("/search", {
+        description = "搜索板块"
+        request {
+            authenticated(false)
+            queryParameter<String>("key")
+            {
+                required = true
+                description = "关键字"
             }
-            response {
-                statuses<Slice<BlockId>>(HttpStatus.OK, example = sliceOf(BlockId(0)))
-            }
-        }) { searchBlock() }
-    }
+            paged()
+        }
+        response {
+            statuses<Slice<BlockId>>(HttpStatus.OK, example = sliceOf(BlockId(0)))
+        }
+    }) { searchBlock() }
 }
+
+@Serializable
+private data class WarpBlockId(val block: BlockId)
 
 @Serializable
 private data class NewBlock(
@@ -169,7 +169,7 @@ private suspend fun Context.newBlock()
     checkPermission { checkHasAdminIn(newBlock.parent) }
     val blocks = get<Blocks>()
     blocks.getBlock(newBlock.parent) ?: return call.respond(HttpStatus.BadRequest)
-    blocks.createBlock(
+    val id = blocks.createBlock(
         name = newBlock.name,
         description = newBlock.description,
         parent = newBlock.parent,
@@ -180,7 +180,7 @@ private suspend fun Context.newBlock()
         anonymousPermission = newBlock.anonymousPermission
     )
     get<Operations>().addOperation(loginUser.id, newBlock)
-    call.respond(HttpStatus.OK)
+    call.respond(HttpStatus.OK, WarpBlockId(id))
 }
 
 @Serializable
@@ -214,8 +214,9 @@ private suspend fun Context.editBlockInfo()
 private suspend fun Context.getBlockInfo()
 {
     val id = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    checkPermission { checkCanRead(id) }
-    get<Blocks>().getBlock(id)?.let { call.respond(HttpStatus.OK, it) } ?: call.respond(HttpStatus.NotFound)
+    val block = get<Blocks>().getBlock(id) ?: return call.respond(HttpStatus.NotFound)
+    checkPermission { checkCanRead(block) }
+    call.respond(HttpStatus.OK, block)
 }
 
 private suspend fun Context.deleteBlock()
@@ -267,13 +268,16 @@ private suspend fun Context.getChildren()
 {
     val id1 = call.parameters["id"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val id = if (id1 == BlockId(0)) null else id1
+    val (begin, count) = call.getPage()
+    val blocks = get<Blocks>()
 
-    checkPermission {
-        if (id != null) checkCanRead(id)
+    checkPermission()
+    {
+        val block = id?.let { blocks.getBlock(it) }
+        if (block != null) checkCanRead(block)
     }
-    checkPermission {
-        get<Blocks>().getChildren(id).filter { canRead(it.id) }.map { it.id }.let { call.respond(HttpStatus.OK, it) }
-    }
+
+    blocks.getChildren(getLoginUser()?.id, id, begin, count).let { call.respond(HttpStatus.OK, it) }
 }
 
 private suspend fun Context.searchBlock()
@@ -281,6 +285,6 @@ private suspend fun Context.searchBlock()
     val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val blocks = get<Blocks>().searchBlock(getLoginUser()?.id, key, begin, count).map(BlockFull::id)
+    val blocks = get<Blocks>().searchBlock(getLoginUser()?.id, key, begin, count)
     call.respond(HttpStatus.OK, blocks)
 }

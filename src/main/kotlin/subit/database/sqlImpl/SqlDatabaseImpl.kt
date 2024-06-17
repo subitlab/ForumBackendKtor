@@ -176,8 +176,6 @@ abstract class WarpColumnType<Base: Any, T: Any>(
     override fun sqlType() = base.sqlType()
     override fun valueFromDB(value: Any) = base.valueFromDB(value)?.let(warp)
     override fun notNullValueToDB(value: T): Any = base.notNullValueToDB(unwrap(value))
-//    override fun nonNullValueToString(value: T): String = base.nonNullValueToString(unwrap(value))
-//    override fun valueToString(value: T?): String = value?.let(unwrap).let(base::valueToString)
 }
 
 // BlockId

@@ -33,140 +33,137 @@ import subit.utils.FileUtils.getUserFiles
 import java.io.InputStream
 import java.util.*
 
-fun Route.files()
+fun Route.files() = route("files", {
+    tags = listOf("文件")
+})
 {
-    route("files", {
-        tags = listOf("文件")
-    })
-    {
-        get("/{id}/{type}", {
-            description =
-                "获取文件, 若是管理员可以获取任意文件, 否则只能获取自己上传的文件. 注意若文件过期则只能获取info"
-            request {
-                authenticated(false)
-                pathParameter<String>("id")
+    get("/{id}/{type}", {
+        description =
+            "获取文件, 若是管理员可以获取任意文件, 否则只能获取自己上传的文件. 注意若文件过期则只能获取info"
+        request {
+            authenticated(false)
+            pathParameter<String>("id")
+            {
+                required = true
+                description = "文件ID"
+                example = UUID.randomUUID().toString()
+            }
+            pathParameter<GetFileType>("type")
+            {
+                required = true
+                description = "获取类型, 可以获取文件信息或文件的数据"
+                example = GetFileType.INFO
+            }
+        }
+        response {
+            "200: 获取文件信息" to {
+                description = "当type为INFO时返回文件信息"
+                body<FileUtils.FileInfo>()
                 {
-                    required = true
-                    description = "文件ID"
-                    example = UUID.randomUUID().toString()
-                }
-                pathParameter<GetFileType>("type")
-                {
-                    required = true
-                    description = "获取类型, 可以获取文件信息或文件的数据"
-                    example = GetFileType.INFO
+                    example("example", FileUtils.FileInfo("fileName", UserId(0), true, 0, "md5"))
                 }
             }
-            response {
-                "200: 获取文件信息" to {
-                    description = "当type为INFO时返回文件信息"
-                    body<FileUtils.FileInfo>()
-                    {
-                        example("example", FileUtils.FileInfo("fileName", UserId(0), true, 0, "md5"))
-                    }
-                }
-                "200: 获取文件数据" to {
-                    description = "当type为DATA时返回文件数据"
-                    body { mediaType(ContentType.Application.OctetStream) }
-                }
-                statuses(HttpStatus.NotFound)
+            "200: 获取文件数据" to {
+                description = "当type为DATA时返回文件数据"
+                body { mediaType(ContentType.Application.OctetStream) }
             }
-        }) { getFile() }
+            statuses(HttpStatus.NotFound)
+        }
+    }) { getFile() }
 
-        delete("/{id}", {
-            description = "删除文件, 除管理员外只能删除自己上传的文件"
-            request {
-                authenticated(true)
-                pathParameter<String>("id")
-                {
-                    required = true
-                    description = "文件ID"
-                    example = UUID.randomUUID().toString()
-                }
+    delete("/{id}", {
+        description = "删除文件, 除管理员外只能删除自己上传的文件"
+        request {
+            authenticated(true)
+            pathParameter<String>("id")
+            {
+                required = true
+                description = "文件ID"
+                example = UUID.randomUUID().toString()
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound)
-                statuses(HttpStatus.Forbidden)
-            }
-        }) { deleteFile() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound)
+            statuses(HttpStatus.Forbidden)
+        }
+    }) { deleteFile() }
 
-        post("/new", {
-            description = "上传文件"
-            request {
-                authenticated(true)
-                multipartBody()
+    post("/new", {
+        description = "上传文件"
+        request {
+            authenticated(true)
+            multipartBody()
+            {
+                required = true
+                description = "第一部分是文件信息, 第二部分是文件数据"
+                part<UploadFile>("info")
+                part<Any>("file")
                 {
-                    required = true
-                    description = "第一部分是文件信息, 第二部分是文件数据"
-                    part<UploadFile>("info")
-                    part<Any>("file")
-                    {
-                        mediaTypes = listOf(ContentType.Application.OctetStream)
-                    }
+                    mediaTypes = listOf(ContentType.Application.OctetStream)
                 }
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.BadRequest)
-            }
-        }) { uploadFile() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.BadRequest)
+        }
+    }) { uploadFile() }
 
-        get("/list/{id}", {
-            description = "获取用户上传的文件的列表, 若不是管理员只能获取目标用户公开的文件"
-            request {
-                authenticated(false)
-                pathParameter<RawUserId>("id")
-                {
-                    required = true
-                    description = "用户ID, 为0表示当前登陆的用户"
-                }
-                paged()
+    get("/list/{id}", {
+        description = "获取用户上传的文件的列表, 若不是管理员只能获取目标用户公开的文件"
+        request {
+            authenticated(false)
+            pathParameter<RawUserId>("id")
+            {
+                required = true
+                description = "用户ID, 为0表示当前登陆的用户"
             }
-            response {
-                statuses<Files>(
-                    HttpStatus.OK,
-                    example = Files(FileUtils.SpaceInfo(0L, 0L, 0), sliceOf(UUID.randomUUID().toString()))
-                )
-            }
-        }) { getFileList() }
+            paged()
+        }
+        response {
+            statuses<Files>(
+                HttpStatus.OK,
+                example = Files(FileUtils.SpaceInfo(0L, 0L, 0), sliceOf(UUID.randomUUID().toString()))
+            )
+        }
+    }) { getFileList() }
 
-        post("changePublic", {
-            description = "修改文件的公开状态, 只能修改自己上传的文件"
-            request {
-                authenticated(true)
-                body<ChangePublic>
-                {
-                    required = true
-                    description = "文件信息"
-                    example("example", ChangePublic(UUID.randomUUID().toString(), true))
-                }
+    post("changePublic", {
+        description = "修改文件的公开状态, 只能修改自己上传的文件"
+        request {
+            authenticated(true)
+            body<ChangePublic>
+            {
+                required = true
+                description = "文件信息"
+                example("example", ChangePublic(UUID.randomUUID().toString(), true))
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound)
-                statuses(HttpStatus.Forbidden)
-            }
-        }) { changePublic() }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound)
+            statuses(HttpStatus.Forbidden)
+        }
+    }) { changePublic() }
 
-        post("changePermission", {
-            description = "修改其他用户的文件权限"
-            request {
-                authenticated(true)
-                body<ChangePermission>
-                {
-                    required = true
-                    description = "文件信息"
-                    example("example", ChangePermission(UserId(0), PermissionLevel.NORMAL))
-                }
+    post("changePermission", {
+        description = "修改其他用户的文件权限"
+        request {
+            authenticated(true)
+            body<ChangePermission>
+            {
+                required = true
+                description = "文件信息"
+                example("example", ChangePermission(UserId(0), PermissionLevel.NORMAL))
             }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound)
-                statuses(HttpStatus.Forbidden)
-            }
-        }) { changePermission() }
-    }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound)
+            statuses(HttpStatus.Forbidden)
+        }
+    }) { changePermission() }
 }
 
 @Serializable
@@ -193,6 +190,7 @@ private suspend fun Context.getFile()
             call.response.header("Content-md5", fileInfo.md5)
             call.respondFile(file)
         }
+
         else                                     -> call.respond(HttpStatus.BadRequest)
     }
 }
@@ -262,11 +260,11 @@ private suspend fun Context.getFileList()
     {
         val files = user.id.getUserFiles().map { it.first.toString() }
         val info = user.getSpaceInfo()
-        return call.respond(HttpStatus.OK, Files(info, files.asIterable().asSlice(begin, count)))
+        return call.respond(HttpStatus.OK, Files(info, files.asSlice(begin, count)))
     }
     val file = id.getUserFiles().filter { user.canGet(it.second) }.map { it.first.toString() }
     val info = get<Users>().getUser(id)?.getSpaceInfo() ?: return call.respond(HttpStatus.NotFound)
-    call.respond(HttpStatus.OK, Files (info, file.asIterable().asSlice(begin, count)))
+    call.respond(HttpStatus.OK, Files(info, file.asSlice(begin, count)))
 }
 
 @Serializable

@@ -14,78 +14,75 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.bannedWords()
+fun Route.bannedWords() = route("/bannedWord", {
+    tags = listOf("违禁词汇")
+})
 {
-    route("/bannedWord", {
-        tags = listOf("违禁词汇")
-    })
-    {
-        get("/list", {
-            description = "获取违禁词汇列表, 需要全局管理员"
-            request {
-                authenticated(true)
-                paged()
-            }
-            response {
-                statuses<List<String>>(HttpStatus.OK, example = listOf("违禁词汇1", "违禁词汇2", "违禁词汇3"))
-                statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { getBannedWords() }
+    get("/list", {
+        description = "获取违禁词汇列表, 需要全局管理员"
+        request {
+            authenticated(true)
+            paged()
+        }
+        response {
+            statuses<List<String>>(HttpStatus.OK, example = listOf("违禁词汇1", "违禁词汇2", "违禁词汇3"))
+            statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { getBannedWords() }
 
-        post("/new", {
-            description = "添加违禁词汇, 需要全局管理员"
-            request {
-                authenticated(true)
-                body<NewBannedWord>
-                {
-                    required = true
-                    description = "新违禁词汇"
-                    example("example", NewBannedWord("违禁词汇"))
-                }
+    post("/new", {
+        description = "添加违禁词汇, 需要全局管理员"
+        request {
+            authenticated(true)
+            body<NewBannedWord>
+            {
+                required = true
+                description = "新违禁词汇"
+                example("example", NewBannedWord("违禁词汇"))
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { newBannedWord() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { newBannedWord() }
 
-        delete("/{word}", {
-            description = "删除违禁词汇, 需要全局管理员"
-            request {
-                authenticated(true)
-                pathParameter<String>("word")
-                {
-                    required = true
-                    description = "违禁词汇"
-                    example = "违禁词汇"
-                }
+    delete("/{word}", {
+        description = "删除违禁词汇, 需要全局管理员"
+        request {
+            authenticated(true)
+            pathParameter<String>("word")
+            {
+                required = true
+                description = "违禁词汇"
+                example = "违禁词汇"
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
-            }
-        }) { deleteBannedWord() }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { deleteBannedWord() }
 
-        put("/{word}", {
-            description = "修改违禁词汇, 需要全局管理员"
-            request {
-                authenticated(true)
-                pathParameter<String>("word")
-                {
-                    required = true
-                    description = "违禁词汇"
-                    example = "违禁词汇"
-                }
-                body<NewBannedWord>
-                {
-                    required = true
-                    description = "新违禁词汇"
-                    example("example", NewBannedWord("违禁词汇"))
-                }
+    put("/{word}", {
+        description = "修改违禁词汇, 需要全局管理员"
+        request {
+            authenticated(true)
+            pathParameter<String>("word")
+            {
+                required = true
+                description = "违禁词汇"
+                example = "违禁词汇"
             }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+            body<NewBannedWord>
+            {
+                required = true
+                description = "新违禁词汇"
+                example("example", NewBannedWord("违禁词汇"))
             }
-        }) { editBannedWord() }
-    }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.Unauthorized)
+        }
+    }) { editBannedWord() }
 }
 
 private suspend fun Context.getBannedWords()

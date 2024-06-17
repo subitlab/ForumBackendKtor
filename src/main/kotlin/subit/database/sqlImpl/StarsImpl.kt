@@ -19,13 +19,13 @@ class StarsImpl: DaoSqlImpl<StarsImpl.StarsTable>(StarsTable), Stars
     object StarsTable: Table("stars")
     {
         val user = reference("user", UsersImpl.UserTable).index()
-        val post = reference("post", PostsImpl.PostsTable, ReferenceOption.CASCADE, ReferenceOption.SET_NULL).nullable().default(null)
+        val post = reference("post", PostsImpl.PostsTable).index()
         val time = timestamp("time").defaultExpression(CurrentTimestamp).index()
     }
 
     private fun deserialize(row: ResultRow) = Star(
         user = row[StarsTable.user].value,
-        post = row[StarsTable.post]?.value,
+        post = row[StarsTable.post].value,
         time = row[StarsTable.time].toEpochMilliseconds()
     )
 

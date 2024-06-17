@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import subit.dataClasses.Slice.Companion.asSlice
+import subit.dataClasses.Slice.Companion.fromSequence
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -36,19 +37,11 @@ data class Slice<T>(
             contract {
                 callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
             }
-            return asIterable().asSlice(begin, limit, filter)
-        }
-
-        inline fun <T> Iterable<T>.asSlice(begin: Long, limit: Int, filter: (T)->Boolean = { true }): Slice<T>
-        {
-            contract {
-                callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
-            }
-            return fromIterable(this, begin, limit, filter)
+            return fromSequence(this, begin, limit, filter)
         }
 
         /**
-         * 对于[Query], 且无需过滤的情况, 可以使用此方法, 可以避免[fromIterable]方法遍历所有数据的情况
+         * 对于[Query], 且无需过滤的情况, 可以使用此方法, 可以避免[fromSequence]方法遍历所有数据的情况
          */
         fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow>
         {
@@ -57,17 +50,22 @@ data class Slice<T>(
             return Slice(sum, begin, list)
         }
 
+        @Deprecated(
+            message = "该方法效率极低, 为实现过虑将通过分块查询遍历全部数据, " +
+                      "虽不会造成很大的内存消耗, 但会阻塞进行查询造成卡顿",
+            level = DeprecationLevel.WARNING
+        )
         inline fun Query.asSlice(begin: Long, limit: Int, filter: (ResultRow)->Boolean): Slice<ResultRow>
         {
             contract {
                 callsInPlace(filter, kotlin.contracts.InvocationKind.UNKNOWN)
             }
             // 尝试进行分块查询, 若不支持就只能直接查询了
-            val res: Iterable<ResultRow> = runCatching()
+            val res: Sequence<ResultRow> = runCatching()
             {
                 this.fetchBatchedResults().flattenAsIterable()
-            }.getOrDefault(this)
-            return fromIterable(res, begin, limit, filter)
+            }.getOrDefault(this).asSequence()
+            return fromSequence(res, begin, limit, filter)
         }
 
         /**
@@ -78,8 +76,8 @@ data class Slice<T>(
          * 传入[filter]而不使用[Iterable.filter]的意义在于, 后者会将所有满足条件的数据加载到内存中,
          * 而这里的[filter]则是在遍历时进行过滤, 对于满足条件但不在 [begin] / [limit] 范围内的数据不会加载到内存中
          */
-        inline fun <T> fromIterable(
-            iterable: Iterable<T>,
+        inline fun <T> fromSequence(
+            sequence: Sequence<T>,
             begin: Long,
             limit: Int,
             filter: (T)->Boolean = { true }
@@ -90,7 +88,7 @@ data class Slice<T>(
             }
             val list = ArrayList<T>()
             var i = 0L
-            for (item in iterable)
+            for (item in sequence)
             {
                 if (!filter(item)) continue
                 if (i >= begin && i < begin+limit) list.add(item)
@@ -106,7 +104,7 @@ data class Slice<T>(
     fun <R> map(transform: (T)->R) = Slice(totalSize, begin, list.map(transform))
 }
 
-fun <T> sliceOf(vararg items: T) = items.toList().asSlice(begin = 0, limit = items.size)
+fun <T> sliceOf(vararg items: T) = items.toList().asSequence().asSlice(begin = 0, limit = items.size)
 
 /**
  * [Table.selectBatched]等方法会返回一个 Iterable<Iterable<T>> 类型的数据, 此方法将其扁平化为 Iterable<T>

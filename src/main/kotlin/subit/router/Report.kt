@@ -22,88 +22,85 @@ import subit.utils.HttpStatus
 import subit.utils.respond
 import subit.utils.statuses
 
-fun Route.report()
-{
-    route("/report", {
-        tags = listOf("举报")
-        request {
-            authenticated(true)
-        }
-    })
-    {
-        post("/{type}/{id}", {
-            description = "举报一个帖子/用户/板块/评论"
-            request {
-                pathParameter<ReportObject>("type")
-                {
-                    required = true
-                    description = "举报对象"
-                    example = ReportObject.POST
-                }
-                pathParameter<RawPostId>("id")
-                {
-                    required = true
-                    description = "帖子id"
-                }
-                body<ReportContent>
-                {
-                    required = true
-                    description = "举报内容"
-                    example("example", ReportContent("举报内容"))
-                }
-            }
-            response {
-                statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound)
-            }
-        }) { newReport() }
-
-        get("/list", {
-            description = "获取举报列表"
-            request {
-                queryParameter<String>("filter")
-                {
-                    required = true
-                    description = "all表示全部, true是已受理, false未受理"
-                    example = "all"
-                }
-                paged()
-            }
-            response {
-                statuses<Slice<ReportId>>(HttpStatus.OK, example = sliceOf(ReportId(0)))
-                statuses(HttpStatus.Forbidden)
-            }
-        }) { getReports() }
-
-        get("/{id}", {
-            description = "获取一个举报"
-            request {
-                pathParameter<ReportId>("id")
-                {
-                    required = true
-                    description = "举报id"
-                }
-            }
-            response {
-                statuses<Report>(HttpStatus.OK, example = Report.example)
-                statuses(HttpStatus.NotFound, HttpStatus.Forbidden)
-            }
-        }) { getReport() }
-
-        post("/handled/{id}", {
-            description = "处理一个举报"
-            request {
-                pathParameter<ReportId>("id")
-                {
-                    required = true
-                    description = "举报id"
-                }
-            }
-            response {
-                statuses(HttpStatus.OK)
-                statuses(HttpStatus.NotFound, HttpStatus.Forbidden)
-            }
-        }) { handleReport() }
+fun Route.report() = route("/report", {
+    tags = listOf("举报")
+    request {
+        authenticated(true)
     }
+})
+{
+    post("/{type}/{id}", {
+        description = "举报一个帖子/用户/板块/评论"
+        request {
+            pathParameter<ReportObject>("type")
+            {
+                required = true
+                description = "举报对象"
+                example = ReportObject.POST
+            }
+            pathParameter<RawPostId>("id")
+            {
+                required = true
+                description = "帖子id"
+            }
+            body<ReportContent>
+            {
+                required = true
+                description = "举报内容"
+                example("example", ReportContent("举报内容"))
+            }
+        }
+        response {
+            statuses(HttpStatus.OK, HttpStatus.Forbidden, HttpStatus.NotFound)
+        }
+    }) { newReport() }
+
+    get("/list", {
+        description = "获取举报列表"
+        request {
+            queryParameter<String>("filter")
+            {
+                required = true
+                description = "all表示全部, true是已受理, false未受理"
+                example = "all"
+            }
+            paged()
+        }
+        response {
+            statuses<Slice<ReportId>>(HttpStatus.OK, example = sliceOf(ReportId(0)))
+            statuses(HttpStatus.Forbidden)
+        }
+    }) { getReports() }
+
+    get("/{id}", {
+        description = "获取一个举报"
+        request {
+            pathParameter<ReportId>("id")
+            {
+                required = true
+                description = "举报id"
+            }
+        }
+        response {
+            statuses<Report>(HttpStatus.OK, example = Report.example)
+            statuses(HttpStatus.NotFound, HttpStatus.Forbidden)
+        }
+    }) { getReport() }
+
+    post("/handled/{id}", {
+        description = "处理一个举报"
+        request {
+            pathParameter<ReportId>("id")
+            {
+                required = true
+                description = "举报id"
+            }
+        }
+        response {
+            statuses(HttpStatus.OK)
+            statuses(HttpStatus.NotFound, HttpStatus.Forbidden)
+        }
+    }) { handleReport() }
 }
 
 @Serializable
