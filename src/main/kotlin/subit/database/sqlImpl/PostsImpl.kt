@@ -214,11 +214,17 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
     {
         val permissionTable = (permissions as PermissionsImpl).table
         val blockTable = (blocks as BlocksImpl).table
+        val likesTable = (likes as LikesImpl).table
+        val starsTable = (stars as StarsImpl).table
+        val commentsTable = (comments as CommentsImpl).table
         val additionalConstraint: (SqlExpressionBuilder.()->Op<Boolean>)? =
             if (loginUser != null) ({ permissionTable.user eq loginUser })
             else null
         PostsTable.join(blockTable, JoinType.INNER, block, blockTable.id)
             .join(permissionTable, JoinType.LEFT, block, permissionTable.block, additionalConstraint)
+            .join(likesTable, JoinType.LEFT, id, likesTable.post)
+            .join(starsTable, JoinType.LEFT, id, starsTable.post)
+            .join(commentsTable, JoinType.LEFT, id, commentsTable.post)
             .select(id)
             .where { (title like "%$key%") or (content like "%$key%") }
             .andWhere { state eq State.NORMAL }
