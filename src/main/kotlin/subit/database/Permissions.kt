@@ -53,8 +53,8 @@ open class CheckPermissionScope @PublishedApi internal constructor(val user: Use
 
     suspend fun canRead(block: BlockFull): Boolean = when (block.state)
     {
-        NORMAL  -> getPermission(block.id) < block.reading
-        DELETED -> (getPermission(block.id) < block.reading) && user.hasGlobalAdmin()
+        NORMAL  -> getPermission(block.id) >= block.reading
+        DELETED -> (getPermission(block.id) >= block.reading) && user.hasGlobalAdmin()
     }
 
     suspend fun canRead(post: PostInfo): Boolean = when (post.state)
@@ -101,16 +101,16 @@ open class CheckPermissionScope @PublishedApi internal constructor(val user: Use
 
     suspend fun canPost(block: BlockFull): Boolean = when (block.state)
     {
-        NORMAL  -> getPermission(block.id) < block.posting
-        DELETED -> (getPermission(block.id) < block.posting) && user.hasGlobalAdmin()
+        NORMAL  -> getPermission(block.id) >= block.posting
+        DELETED -> (getPermission(block.id) >= block.posting) && user.hasGlobalAdmin()
     }
 
     /// 可以匿名 ///
 
     suspend fun canAnonymous(block: BlockFull): Boolean = when (block.state)
     {
-        NORMAL  -> getPermission(block.id) < block.anonymous
-        DELETED -> (getPermission(block.id) < block.anonymous) && user.hasGlobalAdmin()
+        NORMAL  -> getPermission(block.id) >= block.anonymous
+        DELETED -> (getPermission(block.id) >= block.anonymous) && user.hasGlobalAdmin()
     }
 
     /// 修改他人权限 ///
