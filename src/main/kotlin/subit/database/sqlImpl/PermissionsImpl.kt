@@ -1,9 +1,7 @@
 package subit.database.sqlImpl
 
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.koin.core.component.KoinComponent
 import subit.dataClasses.BlockId
 import subit.dataClasses.PermissionLevel
@@ -25,14 +23,20 @@ class PermissionsImpl: DaoSqlImpl<PermissionsImpl.PermissionTable>(PermissionTab
      */
     override suspend fun setPermission(bid: BlockId, uid: UserId, permission: PermissionLevel): Unit = query()
     {
+        if (permission == PermissionLevel.NORMAL)
+        {
+            deleteWhere { (user eq uid) and (block eq bid) }
+            return@query
+        }
         val count = update({ (user eq uid) and (block eq bid) })
         {
             it[PermissionTable.permission] = permission
         }
 
-        // 如果没有更新到任何数据, 说明这个权限不存在, 需要插入
         if (count > 0) return@query
-        else insert()
+
+        // 如果没有更新到任何数据, 说明这个权限不存在, 需要插入
+        insert()
         {
             it[user] = uid
             it[block] = bid

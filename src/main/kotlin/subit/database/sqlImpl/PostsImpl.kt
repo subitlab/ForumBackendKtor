@@ -49,6 +49,7 @@ class PostsImpl: DaoSqlImpl<PostsImpl.PostsTable>(PostsTable), Posts, KoinCompon
         override val primaryKey = PrimaryKey(id)
     }
 
+    @Suppress("RemoveRedundantQualifierName")
     private fun deserializePost(row: ResultRow): PostInfo = PostInfo(
         id = row[PostsTable.id].value,
         title = row[PostsTable.title],

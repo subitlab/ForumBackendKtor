@@ -169,33 +169,31 @@ class PrivateChatsImpl: DaoSqlImpl<PrivateChatsImpl.PrivateChatsTable>(PrivateCh
         deleteWhere { (from eq uid) and (time eq Instant.DISTANT_PAST) }
     }
 
-    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean) = query()
+    override suspend fun setIsBlock(from: UserId, to: UserId, isBlock: Boolean): Unit = query()
     {
         //此处表示from拉黑了to
-        val nowIsBlock = select(content).where {
-            (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
-        }.singleOrNull()?.get(content)?.toBoolean()
-        if (isBlock != nowIsBlock)
+        // 只要存在time是Instant.DISTANT_FUTURE的记录，就表示from拉黑了to
+
+        val op = (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
+
+        // 如果取消拉黑, 则删除记录即可
+        if (!isBlock) deleteWhere { op }
+        // 如果是添加记录的话, 需要先确认当前没有拉黑, 从而避免重复插入
+        else if (select(content).where { op }.count() <= 0)
         {
-            if (nowIsBlock == null) insert {
+            insert {
                 it[PrivateChatsTable.from] = from
                 it[PrivateChatsTable.to] = to
                 it[time] = Instant.DISTANT_FUTURE
-                it[content] = isBlock.toString()
-            }
-            else update({
-                (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
-            })
-            {
-                it[content] = isBlock.toString()
+                it[content] = "This is a block record. The $from block $to. Do not delete this record."
             }
         }
     }
 
     override suspend fun getIsBlock(from: UserId, to: UserId): Boolean = query()
     {
-        select(content).where {
+        selectAll().where {
             (PrivateChatsTable.from eq from) and (PrivateChatsTable.to eq to) and (time eq Instant.DISTANT_FUTURE)
-        }.singleOrNull()?.get(content)?.toBoolean() ?: false
+        }.count() > 0
     }
 }
