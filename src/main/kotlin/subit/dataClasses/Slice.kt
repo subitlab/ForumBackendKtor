@@ -3,7 +3,6 @@ package subit.dataClasses
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.Table
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.fromSequence
 import kotlin.contracts.ExperimentalContracts
@@ -107,7 +106,7 @@ data class Slice<T>(
 fun <T> sliceOf(vararg items: T) = items.toList().asSequence().asSlice(begin = 0, limit = items.size)
 
 /**
- * [Table.selectBatched]等方法会返回一个 Iterable<Iterable<T>> 类型的数据, 此方法将其扁平化为 Iterable<T>
+ * [Query.fetchBatchedResults]等方法会返回一个 Iterable<Iterable<T>> 类型的数据, 此方法将其扁平化为 Iterable<T>
  *
  * 注意: 不使用[Iterable.flatten]的原因是, [Iterable.flatten]转为list
  */

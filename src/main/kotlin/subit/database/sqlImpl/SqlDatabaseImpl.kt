@@ -201,7 +201,3 @@ fun Table.reportId(name: String) = registerColumn(name, ReportIdColumnType())
 // NoticeId
 class NoticeIdColumnType: WarpColumnType<Long, NoticeId>(LongColumnType(), ::NoticeId, NoticeId::value)
 fun Table.noticeId(name: String) = registerColumn(name, NoticeIdColumnType())
-
-// BlockUserId
-class BlockUserIdColumnType: WarpColumnType<Long, BlockUserId>(LongColumnType(), BlockUserId::byRawValue, BlockUserId::value)
-fun Table.blockUserId(name: String) = registerColumn(name, BlockUserIdColumnType())

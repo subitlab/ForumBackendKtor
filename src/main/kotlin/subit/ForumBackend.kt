@@ -1,21 +1,10 @@
 package subit
 
-import io.github.smiley4.ktorswaggerui.SwaggerUI
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.*
-import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.plugins.doublereceive.*
-import io.ktor.server.plugins.statuspages.*
-import io.ktor.server.request.*
-import org.koin.dsl.bind
-import org.koin.dsl.module
-import org.koin.ktor.plugin.Koin
-import org.koin.logger.slf4jLogger
 import subit.console.command.CommandSet.startCommandThread
 import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
@@ -23,8 +12,6 @@ import subit.plugin.*
 import subit.router.router
 import subit.utils.FileUtils
 import subit.utils.ForumThreadGroup
-import subit.utils.HttpStatus
-import subit.utils.respond
 import java.io.File
 import kotlin.properties.Delegates
 

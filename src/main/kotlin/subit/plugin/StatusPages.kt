@@ -25,7 +25,6 @@ fun Application.installStatusPages() = install(StatusPages)
     }
     /** 包装一层, 因为正常的返回没有body, 但是这里需要返回一个body, 见[HttpStatus] */
     status(HttpStatusCode.NotFound) { _ -> call.respond(HttpStatus.NotFound) }
-    status(HttpStatusCode.Unauthorized) { _ -> call.respond(HttpStatus.Unauthorized) }
     status(HttpStatusCode.Forbidden) { _ -> call.respond(HttpStatus.Forbidden) }
     status(HttpStatusCode.BadRequest) { _ -> call.respond(HttpStatus.BadRequest) }
     status(HttpStatusCode.InternalServerError) { _ -> call.respond(HttpStatus.InternalServerError) }

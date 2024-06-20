@@ -21,6 +21,7 @@ import java.util.*
 /**
  * JWT验证
  */
+@Suppress("MemberVisibilityCanBePrivate")
 object JWTAuth: KoinComponent
 {
     private val logger = ForumLogger.getLogger()

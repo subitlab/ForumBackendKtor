@@ -113,24 +113,3 @@ value class NoticeId(override val value: RawNoticeId): Id<NoticeId, RawNoticeId>
         fun Number.toNoticeId() = NoticeId(toLong())
     }
 }
-
-typealias RawBlockUserId = Long
-@JvmInline
-@Serializable
-value class BlockUserId private constructor(override val value: RawBlockUserId): Id<BlockUserId, RawBlockUserId>
-{
-    constructor(uid: UserId, bid: BlockId): this((bid.value.toLong() shl 32) or uid.value.toLong())
-
-    override fun toString(): String = value.toString()
-
-    companion object
-    {
-        fun String.toBlockUserId() = BlockUserId(toLong())
-        fun String.toBlockUserIdOrNull() = toLongOrNull()?.let(::BlockUserId)
-        fun Number.toBlockUserId() = BlockUserId(toLong())
-        fun byRawValue(value: RawBlockUserId) = BlockUserId(value)
-    }
-
-    val user get() = UserId(value.toInt())
-    val block get() = BlockId((value ushr 32).toInt())
-}

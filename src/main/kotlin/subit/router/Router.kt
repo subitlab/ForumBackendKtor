@@ -3,7 +3,6 @@ package subit.router
 import io.github.smiley4.ktorswaggerui.dsl.OpenApiRequest
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
 import org.koin.core.parameter.ParametersDefinition
@@ -76,9 +75,7 @@ fun Application.router() = routing()
 {
     authenticate("forum-auth", optional = true)
     {
-
         val prohibits: Prohibits by inject()
-
         intercept(ApplicationCallPipeline.Call)
         {
             //检测是否在维护中
