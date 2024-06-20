@@ -50,10 +50,4 @@ class EmailCodesImpl: EmailCodes
         codes.remove(email to usage)
         return true
     }
-
-    override suspend fun canSendEmail(email: String, usage: EmailCodes.EmailCodeUsage): Boolean
-    {
-        val pair = codes[email to usage] ?: return true
-        return pair.second < Clock.System.now().plus(60 - emailConfig.codeValidTime, DateTimeUnit.SECOND)
-    }
 }

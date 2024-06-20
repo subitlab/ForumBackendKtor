@@ -5,6 +5,7 @@ package subit.router.auth
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth
@@ -12,6 +13,7 @@ import subit.JWTAuth.getLoginUser
 import subit.config.emailConfig
 import subit.dataClasses.UserId
 import subit.database.*
+import subit.plugin.RateLimit
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -101,23 +103,27 @@ fun Route.auth() = route("/auth", {
         }
     }) { resetPassword() }
 
-    post("/sendEmailCode", {
-        description = "发送邮箱验证码"
-        request {
-            body<EmailInfo>
-            {
-                required = true
-                description = "邮箱信息"
-                example("example", EmailInfo("email@abc.com", EmailCodes.EmailCodeUsage.REGISTER))
+    rateLimit(RateLimit.SendEmail.rateLimitName)
+    {
+        post("/sendEmailCode", {
+            description = "发送邮箱验证码"
+            request {
+                body<EmailInfo>
+                {
+                    required = true
+                    description = "邮箱信息"
+                    example("example", EmailInfo("email@abc.com", EmailCodes.EmailCodeUsage.REGISTER))
+                }
             }
-        }
-        this.response {
-            statuses(HttpStatus.OK)
-            statuses(
-                HttpStatus.EmailFormatError,
-            )
-        }
-    }) { sendEmailCode() }
+            this.response {
+                statuses(HttpStatus.OK)
+                statuses(
+                    HttpStatus.EmailFormatError,
+                    HttpStatus.TooManyRequests
+                )
+            }
+        }) { sendEmailCode() }
+    }
 
     post("/changePassword", {
         description = "修改密码"
@@ -248,7 +254,7 @@ private suspend fun Context.changePassword()
 }
 
 @Serializable
-private data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeUsage)
+data class EmailInfo(val email: String, val usage: EmailCodes.EmailCodeUsage)
 
 private suspend fun Context.sendEmailCode()
 {
@@ -256,8 +262,6 @@ private suspend fun Context.sendEmailCode()
     if (!checkEmail(emailInfo.email))
         return call.respond(HttpStatus.EmailFormatError)
     val emailCodes = get<EmailCodes>()
-    if (!emailCodes.canSendEmail(emailInfo.email, emailInfo.usage))
-        return call.respond(HttpStatus.SendEmailCodeTooFrequent)
     emailCodes.sendEmailCode(emailInfo.email, emailInfo.usage)
     call.respond(HttpStatus.OK)
 }

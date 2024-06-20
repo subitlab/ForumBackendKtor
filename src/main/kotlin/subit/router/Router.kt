@@ -74,7 +74,7 @@ fun ApplicationCall.getPage(): Pair<Long, Int>
 
 fun Application.router() = routing()
 {
-    authenticate(optional = true)
+    authenticate("forum-auth", optional = true)
     {
 
         val prohibits: Prohibits by inject()
@@ -99,14 +99,6 @@ fun Application.router() = routing()
 
             // 检查参数是否包含违禁词
             checkParameters()
-        }
-
-        options("{...}")
-        {
-            //跨域请求
-            call.response.header("Access-Control-Allow-Origin", "*")
-            call.response.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-            call.respond(HttpStatus.OK)
         }
 
         admin()

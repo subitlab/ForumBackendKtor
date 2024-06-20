@@ -75,6 +75,6 @@ class UsersImpl: Users
             true
         } ?: false
 
-    override suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull> =
-        map.values.filter { it.username.contains(username) }.asSequence().asSlice(begin, count)
+    override suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserId> =
+        map.values.filter { it.username.contains(username) }.asSequence().asSlice(begin, count).map { it.id }
 }

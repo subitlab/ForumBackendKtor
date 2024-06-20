@@ -58,6 +58,8 @@ data class HttpStatus(val code: HttpStatusCode, val message: String)
         val Maintaining = HttpStatus(HttpStatusCode.NotAcceptable, "系统维护中")
         // 发送验证码过于频繁
         val SendEmailCodeTooFrequent = HttpStatus(HttpStatusCode.TooManyRequests, "发送验证码过于频繁")
+        // 请求过于频繁
+        val TooManyRequests = HttpStatus(HttpStatusCode.TooManyRequests, "请求过于频繁")
     }
 }
 @Serializable

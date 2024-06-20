@@ -14,7 +14,7 @@ val swagger_ui_version: String by project
 plugins {
     kotlin("jvm") version "2.0.0"
     kotlin("plugin.serialization") version "1.9.23"
-    id("io.ktor.plugin") version "2.3.7"
+    id("io.ktor.plugin") version "2.3.11"
 }
 
 group = "subit"
@@ -40,6 +40,9 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation") // request/response时反序列化
     implementation("io.ktor:ktor-server-status-pages") // 错误页面(异常处理)
     implementation("io.ktor:ktor-server-swagger")
+    implementation("io.ktor:ktor-server-cors-jvm") // 跨域
+    implementation("io.ktor:ktor-server-double-receive-jvm") // 重复接收
+    implementation("io.ktor:ktor-server-rate-limit-jvm") // 限流
     implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
     //mysql

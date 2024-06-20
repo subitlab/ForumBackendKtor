@@ -74,15 +74,6 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
         result != null && result >= Clock.System.now()
     }
 
-    override suspend fun canSendEmail(email: String, usage: EmailCodeUsage): Boolean = query()
-    {
-        select(time).where {
-            (EmailsTable.email eq email)
-                .and(EmailsTable.usage eq usage)
-                .and(time lessEq Clock.System.now().plus(60 - emailConfig.codeValidTime, unit = DateTimeUnit.SECOND))
-        }.singleOrNull()?.let { it[time] }?.let { it < Clock.System.now() } ?: true
-    }
-
     private suspend fun clearExpiredEmailCode(): Unit = query()
     {
         EmailsTable.deleteWhere { time lessEq CurrentTimestamp }

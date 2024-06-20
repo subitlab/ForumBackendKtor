@@ -2,6 +2,7 @@ package subit.database.sqlImpl
 
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
@@ -110,8 +111,8 @@ class UsersImpl: DaoSqlImpl<UsersImpl.UserTable>(UserTable), Users
         update({ UserTable.id eq id }) { it[filePermission] = permission } > 0
     }
 
-    override suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull> = query()
+    override suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserId> = query()
     {
-        selectAll().where { UserTable.username like "%$username%" }.asSlice(begin, count).map(::deserialize)
+        select(id).where { UserTable.username like "%$username%" }.asSlice(begin, count).map { it[id].value }
     }
 }

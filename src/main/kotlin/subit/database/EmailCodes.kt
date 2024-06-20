@@ -23,11 +23,6 @@ interface EmailCodes
      * 验证邮箱验证码，验证成功后将立即删除验证码
      */
     suspend fun verifyEmailCode(email: String, code: String, usage: EmailCodeUsage): Boolean
-
-    /**
-     * 是否可以发送邮件, 如果一分钟内发送过, 则不可再次发送
-     */
-    suspend fun canSendEmail(email: String, usage: EmailCodeUsage): Boolean
 }
 
 suspend fun EmailCodes.sendEmailCode(email: String, usage: EmailCodeUsage)

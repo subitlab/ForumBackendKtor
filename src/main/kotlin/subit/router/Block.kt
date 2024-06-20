@@ -130,22 +130,6 @@ fun Route.block() = route("/block", {
             statuses(HttpStatus.Forbidden, HttpStatus.Unauthorized)
         }
     }) { getChildren() }
-
-    get("/search", {
-        description = "搜索板块"
-        request {
-            authenticated(false)
-            queryParameter<String>("key")
-            {
-                required = true
-                description = "关键字"
-            }
-            paged()
-        }
-        response {
-            statuses<Slice<BlockId>>(HttpStatus.OK, example = sliceOf(BlockId(0)))
-        }
-    }) { searchBlock() }
 }
 
 @Serializable
@@ -278,13 +262,4 @@ private suspend fun Context.getChildren()
     }
 
     blocks.getChildren(getLoginUser()?.id, id, begin, count).let { call.respond(HttpStatus.OK, it) }
-}
-
-private suspend fun Context.searchBlock()
-{
-    val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
-    val blocks = get<Blocks>().searchBlock(getLoginUser()?.id, key, begin, count)
-    call.respond(HttpStatus.OK, blocks)
 }

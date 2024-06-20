@@ -68,5 +68,5 @@ interface Users
     /**
      * 搜索用户
      */
-    suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserFull>
+    suspend fun searchUser(username: String, begin: Long, count: Int): Slice<UserId>
 }

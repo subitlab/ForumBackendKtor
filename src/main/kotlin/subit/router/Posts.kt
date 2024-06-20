@@ -4,6 +4,7 @@ package subit.router.posts
 
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
@@ -12,6 +13,7 @@ import subit.dataClasses.BlockId.Companion.toBlockIdOrNull
 import subit.dataClasses.PostId.Companion.toPostIdOrNull
 import subit.dataClasses.UserId.Companion.toUserIdOrNull
 import subit.database.*
+import subit.plugin.RateLimit
 import subit.router.*
 import subit.utils.HttpStatus
 import subit.utils.respond
@@ -20,6 +22,44 @@ import subit.utils.statuses
 fun Route.posts() = route("/post", {
     tags = listOf("帖子")
 }) {
+
+    rateLimit(RateLimit.Post.rateLimitName)
+    {
+        post("/new", {
+            description = "新建帖子"
+            request {
+                authenticated(true)
+                body<NewPost>
+                {
+                    required = true
+                    description = "发帖, 成功返回帖子ID."
+                    example("example", NewPost("标题", "内容", false, BlockId(0), false))
+                }
+            }
+            response {
+                statuses<WarpPostId>(HttpStatus.OK, example = WarpPostId(PostId(0)))
+                statuses(HttpStatus.BadRequest, HttpStatus.TooManyRequests)
+            }
+        }) { newPost() }
+
+        put("/{id}", {
+            description = "编辑帖子(block及以上管理员可修改)"
+            request {
+                authenticated(true)
+                body<EditPost>
+                {
+                    required = true
+                    description = "编辑帖子"
+                    example("example", EditPost("新标题", "新内容"))
+                }
+            }
+            response {
+                statuses(HttpStatus.OK)
+                statuses(HttpStatus.BadRequest, HttpStatus.TooManyRequests)
+            }
+        }) { editPost() }
+    }
+
     get("/{id}", {
         description = "获取帖子信息"
         request {
@@ -52,23 +92,6 @@ fun Route.posts() = route("/post", {
         }
     }) { deletePost() }
 
-    put("/{id}", {
-        description = "编辑帖子(block及以上管理员可修改)"
-        request {
-            authenticated(true)
-            body<EditPost>
-            {
-                required = true
-                description = "编辑帖子"
-                example("example", EditPost("新标题", "新内容"))
-            }
-        }
-        response {
-            statuses(HttpStatus.OK)
-            statuses(HttpStatus.BadRequest)
-        }
-    }) { editPost() }
-
     post("/{id}/like", {
         description = "点赞/点踩/取消点赞/收藏/取消收藏 帖子"
         request {
@@ -90,23 +113,6 @@ fun Route.posts() = route("/post", {
             statuses(HttpStatus.NotFound)
         }
     }) { likePost() }
-
-    post("/new", {
-        description = "新建帖子"
-        request {
-            authenticated(true)
-            body<NewPost>
-            {
-                required = true
-                description = "发帖, 成功返回帖子ID"
-                example("example", NewPost("标题", "内容", false, BlockId(0), false))
-            }
-        }
-        response {
-            statuses<WarpPostId>(HttpStatus.OK, example = WarpPostId(PostId(0)))
-            statuses(HttpStatus.BadRequest)
-        }
-    }) { newPost() }
 
     get("/list/user/{user}", {
         description = "获取用户发送的帖子列表"
@@ -184,44 +190,32 @@ fun Route.posts() = route("/post", {
         }
     }) { setBlockTopPosts() }
 
-    get("/search", {
-        description = "搜索帖子"
-        request {
-            authenticated(false)
-            queryParameter<String>("key")
-            {
-                required = true
-                description = "关键字"
-                example = "关键字"
+    rateLimit(RateLimit.AddView.rateLimitName)
+    {
+        post("/view", {
+            description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
+            request {
+                authenticated(true)
+                body<WarpPostId>
+                {
+                    required = true
+                    description = "帖子ID"
+                    example("example", WarpPostId(PostId(0)))
+                }
             }
-            paged()
-        }
-        response {
-            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
-        }
-    }) { searchPost() }
-
-    post("/view", {
-        description = "增加帖子浏览量, 应在用户打开帖子时调用. 若未登陆将不会增加浏览量"
-        request {
-            authenticated(true)
-            body<WarpPostId>
-            {
-                required = true
-                description = "帖子ID"
-                example("example", WarpPostId(PostId(0)))
+            response {
+                statuses(
+                    HttpStatus.OK,
+                    HttpStatus.Unauthorized,
+                    HttpStatus.TooManyRequests
+                )
             }
-        }
-        response {
-            statuses(HttpStatus.OK)
-            statuses(HttpStatus.Unauthorized)
-            statuses(HttpStatus.BadRequest)
-        }
-    }) { addView() }
+        }) { addView() }
+    }
 }
 
 @Serializable
-private data class WarpPostId(val post: PostId)
+data class WarpPostId(val post: PostId)
 
 private suspend fun Context.getPost()
 {
@@ -379,14 +373,6 @@ private suspend fun Context.setBlockTopPosts()
     checkPermission { checkHasAdminIn(postInfo.block) }
     get<Posts>().editPost(pid, top = top)
     call.respond(HttpStatus.OK)
-}
-
-private suspend fun Context.searchPost()
-{
-    val key = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val (begin, count) = call.getPage()
-    val posts = get<Posts>().searchPosts(getLoginUser()?.id, key, begin, count)
-    call.respond(HttpStatus.OK, posts)
 }
 
 private suspend fun Context.addView()

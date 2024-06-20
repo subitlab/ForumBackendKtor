@@ -2,31 +2,24 @@ package subit
 
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.config.*
 import io.ktor.server.config.ConfigLoader.Companion.load
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
-import kotlinx.serialization.json.Json
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import subit.JWTAuth.initJwtAuth
-import subit.config.apiDocsConfig
 import subit.console.command.CommandSet.startCommandThread
-import subit.dataClasses.UserId
-import subit.database.Users
 import subit.database.loadDatabaseImpl
 import subit.logger.ForumLogger
+import subit.plugin.*
 import subit.router.router
 import subit.utils.FileUtils
 import subit.utils.ForumThreadGroup
@@ -131,112 +124,17 @@ fun Application.init()
     startCommandThread()
 
     FileUtils.init() // 初始化文件系统
-    installAuthentication()
-    installDeserialization()
-    installStatusPages()
+
     installApiDoc()
+    installAuthentication()
+    installContentNegotiation()
+    installCORS()
+    installDoubleReceive()
     installKoin()
+    installStatusPages()
+    installRateLimit()
 
     loadDatabaseImpl()
 
     router()
-}
-
-/**
- * 安装登陆验证服务
- */
-private fun Application.installAuthentication() = install(Authentication)
-{
-    this@installAuthentication.initJwtAuth()
-    jwt()
-    {
-        verifier(JWTAuth.makeJwtVerifier()) // 设置验证器
-        validate() // 设置验证函数
-        {
-            val users: Users by inject()
-            ForumLogger.getLogger("ForumBackend.installAuthentication").config(
-                "用户token: id=${
-                    it.payload.getClaim("id")
-                        .asInt()
-                }, password=${it.payload.getClaim("password").asString()}"
-            )
-            if (!JWTAuth.checkLoginByEncryptedPassword(
-                    it.payload.getClaim("id").asInt().let(::UserId),
-                    it.payload.getClaim("password").asString()
-                )
-            ) null
-            else users.getUser(it.payload.getClaim("id").asInt().let(::UserId))
-        }
-    }
-
-    basic("auth-api-docs")
-    {
-        realm = "Access to the Swagger UI"
-        validate()
-        {
-            if (it.name == apiDocsConfig.name && it.password == apiDocsConfig.password)
-                UserIdPrincipal(it.name)
-            else null
-        }
-    }
-}
-
-/**
- * 安装反序列化/序列化服务(用于处理json)
- */
-private fun Application.installDeserialization() = install(ContentNegotiation)
-{
-    json(Json()
-    {
-        // 设置默认值也序列化, 否则不默认值不会被序列化
-        encodeDefaults = true
-        // 若debug模式开启, 则将json序列化为可读性更高的格式
-        prettyPrint = debug
-        // 忽略未知字段
-        ignoreUnknownKeys = true
-        // 宽松模式, 若字段类型不匹配, 则尝试转换
-        isLenient = true
-    })
-}
-
-/**
- * 对于不同的状态码返回不同的页面
- */
-private fun Application.installStatusPages() = install(StatusPages)
-{
-    exception<BadRequestException> { call, _ -> call.respond(HttpStatus.BadRequest) }
-    exception<Throwable>
-    { call, throwable ->
-        ForumLogger.getLogger("ForumBackend.installStatusPages")
-            .warning("出现位置错误, 访问接口: ${call.request.path()}", throwable)
-        call.respond(HttpStatus.InternalServerError)
-    }
-    status(HttpStatusCode.NotFound)
-    { _ ->
-        call.respond(HttpStatus.NotFound)
-    }
-}
-
-private fun Application.installApiDoc() = install(SwaggerUI)
-{
-    swagger()
-    {
-        swaggerUrl = "api-docs"
-        forwardRoot = true
-        authentication = "auth-api-docs"
-    }
-    info()
-    {
-        title = "论坛后端API文档"
-        version = subit.version
-        description = "SubIT论坛后端API文档"
-    }
-}
-
-private fun Application.installKoin() = install(Koin)
-{
-    slf4jLogger()
-    modules(module {
-        single { this@installKoin } bind Application::class
-    })
 }

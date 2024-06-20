@@ -197,22 +197,6 @@ fun Route.user() = route("/user", {
             statuses(HttpStatus.Unauthorized)
         }
     }) { switchStars() }
-
-    get("/search", {
-        description = "搜索用户 会返回所有用户名包含key的用户"
-        request {
-            queryParameter<String>("key")
-            {
-                required = true
-                description = "关键字"
-                example = "关键字"
-            }
-            paged()
-        }
-        response {
-            statuses<Slice<UserId>>(HttpStatus.OK, example = sliceOf(UserId(0)))
-        }
-    }) { searchUser() }
 }
 
 private suspend fun Context.getUserInfo()
@@ -353,11 +337,4 @@ private suspend fun Context.switchStars()
     val switchStars = receiveAndCheckBody<SwitchStars>()
     get<Users>().changeShowStars(loginUser.id, switchStars.showStars)
     call.respond(HttpStatus.OK)
-}
-
-private suspend fun Context.searchUser()
-{
-    val username = call.parameters["key"] ?: return call.respond(HttpStatus.BadRequest)
-    val (begin, count) = call.getPage()
-    call.respond(HttpStatus.OK, get<Users>().searchUser(username, begin, count).map(UserFull::id))
 }

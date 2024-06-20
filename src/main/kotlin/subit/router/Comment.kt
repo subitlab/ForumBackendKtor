@@ -7,6 +7,7 @@ import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.post
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.server.application.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import subit.JWTAuth.getLoginUser
@@ -14,6 +15,7 @@ import subit.dataClasses.*
 import subit.dataClasses.CommentId.Companion.toCommentIdOrNull
 import subit.dataClasses.PostId.Companion.toPostIdOrNull
 import subit.database.*
+import subit.plugin.RateLimit
 import subit.router.Context
 import subit.router.authenticated
 import subit.router.get
@@ -25,47 +27,50 @@ fun Route.comment() = route("/comment", {
     tags = listOf("评论")
 })
 {
-    post("/post/{postId}", {
-        description = "评论一个帖子"
-        request {
-            authenticated(true)
-            pathParameter<RawPostId>("postId")
-            {
-                required = true
-                description = "帖子id"
+    rateLimit(RateLimit.Post.rateLimitName)
+    {
+        post("/post/{postId}", {
+            description = "评论一个帖子"
+            request {
+                authenticated(true)
+                pathParameter<RawPostId>("postId")
+                {
+                    required = true
+                    description = "帖子id"
+                }
+                body<CommentContent>
+                {
+                    description = "评论内容"
+                    example("example", CommentContent("评论内容"))
+                }
             }
-            body<CommentContent>
-            {
-                description = "评论内容"
-                example("example", CommentContent("评论内容"))
+            response {
+                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
+                statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
             }
-        }
-        response {
-            statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
-            statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
-        }
-    }) { commentPost() }
+        }) { commentPost() }
 
-    post("/comment/{commentId}", {
-        description = "评论一个评论"
-        request {
-            authenticated(true)
-            pathParameter<RawCommentId>("commentId")
-            {
-                required = true
-                description = "评论id"
+        post("/comment/{commentId}", {
+            description = "评论一个评论"
+            request {
+                authenticated(true)
+                pathParameter<RawCommentId>("commentId")
+                {
+                    required = true
+                    description = "评论id"
+                }
+                body<CommentContent>
+                {
+                    description = "评论内容"
+                    example("example", CommentContent("评论内容"))
+                }
             }
-            body<CommentContent>
-            {
-                description = "评论内容"
-                example("example", CommentContent("评论内容"))
+            response {
+                statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
+                statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
             }
-        }
-        response {
-            statuses<CommentIdResponse>(HttpStatus.OK, example = CommentIdResponse(CommentId(0)))
-            statuses(HttpStatus.Forbidden, HttpStatus.NotFound)
-        }
-    }) { commentComment() }
+        }) { commentComment() }
+    }
 
     delete("/{commentId}", {
         description = "删除一个评论, 需要板块管理员权限"
