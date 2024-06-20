@@ -1,5 +1,8 @@
 package subit.console.command
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /**
  * 使用shell命令
  */
@@ -9,9 +12,9 @@ object Shell: Command
     override val args = "[command]"
     override val aliases = listOf("sh")
 
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean = withContext(Dispatchers.IO)
     {
         ProcessBuilder().command(args).inheritIO().start().waitFor()
-        return true
+        true
     }
 }

@@ -73,7 +73,7 @@ abstract class TreeCommand(): Command
     /**
      * 执行命令
      */
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         if (args.isEmpty()) return false // 参数过短
         val command = map[args[0]] // 获取命令对象
@@ -88,7 +88,7 @@ abstract class TreeCommand(): Command
     /**
      * Tab complete
      */
-    override fun tabComplete(args: List<String>): List<Candidate>
+    override suspend fun tabComplete(args: List<String>): List<Candidate>
     {
         // 如果没有参数或者只有一个参数, 就返回所有命令名/别名
         if (args.isEmpty()||args.size==1) return map.entries.map {

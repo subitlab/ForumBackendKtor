@@ -9,7 +9,7 @@ object Clear: Command
 {
     override val description = "Clear screen"
     override val log = false
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         Console.clear()
         return true

@@ -11,7 +11,7 @@ import subit.logger.ForumLogger
 import subit.plugin.*
 import subit.router.router
 import subit.utils.FileUtils
-import subit.utils.ForumThreadGroup
+import subit.utils.Power
 import java.io.File
 import kotlin.properties.Delegates
 
@@ -92,7 +92,7 @@ fun main(args: Array<String>)
     // 启动服务器
     embeddedServer(Netty, environment).start(wait = true)
     // 若服务器关闭则终止整个程序
-    ForumThreadGroup.shutdown(0)
+    Power.shutdown(0)
 }
 
 /**

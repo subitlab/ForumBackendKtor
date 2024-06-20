@@ -1,6 +1,6 @@
 package subit.console.command
 
-import subit.utils.ForumThreadGroup
+import subit.utils.Power
 
 /**
  * 杀死服务器
@@ -8,5 +8,6 @@ import subit.utils.ForumThreadGroup
 object Stop: Command
 {
     override val description = "Stop the server."
-    override fun execute(args: List<String>): Boolean = ForumThreadGroup.shutdown(0, "stop command executed.")
+    override suspend fun execute(args: List<String>): Boolean =
+        Power.shutdown(0, "stop command executed.")
 }

@@ -8,7 +8,7 @@ import subit.console.SimpleAnsiColor.Companion.RED
 import subit.database.memoryImpl.MemoryDatabaseImpl
 import subit.database.sqlImpl.SqlDatabaseImpl
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup.shutdown
+import subit.utils.Power.shutdown
 
 val databaseImpls: List<IDatabase> = listOf(
     SqlDatabaseImpl,

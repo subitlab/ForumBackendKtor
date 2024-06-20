@@ -11,7 +11,7 @@ object About: Command
     override val description = "Show about."
     override val aliases = listOf("version", "ver")
 
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         CommandSet.out.println("SubIT Forum Backend")
         CommandSet.out.println("Version: $version")

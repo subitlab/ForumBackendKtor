@@ -10,7 +10,7 @@ object Reload: Command
 {
     override val description = "Reload configs."
 
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         if (args.isEmpty()) ConfigLoader.reloadAll()
         else if (args.size == 1) ConfigLoader.reload(args[0])
@@ -18,5 +18,5 @@ object Reload: Command
         return true
     }
 
-    override fun tabComplete(args: List<String>): List<Candidate> = ConfigLoader.configs().map(::Candidate)
+    override suspend fun tabComplete(args: List<String>): List<Candidate> = ConfigLoader.configs().map(::Candidate)
 }

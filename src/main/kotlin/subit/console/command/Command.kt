@@ -1,6 +1,10 @@
 package subit.console.command
 
 import io.ktor.server.application.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jline.reader.*
 import org.jline.reader.impl.DefaultParser
 import subit.console.AnsiStyle
@@ -9,8 +13,7 @@ import subit.console.AnsiStyle.Companion.ansi
 import subit.console.Console
 import subit.console.SimpleAnsiColor
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup
-import subit.utils.ForumThreadGroup.shutdown
+import subit.utils.Power.shutdown
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
@@ -60,7 +63,7 @@ interface Command
      * @param args Command arguments.
      * @return Whether the command is executed successfully.
      */
-    fun execute(args: List<String>): Boolean = false
+    suspend fun execute(args: List<String>): Boolean = false
 
     /**
      * Tab complete the command.
@@ -68,7 +71,7 @@ interface Command
      * @param args Command arguments.
      * @return Tab complete results.
      */
-    fun tabComplete(args: List<String>): List<Candidate> = emptyList()
+    suspend fun tabComplete(args: List<String>): List<Candidate> = emptyList()
 }
 
 /**
@@ -102,63 +105,59 @@ object CommandSet: TreeCommand(
     private val prompt: String = parsePrompt("FORUM > ")
     private val rightPrompt: String = parsePrompt("<| POWERED BY SUBIT |>")
 
-    fun Application.startCommandThread()
+    fun Application.startCommandThread() = CoroutineScope(Dispatchers.IO).launch()
     {
-        ForumThreadGroup.newThread("CommandThread")
+        var line: String? = null
+        while (true) try
         {
-            var line: String? = null
-            while (true) try
+            @Suppress("CAST_NEVER_SUCCEEDS")
+            line = Console.lineReader.readLine(prompt, rightPrompt, null as? MaskingCallback, null)
+            val words = DefaultParser().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
+            if (words.isEmpty() || (words.size == 1 && words.first().isEmpty())) continue
+            val command = CommandSet.getCommand(words[0])
+            if (command == null || command.log) logger.info("Console is used command: $line")
+            success = false
+            if (command == null)
             {
-                @Suppress("CAST_NEVER_SUCCEEDS")
-                line = Console.lineReader.readLine(prompt, rightPrompt, null as? MaskingCallback, null)
-                val words = DefaultParser().parse(line, 0, Parser.ParseContext.ACCEPT_LINE).words()
-                if (words.isEmpty() || (words.size == 1 && words.first().isEmpty())) continue
-                val command = CommandSet.getCommand(words[0])
-                if (command == null || command.log) logger.info("Console is used command: $line")
-                success = false
-                if (command == null)
-                {
-                    err.println("Unknown command: ${words[0]}, use \"help\" to get help")
-                }
-                else if (!command.execute(words.subList(1, words.size)))
-                {
-                    err.println("Command is illegal, use \"help ${words[0]}\" to get help")
-                }
-                else success = true
+                err.println("Unknown command: ${words[0]}, use \"help\" to get help")
             }
-            catch (e: UserInterruptException)
+            else if (!command.execute(words.subList(1, words.size)))
             {
-                logger.warning("Console is interrupted")
-                return@newThread
+                err.println("Command is illegal, use \"help ${words[0]}\" to get help")
             }
-            catch (e: EndOfFileException)
-            {
-                logger.warning("Console is closed")
-                shutdown(0, "Console is closed")
-            }
-            catch (e: Exception)
-            {
-                logger.severe("An error occurred while processing the command${line ?: ""}", e)
-            }
-            catch (e: Error)
-            {
-                logger.severe("An error occurred while processing the command${line ?: ""}", e)
-            }
-            catch (e: RuntimeException)
-            {
-                logger.severe("An error occurred while processing the command${line ?: ""}", e)
-            }
-            catch (e: Throwable)
-            {
-                logger.severe("An error occurred while processing the command${line ?: ""}", e)
-            }
-            finally
-            {
-                line = null
-            }
-        }.start()
-        logger.config("Console is initialized")
-    }
+            else success = true
+        }
+        catch (e: UserInterruptException)
+        {
+            logger.warning("Console is interrupted")
+            return@launch
+        }
+        catch (e: EndOfFileException)
+        {
+            logger.warning("Console is closed")
+            shutdown(0, "Console is closed")
+        }
+        catch (e: Exception)
+        {
+            logger.severe("An error occurred while processing the command${line ?: ""}", e)
+        }
+        catch (e: Error)
+        {
+            logger.severe("An error occurred while processing the command${line ?: ""}", e)
+        }
+        catch (e: RuntimeException)
+        {
+            logger.severe("An error occurred while processing the command${line ?: ""}", e)
+        }
+        catch (e: Throwable)
+        {
+            logger.severe("An error occurred while processing the command${line ?: ""}", e)
+        }
+        finally
+        {
+            line = null
+        }
+    }.start()
 
     /**
      * Command completer.
@@ -169,7 +168,8 @@ object CommandSet: TreeCommand(
         {
             logger.severe("An error occurred while tab completing")
             {
-                candidates?.addAll(CommandSet.tabComplete(line.words().subList(0, line.wordIndex()+1)))
+                val candidates1 = runBlocking { CommandSet.tabComplete(line.words().subList(0, line.wordIndex()+1)) }
+                candidates?.addAll(candidates1)
             }
         }
     }

@@ -26,7 +26,7 @@ object Help: Command
         return command
     }
 
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         if (args.isEmpty()) // 直接使用help命令的话打印所有命令列表
         {
@@ -68,7 +68,7 @@ object Help: Command
         return true
     }
 
-    override fun tabComplete(args: List<String>): List<Candidate>
+    override suspend fun tabComplete(args: List<String>): List<Candidate>
     {
         return CommandSet.tabComplete(args)
     }

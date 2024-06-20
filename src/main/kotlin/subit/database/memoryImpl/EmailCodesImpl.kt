@@ -1,5 +1,6 @@
 package subit.database.memoryImpl
 
+import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
@@ -7,7 +8,6 @@ import kotlinx.datetime.plus
 import subit.config.emailConfig
 import subit.database.EmailCodes
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup
 import java.util.*
 
 class EmailCodesImpl: EmailCodes
@@ -20,16 +20,16 @@ class EmailCodesImpl: EmailCodes
     {
         val logger = ForumLogger.getLogger()
         // 启动定期清理过期验证码任务
-        ForumThreadGroup.startTask(
-            ForumThreadGroup.Task(
-                name = "ClearExpiredEmailCode",
-                interval = 1000/*ms*/*60/*s*/*5,/*m*/
-            )
+        @Suppress("OPT_IN_USAGE")
+        GlobalScope.launch(Dispatchers.IO)
+        {
+            while (true)
             {
+                delay(1000/*ms*/*60/*s*/*5/*min*/)
                 logger.config("Clearing expired email codes")
                 logger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
             }
-        )
+        }
     }
 
     private fun clearExpiredEmailCode()

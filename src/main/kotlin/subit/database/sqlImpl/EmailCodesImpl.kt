@@ -1,5 +1,8 @@
 package subit.database.sqlImpl
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
@@ -17,7 +20,6 @@ import subit.dataClasses.Slice.Companion.singleOrNull
 import subit.database.EmailCodes
 import subit.database.EmailCodes.EmailCodeUsage
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup
 
 class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), EmailCodes, KoinComponent
 {
@@ -33,16 +35,16 @@ class EmailCodesImpl: DaoSqlImpl<EmailCodesImpl.EmailsTable>(EmailsTable), Email
     {
         val logger = ForumLogger.getLogger()
         // 启动定期清理过期验证码任务
-        ForumThreadGroup.startTask(
-            ForumThreadGroup.Task(
-                name = "ClearExpiredEmailCode",
-                interval = 1000/*ms*/*60/*s*/*5,/*m*/
-            )
+        @Suppress("OPT_IN_USAGE")
+        GlobalScope.launch()
+        {
+            while (true)
             {
                 logger.config("Clearing expired email codes")
                 logger.severe("Failed to clear expired email codes") { clearExpiredEmailCode() }
+                delay(1000/*ms*/*60/*s*/*5/*min*/)
             }
-        )
+        }
     }
 
     override suspend fun addEmailCode(email: String, code: String, usage: EmailCodeUsage): Unit = query()

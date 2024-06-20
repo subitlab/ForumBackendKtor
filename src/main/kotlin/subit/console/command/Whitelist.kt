@@ -21,7 +21,7 @@ object Whitelist: TreeCommand(Add, Remove, Get), KoinComponent
         override val args: String
             get() = "<email>"
 
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
             if (args.size != 1) return false
             runBlocking {
@@ -39,20 +39,18 @@ object Whitelist: TreeCommand(Add, Remove, Get), KoinComponent
         override val args: String
             get() = "<email>"
 
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
             if (args.size != 1) return false
-            runBlocking {
-                whitelists.remove(args[0])
-            }
+            whitelists.remove(args[0])
             CommandSet.out.println("移除成功")
             return true
         }
-        override fun tabComplete(args: List<String>): List<Candidate>
+        override suspend fun tabComplete(args: List<String>): List<Candidate>
         {
             if (args.size == 1)
             {
-                return runBlocking { whitelists.getWhitelist() }.map { Candidate(it) }
+                return whitelists.getWhitelist().map { Candidate(it) }
             }
             return emptyList()
         }
@@ -65,16 +63,14 @@ object Whitelist: TreeCommand(Add, Remove, Get), KoinComponent
         override val args: String
             get() = ""
 
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
-            runBlocking {
-                whitelists.getWhitelist().apply {
-                    if (isEmpty()) CommandSet.out.println("白名单为空")
-                    else
-                    {
-                        CommandSet.out.println("白名单:")
-                        forEach{ CommandSet.out.println("${SimpleAnsiColor.GREEN}-${AnsiStyle.RESET} $it") }
-                    }
+            whitelists.getWhitelist().apply {
+                if (isEmpty()) CommandSet.out.println("白名单为空")
+                else
+                {
+                    CommandSet.out.println("白名单:")
+                    forEach{ CommandSet.out.println("${SimpleAnsiColor.GREEN}-${AnsiStyle.RESET} $it") }
                 }
             }
             return true

@@ -12,7 +12,7 @@ import subit.console.SimpleAnsiColor.Companion.YELLOW
 import subit.database.*
 import subit.debug
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup
+import subit.utils.Power
 
 object MemoryDatabaseImpl: IDatabase, KoinComponent
 {
@@ -29,7 +29,7 @@ object MemoryDatabaseImpl: IDatabase, KoinComponent
             logger.severe("${RED}开启debug模式请在启动参数中加入 -debug=true")
             logger.severe("${RED}或将配置文件中的数据库实现改为其他实现")
             logger.severe("${RED}程序即将退出.")
-            ForumThreadGroup.shutdown(1, "MemoryDatabaseImpl only for debug mode.")
+            Power.shutdown(1, "MemoryDatabaseImpl only for debug mode.")
         }
 
         logger.warning("${YELLOW}注意: 您正在使用${RED}内存数据库实现${YELLOW}.")

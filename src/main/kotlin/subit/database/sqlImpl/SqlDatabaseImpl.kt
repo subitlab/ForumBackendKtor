@@ -22,7 +22,7 @@ import subit.console.SimpleAnsiColor.Companion.RED
 import subit.dataClasses.*
 import subit.database.*
 import subit.logger.ForumLogger
-import subit.utils.ForumThreadGroup.shutdown
+import subit.utils.Power.shutdown
 
 /**
  * @param T 表类型

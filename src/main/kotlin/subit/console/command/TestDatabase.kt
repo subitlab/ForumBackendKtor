@@ -1,6 +1,5 @@
 package subit.console.command
 
-import kotlinx.coroutines.runBlocking
 import org.jline.reader.Candidate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -101,7 +100,7 @@ object TestDatabase: Command, KoinComponent
         }
     }
 
-    override fun execute(args: List<String>): Boolean
+    override suspend fun execute(args: List<String>): Boolean
     {
         if (!debug)
         {
@@ -127,19 +126,13 @@ object TestDatabase: Command, KoinComponent
             params[param] = value
         }
 
-        val res = if (method.isSuspend) runBlocking()
-        {
-            method.callSuspendBy(params)
-        }
-        else
-        {
-            method.callBy(params)
-        }
+        val res = if (method.isSuspend) method.callSuspendBy(params)
+        else method.callBy(params)
         CommandSet.out.println("Result: $res")
         return true
     }
 
-    override fun tabComplete(args: List<String>): List<Candidate>
+    override suspend fun tabComplete(args: List<String>): List<Candidate>
     {
         return when (args.size)
         {

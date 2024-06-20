@@ -19,7 +19,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
         override val description = "Set/get logger level."
         override val args = "[level]"
 
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
             if (args.isEmpty()) // 没参数就打印当前日志等级
             {
@@ -39,7 +39,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             return true
         }
 
-        override fun tabComplete(args: List<String>): List<Candidate>
+        override suspend fun tabComplete(args: List<String>): List<Candidate>
         {
             if (args.size==1)
             {
@@ -64,7 +64,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             override val description = "Add a filter."
             override val args = "<pattern>"
 
-            override fun execute(args: kotlin.collections.List<String>): Boolean
+            override suspend fun execute(args: kotlin.collections.List<String>): Boolean
             {
                 if (args.isEmpty())
                 {
@@ -86,7 +86,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             override val args = "<pattern>"
             override val aliases = listOf("rm")
 
-            override fun execute(args: kotlin.collections.List<String>): Boolean
+            override suspend fun execute(args: kotlin.collections.List<String>): Boolean
             {
                 if (args.isEmpty())
                 {
@@ -98,7 +98,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
                 return true
             }
 
-            override fun tabComplete(args: kotlin.collections.List<String>): kotlin.collections.List<Candidate>
+            override suspend fun tabComplete(args: kotlin.collections.List<String>): kotlin.collections.List<Candidate>
             {
                 if (args.size==1)
                 {
@@ -116,7 +116,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             override val description = "List all filters."
             override val aliases = listOf("ls")
 
-            override fun execute(args: kotlin.collections.List<String>): Boolean
+            override suspend fun execute(args: kotlin.collections.List<String>): Boolean
             {
                 CommandSet.out.println("Filters:")
                 for (filter in ForumLogger.filters())
@@ -135,7 +135,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             override val description = "Set/get filter mode."
             override val args = "[mode]"
 
-            override fun execute(args: kotlin.collections.List<String>): Boolean
+            override suspend fun execute(args: kotlin.collections.List<String>): Boolean
             {
                 if (args.isEmpty())
                 {
@@ -165,7 +165,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
                 return true
             }
 
-            override fun tabComplete(args: kotlin.collections.List<String>): kotlin.collections.List<Candidate>
+            override suspend fun tabComplete(args: kotlin.collections.List<String>): kotlin.collections.List<Candidate>
             {
                 if (args.size==1)
                 {
@@ -181,7 +181,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
         override val description = "Set/get show logger name."
         override val args = "[true/false]"
 
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
             if (args.isEmpty())
             {
@@ -193,7 +193,7 @@ object Logger : TreeCommand(Level, Filter, ShowLoggerName)
             loggerConfig = loggerConfig.copy(showLoggerName = show)
             return true
         }
-        override fun tabComplete(args: List<String>): List<Candidate>
+        override suspend fun tabComplete(args: List<String>): List<Candidate>
         {
             return if (args.size == 1) listOf(Candidate("true"), Candidate("false"))
             else emptyList()

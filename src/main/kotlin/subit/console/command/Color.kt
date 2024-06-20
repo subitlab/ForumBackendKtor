@@ -10,7 +10,7 @@ object Color: TreeCommand(Test, Mode, Effect)
     object Test: Command
     {
         override val description = "Test color display. If you appear garbled, you can adjust the color settings."
-        override fun execute(args: List<String>): Boolean
+        override suspend fun execute(args: List<String>): Boolean
         {
             val sb = StringBuilder().append("")
                 .append("If certain colors or effects are not supported, ")
@@ -48,7 +48,7 @@ object Color: TreeCommand(Test, Mode, Effect)
         object RGB: Command
         {
             override val description = "Use RGB and simple color"
-            override fun execute(args: List<String>): Boolean
+            override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.RGB
                 CommandSet.out.println("Color mode: RGB")
@@ -59,7 +59,7 @@ object Color: TreeCommand(Test, Mode, Effect)
         object Simple: Command
         {
             override val description = "Use simple color"
-            override fun execute(args: List<String>): Boolean
+            override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.SIMPLE
                 CommandSet.out.println("Color mode: Simple")
@@ -70,7 +70,7 @@ object Color: TreeCommand(Test, Mode, Effect)
         object None: Command
         {
             override val description = "Disable color"
-            override fun execute(args: List<String>): Boolean
+            override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiColorMode = ColorDisplayMode.NONE
                 CommandSet.out.println("Color mode: None")
@@ -86,7 +86,7 @@ object Color: TreeCommand(Test, Mode, Effect)
         object On: Command
         {
             override val description = "Enable color effect"
-            override fun execute(args: List<String>): Boolean
+            override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiEffectMode = EffectDisplayMode.ON
                 CommandSet.out.println("Color effect: On")
@@ -97,7 +97,7 @@ object Color: TreeCommand(Test, Mode, Effect)
         object Off: Command
         {
             override val description = "Disable color effect"
-            override fun execute(args: List<String>): Boolean
+            override suspend fun execute(args: List<String>): Boolean
             {
                 Console.ansiEffectMode = EffectDisplayMode.OFF
                 CommandSet.out.println("Color effect: Off")
