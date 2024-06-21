@@ -5,10 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jline.keymap.KeyMap.ctrl
 import org.jline.reader.*
 import org.jline.reader.impl.DefaultParser
-import org.jline.widget.Widgets
 import subit.console.AnsiStyle
 import subit.console.AnsiStyle.Companion.RESET
 import subit.console.AnsiStyle.Companion.ansi
