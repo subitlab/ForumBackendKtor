@@ -2,23 +2,41 @@ database:
   # 数据库实现, 可选值: sql, memory
   impl: sql
   sql: # 该配置项仅在 impl 为 sql 时必须, 其余情况下无效
+
+    # 支持的数据库：
+    # - H2 (versions 2.x）
+    # - MariaDB
+    # - MySQL
+    # - Oracle
+    # - Postgres
+    # - MicrosoftSQLServer
+    # - SQLite
+
     #数据库用户名
     user: 'YourSqlUser'
     #数据库密码
     password: 'YourSqlPassword'
 
     # 数据库连接地址
-    ## mysql
-    url: 'jdbc:mysql://YourSqlHost:YourSqlPort/YourDatabaseName'
-    ## postgres
-    ## url: 'jdbc:postgresql://YourSqlHost:YourSqlPort/YourDatabaseName'
+    url: 'jdbc:mysql://YourSqlHost:YourSqlPort/YourDatabaseName' # mysql
+    ## url: 'jdbc:pgsql://YourSqlHost:YourSqlPort/YourDatabaseName' # postgres
+    ## url: 'jdbc:sqlite:YourDatabaseName' # sqlite
+    ## url: 'jdbc:h2:YourDatabaseName' # h2
+    ## url: 'jdbc:oracle:thin:@YourSqlHost:YourSqlPort:YourDatabaseName' # oracle
+    ## url: 'jdbc:sqlserver://YourSqlHost:YourSqlPort;databaseName=YourDatabaseName' # sqlserver
+    ## url: 'jdbc:mariadb://YourSqlHost:YourSqlPort/YourDatabaseName' # mariadb
 
-    # 数据库驱动
-    ## mysql
-    driver: 'com.mysql.cj.jdbc.Driver'
-    ## postgres
-    ## driver: 'org.postgresql.Driver'
+    # 数据库驱动 该项可以不填或填为null以通过url自动识别对应驱动
+    driver: null
+    ## driver: 'com.mysql.cj.jdbc.Driver' # mysql
+    ## driver: 'com.impossibl.postgres.jdbc.PGDriver' # postgres
+    ## driver: 'org.sqlite.JDBC' # sqlite
+    ## driver: 'org.h2.Driver' # h2
+    ## driver: 'oracle.jdbc.OracleDriver' # oracle
+    ## driver: 'com.microsoft.sqlserver.jdbc.SQLServerDriver' # sqlserver
+    ## driver: 'org.mariadb.jdbc.Driver' # mariadb
 
+    # 数据库懒惰初始化
     lazyInit: true
 
 # jwt登陆验证

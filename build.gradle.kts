@@ -1,11 +1,10 @@
 // 取消命名不合法警告
-@file:Suppress("PropertyName")
+@file:Suppress("PropertyName", "LocalVariableName")
 
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
 val exposed_version: String by project
-val h2_version: String by project
 val hikaricp_version: String by project
 val koin_version: String by project
 val jline_version: String by project
@@ -45,18 +44,37 @@ dependencies {
     implementation("io.ktor:ktor-server-rate-limit-jvm") // 限流
     implementation("io.github.smiley4:ktor-swagger-ui:$swagger_ui_version") // 创建api页面
     implementation("com.sun.mail:javax.mail:1.6.2") // 邮件发送
+
     //mysql
-    implementation("mysql:mysql-connector-java:8.0.33")
+    val mysql_version: String by project
+    implementation("mysql:mysql-connector-java:$mysql_version")
     //postgresql
-    implementation("org.postgresql:postgresql:42.7.3")
-    //sql
+    val pg_version: String by project
+    implementation("com.impossibl.pgjdbc-ng:pgjdbc-ng:$pg_version")
+    //h2
+    val h2_version: String by project
+    implementation("com.h2database:h2:$h2_version")
+    //MariaDB
+    val mariadb_version: String by project
+    implementation("org.mariadb.jdbc:mariadb-java-client:$mariadb_version")
+    //Oracle
+    val oracle_version: String by project
+    implementation("com.oracle.database.jdbc:ojdbc8:$oracle_version")
+    //MicrosoftSQLServer
+    val mssql_version: String by project
+    implementation("com.microsoft.sqlserver:mssql-jdbc:$mssql_version")
+    //SQLite
+    val sqlite_version: String by project
+    implementation("org.xerial:sqlite-jdbc:$sqlite_version")
+
+    //数据库
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-json:$exposed_version") // 数据库
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposed_version") // 数据库
-    implementation("com.h2database:h2:$h2_version") // 数据库
     implementation("com.zaxxer:HikariCP:$hikaricp_version") // 连接池
+
     implementation("ch.qos.logback:logback-classic:$logback_version") // 日志
     implementation("io.ktor:ktor-server-call-logging-jvm") // 日志
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm") // json on request/response

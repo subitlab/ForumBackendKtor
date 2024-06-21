@@ -23,6 +23,7 @@ import subit.dataClasses.*
 import subit.database.*
 import subit.logger.ForumLogger
 import subit.utils.Power.shutdown
+import java.sql.Driver
 
 /**
  * @param T 表类型
@@ -54,6 +55,15 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
      */
     private lateinit var config: ApplicationConfig
     private val logger = ForumLogger.getLogger()
+    private val drivers:List<Driver> = listOf(
+        org.h2.Driver(),
+        com.impossibl.postgres.jdbc.PGDriver(),
+        org.sqlite.JDBC(),
+        com.mysql.cj.jdbc.Driver(),
+        oracle.jdbc.OracleDriver(),
+        com.microsoft.sqlserver.jdbc.SQLServerDriver(),
+        org.mariadb.jdbc.Driver()
+    )
 
     /**
      * 创建Hikari数据源,即数据库连接池
@@ -87,16 +97,16 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
 
         logger.info("Init database. impl: sql, LazyInit: $lazyInit")
         val url = config.propertyOrNull("database.sql.url")?.getString()
-        val driver = config.propertyOrNull("database.sql.driver")?.getString()
+        val driver0 = config.propertyOrNull("database.sql.driver")?.getString()
         val user = config.propertyOrNull("database.sql.user")?.getString()
         val password = config.propertyOrNull("database.sql.password")?.getString()
 
-        if (url == null || driver == null)
+        if (url == null)
         {
             logger.severe("${RED}Database configuration not found.")
             logger.severe("${RED}Please add properties in application.conf:")
             logger.severe("${CYAN}database.sql.url${RESET}")
-            logger.severe("${CYAN}database.sql.driver${RESET}")
+            logger.severe("${CYAN}database.sql.driver${RESET} (optional)")
             logger.severe("${CYAN}database.sql.user${GREEN} (optional)${RESET}")
             logger.severe("${CYAN}database.sql.password${GREEN} (optional)${RESET}")
             logger.severe("${CYAN}database.sql.lazyInit${GREEN} (optional, default = true)${RESET}")
@@ -104,14 +114,27 @@ object SqlDatabaseImpl: IDatabase, KoinComponent
             shutdown(1, "Database configuration not found.")
         }
 
+        val driver = if (driver0.isNullOrEmpty())
+        {
+            logger.warning("Sql driver not found, try to load driver by url.")
+            val driver = drivers.find { it.acceptsURL(url) }?.javaClass?.name ?: run {
+                logger.severe("${RED}Driver not found.")
+                logger.severe("${RED}Please confirm that your database is supported.")
+                logger.severe("${RED}If it is supported, Please specify the driver manually by adding the option:")
+                logger.severe("${CYAN}database.sql.driver")
+                shutdown(1, "Driver not found.")
+            }
+            logger.info("Load driver by url: $driver")
+            driver
+        }
+        else driver0
+
         logger.info("Load database configuration. url: $url, driver: $driver, user: $user")
         val module = module(!lazyInit)
         {
             named("sql-database-impl")
 
-            single {
-                Database.connect(createHikariDataSource(url, driver, user, password))
-            }.bind<Database>()
+            single { Database.connect(createHikariDataSource(url, driver, user, password)) }.bind<Database>()
 
             singleOf(::BannedWordsImpl).bind<BannedWords>()
             singleOf(::BlocksImpl).bind<Blocks>()
