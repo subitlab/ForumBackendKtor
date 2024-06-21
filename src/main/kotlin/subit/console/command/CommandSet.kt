@@ -37,6 +37,7 @@ object CommandSet: TreeCommand(
 )
 {
     private val logger = ForumLogger.getLogger()
+
     /**
      * 上一次命令是否成功
      */
@@ -52,11 +53,12 @@ object CommandSet: TreeCommand(
 
     fun Application.startCommandThread() = CoroutineScope(Dispatchers.IO).launch()
     {
-        Signal.handle(Signal("INT"))
+        fun onUserInterrupt()
         {
-            err.println("You pressed Ctrl+C, This operation is not supported.")
-            err.println("If you want to stop the server, please use the command \"stop\"")
+            err.println("You might have pressed Ctrl+C or performed another operation to stop the server, which is not supported")
+            err.println("If you wish to shut down the server, please use the stop command.")
         }
+        Signal.handle(Signal("INT")) { onUserInterrupt() }
 
 
         var line: String? = null
@@ -80,8 +82,7 @@ object CommandSet: TreeCommand(
         }
         catch (e: UserInterruptException)
         {
-            err.println("You pressed Ctrl+C, This operation is not supported.")
-            err.println("If you want to stop the server, please use the command \"stop\"")
+            onUserInterrupt()
         }
         catch (e: EndOfFileException)
         {
@@ -107,7 +108,7 @@ object CommandSet: TreeCommand(
         {
             logger.severe("An error occurred while tab completing")
             {
-                val candidates1 = runBlocking { CommandSet.tabComplete(line.words().subList(0, line.wordIndex()+1)) }
+                val candidates1 = runBlocking { CommandSet.tabComplete(line.words().subList(0, line.wordIndex() + 1)) }
                 candidates?.addAll(candidates1)
             }
         }
