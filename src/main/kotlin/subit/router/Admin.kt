@@ -100,10 +100,10 @@ private data class CreateUser(val username: String, val password: String, val em
 
 private suspend fun Context.createUser()
 {
+    checkPermission { checkHasGlobalAdmin() }
+
     val users = get<Users>()
     val operations = get<Operations>()
-
-    checkPermission { checkHasGlobalAdmin() }
     val createUser = receiveAndCheckBody<CreateUser>()
     checkUserInfo(createUser.username, createUser.password, createUser.email).apply {
         if (this != HttpStatus.OK) return call.respond(this)
@@ -150,7 +150,7 @@ private suspend fun Context.prohibitUser()
 
 private suspend fun Context.prohibitList()
 {
-    checkPermission { hasGlobalAdmin() }
+    checkPermission { checkHasGlobalAdmin() }
     val begin = call.parameters["begin"]?.toLongOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val count = call.parameters["count"]?.toIntOrNull() ?: return call.respond(HttpStatus.BadRequest)
     call.respond(HttpStatus.OK, get<Prohibits>().getProhibitList(begin, count))
