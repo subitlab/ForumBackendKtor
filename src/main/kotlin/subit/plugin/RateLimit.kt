@@ -134,4 +134,9 @@ fun Application.installRateLimit() = install(io.ktor.server.plugins.ratelimit.Ra
             }
         }
     }
+
+    global {
+        rateLimiter(limit = 150, refillPeriod = 1.seconds)
+        requestKey { call -> call.request.local.remoteHost }
+    }
 }
