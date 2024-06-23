@@ -43,6 +43,7 @@ private fun parseCommandLineArgs(args: Array<String>): Pair<Array<String>, File>
 
     // 是否开启debug模式
     debug = argsMap["-debug"]?.toBoolean() ?: false
+    System.setProperty("io.ktor.development", "$debug")
 
     // 去除命令行中的-config参数, 因为ktor会解析此参数进而不加载打包的application.yaml
     // 其余参数还原为字符串数组
@@ -73,7 +74,7 @@ fun main(args: Array<String>)
         val defaultConfig =
             Loader.getResource("default_config.yaml")?.readAllBytes() ?: error("default_config.yaml not found")
         configFile.writeBytes(defaultConfig)
-        ForumLogger.getLogger("ForumBackend.main").severe(
+        ForumLogger.getLogger().severe(
             "config.yaml not found, the default config has been created, " +
             "please modify it and restart the program"
         )

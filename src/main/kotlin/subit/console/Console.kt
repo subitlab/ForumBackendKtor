@@ -8,8 +8,11 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.widget.AutopairWidgets
 import org.jline.widget.AutosuggestionWidgets
 import subit.console.command.CommandSet
+import subit.console.command.CommandSet.err
 import subit.logger.ForumLogger
 import subit.utils.FileUtils
+import subit.utils.Power
+import sun.misc.Signal
 import java.io.File
 
 /**
@@ -42,12 +45,23 @@ object Console
 
     init
     {
+        Signal.handle(Signal("INT")) { onUserInterrupt() }
+
         // 自动配对(小括号/中括号/大括号/引号等)
         val autopairWidgets = AutopairWidgets(lineReader, true)
         autopairWidgets.enable()
         // 根据历史记录建议
         val autosuggestionWidgets = AutosuggestionWidgets(lineReader)
         autosuggestionWidgets.enable()
+    }
+
+    fun onUserInterrupt()
+    {
+        err.println("You might have pressed Ctrl+C or performed another operation to stop the server.")
+        err.println("This method is feasible but not recommended," +
+                    " it should only be used when a command-line system error prevents the program from closing.")
+        err.println("If you want to stop the server, please use the \"stop\" command.")
+        Power.shutdown(0, "User interrupt")
     }
 
     /**

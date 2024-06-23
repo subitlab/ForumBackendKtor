@@ -14,7 +14,6 @@ import subit.console.Console
 import subit.console.SimpleAnsiColor
 import subit.logger.ForumLogger
 import subit.utils.Power.shutdown
-import sun.misc.Signal
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
@@ -53,14 +52,6 @@ object CommandSet: TreeCommand(
 
     fun Application.startCommandThread() = CoroutineScope(Dispatchers.IO).launch()
     {
-        fun onUserInterrupt()
-        {
-            err.println("You might have pressed Ctrl+C or performed another operation to stop the server, which is not supported")
-            err.println("If you wish to shut down the server, please use the stop command.")
-        }
-        Signal.handle(Signal("INT")) { onUserInterrupt() }
-
-
         var line: String? = null
         while (true) try
         {
@@ -82,7 +73,7 @@ object CommandSet: TreeCommand(
         }
         catch (e: UserInterruptException)
         {
-            onUserInterrupt()
+            Console.onUserInterrupt()
         }
         catch (e: EndOfFileException)
         {
