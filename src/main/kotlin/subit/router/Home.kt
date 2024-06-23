@@ -24,24 +24,24 @@ fun Route.home() = route("/home", {
     tags = listOf("首页")
 })
 {
-    get("/recommend", {
-        description = "获取首页推荐帖子"
-        request {
-            queryParameter<Int>("count")
-            {
-                required = false
-                description = "获取数量, 不填为10"
-                example = 10
-            }
-        }
-        response {
-            statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
-            statuses(HttpStatus.NotFound)
-        }
-    }) { getHotPosts() }
-
     rateLimit(RateLimit.Search.rateLimitName)
     {
+        get("/recommend", {
+            description = "获取首页推荐帖子"
+            request {
+                queryParameter<Int>("count")
+                {
+                    required = false
+                    description = "获取数量, 不填为10"
+                    example = 10
+                }
+            }
+            response {
+                statuses<Slice<PostId>>(HttpStatus.OK, example = sliceOf(PostId(0)))
+                statuses(HttpStatus.NotFound)
+            }
+        }) { getHotPosts() }
+
         route("/search", {
             request {
                 authenticated(false)
