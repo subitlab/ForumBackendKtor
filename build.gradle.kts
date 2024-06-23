@@ -113,3 +113,10 @@ tasks.withType<ProcessResources> {
 kotlin {
     jvmToolchain(17)
 }
+
+ktor {
+    fatJar {
+        allowZip64 = true
+        archiveFileName = "ForumBackendKtor-${version}-all.jar"
+    }
+}
