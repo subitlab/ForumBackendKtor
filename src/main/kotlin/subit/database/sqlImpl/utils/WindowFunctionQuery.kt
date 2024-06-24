@@ -42,7 +42,7 @@ import java.util.*
  *
  * 例如:
  * ```kotlin
- * val query = WindowFunctionQuery(rawQuery, 0 10)
+ * val query = WindowFunctionQuery(rawQuery, 0, 10)
  * val result: List<ResultRow> = query.toList()
  * val totalCount = result.firstOrNull()?.getOrNull(WindowFunctionQuery.totalCount) ?: error("获取总数据量失败")
  * val withRowNumber: List<Pair<Long, ResultRow>> = result.map { it[WindowFunctionQuery.rowNumber] to it }
