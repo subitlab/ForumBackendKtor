@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import subit.dataClasses.Slice.Companion.asSlice
 import subit.dataClasses.Slice.Companion.fromSequence
+import subit.database.sqlImpl.utils.WindowFunctionQuery
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -44,9 +45,9 @@ data class Slice<T>(
          */
         fun Query.asSlice(begin: Long, limit: Int): Slice<ResultRow>
         {
-            val sum: Long = copy().count()
-            val list = this.limit(limit, begin).toList()
-            return Slice(sum, begin, list)
+            val list = WindowFunctionQuery(this, begin, limit).toList()
+            val totalSize = list.firstOrNull()?.getOrNull(WindowFunctionQuery.totalCount) ?: 0
+            return Slice(totalSize, begin, list)
         }
 
         @Deprecated(
@@ -90,7 +91,7 @@ data class Slice<T>(
             for (item in sequence)
             {
                 if (!filter(item)) continue
-                if (i >= begin && i < begin+limit) list.add(item)
+                if (i >= begin && i < begin + limit) list.add(item)
                 i++
             }
             return Slice(i, begin, list)
