@@ -349,7 +349,9 @@ private suspend fun Context.getBlockPosts()
     val block = call.parameters["block"]?.toBlockIdOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val blockFull = get<Blocks>().getBlock(block) ?: return call.respond(HttpStatus.NotFound)
     checkPermission { checkCanRead(blockFull) }
-    val type = call.parameters["sort"]?.let(Posts.PostListSort::valueOf) ?: return call.respond(HttpStatus.BadRequest)
+    val type = call.parameters["sort"]
+                   ?.runCatching { Posts.PostListSort.valueOf(this) }
+                   ?.getOrNull() ?: return call.respond(HttpStatus.BadRequest)
     val (begin, count) = call.getPage()
     val posts = get<Posts>().getBlockPosts(block, type, begin, count)
     call.respond(HttpStatus.OK, posts)
@@ -377,7 +379,8 @@ private suspend fun Context.setBlockTopPosts()
 
 private suspend fun Context.addView()
 {
-    val pid = receiveAndCheckBody<PostId>()
-    get<Posts>().addView(pid)
+    getLoginUser() ?: return call.respond(HttpStatus.Unauthorized)
+    val pid = receiveAndCheckBody<WarpPostId>()
+    get<Posts>().addView(pid.post)
     call.respond(HttpStatus.OK)
 }

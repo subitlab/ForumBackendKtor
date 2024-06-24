@@ -45,8 +45,10 @@ object ForumLogger
     }
 
     fun getLogger(clazz: Class<*>): LoggerUtils = getLogger(clazz.kotlin)
+
     @JvmName("getLoggerInline")
     inline fun <reified T> getLogger(): LoggerUtils = getLogger(T::class)
+
     @CallerSensitive
     fun getLogger(): LoggerUtils = getCallerClass()?.let(::getLogger) ?: globalLogger
     internal val nativeOut: PrintStream = System.out
@@ -69,7 +71,7 @@ object ForumLogger
     val err: PrintStream = PrintStream(LoggerOutputStream(Level.SEVERE))
     fun addFilter(pattern: String)
     {
-        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers+pattern)
+        loggerConfig = loggerConfig.copy(matchers = loggerConfig.matchers + pattern)
     }
 
     fun removeFilter(pattern: String)
@@ -136,8 +138,10 @@ object ForumLogger
                 getCallerClasses().stream()
                     .filter {
                         !(it.packageName.startsWith("java") ||
-                          (it.packageName.startsWith("kotlin"))) ||
-                        (it.packageName.startsWith("jdk"))
+                          it.packageName.startsWith("kotlin") ||
+                          it.packageName.startsWith("jdk") ||
+                          it.packageName.startsWith("sun"))
+
                     }
                     .findFirst()
                     .map(::getLogger)

@@ -27,7 +27,7 @@ import subit.utils.statuses
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
-val logger = ForumLogger.getLogger()
+private val logger = ForumLogger.getLogger()
 fun Route.user() = route("/user", {
     tags = listOf("用户")
     description = "用户接口"
