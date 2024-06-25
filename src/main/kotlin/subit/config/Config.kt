@@ -62,7 +62,7 @@ class ConfigLoader<T: Any> private constructor(
     @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object
     {
-        private val logger = ForumLogger.getLogger()
+        private val logger by lazy { ForumLogger.getLogger() }
         fun init() // 初始化所有配置
         {
             apiDocsConfig
